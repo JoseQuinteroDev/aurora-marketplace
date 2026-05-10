@@ -1,8 +1,8 @@
-﻿# Aurora Marketplace
+# Aurora Marketplace
 
-Aurora Marketplace is a full-stack e-commerce platform built as a professional portfolio project.
+Aurora Marketplace is a professional full-stack e-commerce portfolio project.
 
-The goal is not to build a simple online shop, but a real-world e-commerce system with a modern UI, secure backend, batch processing, admin dashboard and AppSec-focused documentation.
+The goal is not to build a simple online shop, but a real-world e-commerce system with secure backend architecture, catalog, cart, checkout, admin tools, batch processing and AppSec-focused documentation.
 
 ## Tech Stack
 
@@ -12,6 +12,7 @@ The goal is not to build a simple online shop, but a real-world e-commerce syste
 - Spring Boot 3.5
 - Spring Web
 - Spring Security
+- JWT authentication
 - Spring Data JPA
 - PostgreSQL
 - Flyway
@@ -25,10 +26,7 @@ The goal is not to build a simple online shop, but a real-world e-commerce syste
 - Angular
 - TypeScript
 - Tailwind CSS
-- Modern UI/UX design system
-- Responsive layouts
-- Microinteractions
-- Dark mode
+- Premium responsive UI/UX planned after backend MVP
 
 ### Infrastructure
 
@@ -38,16 +36,33 @@ The goal is not to build a simple online shop, but a real-world e-commerce syste
 - MinIO
 - Mailpit
 
-## Current Status
+## Current Backend Status
 
-- Monorepo created.
-- Backend generated with Spring Initializr.
-- Java 21 configured.
-- Spring Boot aligned to version 3.5.
-- PostgreSQL, Redis, MinIO and Mailpit running with Docker Compose.
-- Backend connected to PostgreSQL.
-- Flyway enabled.
-- Actuator enabled.
+Implemented MVP backend modules:
+
+- Common API and error contracts.
+- Global exception handling.
+- JWT auth with register/login.
+- Users with `CUSTOMER` and `ADMIN` roles.
+- Catalog: categories, brands, products, variants and images.
+- Inventory with stock movements.
+- Cart, wishlist, reviews and coupons.
+- Checkout from cart.
+- Orders and order status history.
+- Simulated payments.
+- Audit logs.
+- Admin dashboard summary.
+- Admin inventory management.
+- Spring Batch v1 jobs.
+
+Not implemented yet:
+
+- Angular frontend.
+- Real payment provider such as Stripe.
+- Refresh tokens.
+- Email verification.
+- Password recovery.
+- Orders shipping integrations.
 
 ## Local Services
 
@@ -63,73 +78,85 @@ The goal is not to build a simple online shop, but a real-world e-commerce syste
 
 ## Run Infrastructure
 
+```powershell
 docker compose up -d
+```
 
 ## Run Backend
 
+```powershell
 cd backend
+.\mvnw.cmd clean install -DskipTests
 .\mvnw.cmd spring-boot:run
+```
+
+## Configuration
+
+JWT development defaults exist in `application.yml`. In production, override at least:
+
+```powershell
+$env:APP_SECURITY_JWT_SECRET="replace-with-a-real-secret-of-at-least-32-chars"
+$env:APP_SECURITY_JWT_EXPIRATION_MINUTES="60"
+```
+
+Batch file locations can be overridden:
+
+```powershell
+$env:APP_BATCH_IMPORT_PRODUCTS_FILE="data/import/products.csv"
+$env:APP_BATCH_SYNC_INVENTORY_FILE="data/import/inventory.csv"
+$env:APP_BATCH_ABANDONED_CART_RETENTION_HOURS="24"
+```
 
 ## Health Check
 
-http://localhost:8080/actuator/health
+```text
+GET http://localhost:8080/actuator/health
+```
 
-## Planned Modules
+## Main Backend Endpoints
 
-- Auth
-- User
-- Catalog
-- Product
-- Category
-- Inventory
-- Cart
-- Order
-- Payment
-- Review
-- Wishlist
-- Promotion
-- Batch
-- Admin
-- Audit
-- Notification
-- Security
-- Common API layer
+Public:
 
-## Security Vision
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/categories`
+- `GET /api/brands`
+- `GET /api/products`
+- `GET /api/products/search?q=term`
+- `GET /api/products/{slug}`
+- `GET /api/products/{productId}/reviews`
+- `GET /actuator/health`
 
-- Secure authentication
-- Role-based authorization
-- Input validation
-- Ownership validation
-- Secure error handling
-- Audit logs
-- OWASP Top 10 documentation
-- Future vulnerable-lab branch for AppSec practice
+Customer:
 
-## Batch Processing Vision
+- `GET /api/cart`
+- `POST /api/cart/items`
+- `POST /api/cart/apply-coupon`
+- `POST /api/checkout/confirm`
+- `GET /api/orders`
+- `POST /api/payments/{orderId}/simulate`
+- `GET /api/wishlist`
+- `POST /api/products/{productId}/reviews`
 
-- Product import
-- Inventory synchronization
-- Abandoned cart cleanup
-- Daily metrics calculation
-- Expired token cleanup
-- Recommendation ranking
+Admin:
 
-## Roadmap
+- `/api/admin/categories/**`
+- `/api/admin/brands/**`
+- `/api/admin/products/**`
+- `/api/admin/inventory/**`
+- `/api/admin/orders/**`
+- `/api/admin/coupons/**`
+- `/api/admin/reviews/**`
+- `/api/admin/audit-logs`
+- `/api/admin/dashboard/summary`
+- `/api/admin/batch/**`
 
-1. Backend common architecture.
-2. Global API response model.
-3. Global exception handling.
-4. Security base configuration.
-5. Auth module.
-6. Catalog module.
-7. Inventory module.
-8. Cart module.
-9. Checkout and orders.
-10. Admin dashboard.
-11. Spring Batch jobs.
-12. Angular frontend.
-13. Premium UI/UX design system.
-14. AppSec lab.
-15. Testing.
-16. Deployment.
+More detail: `docs/api/backend-endpoints.md`.
+
+## Batch Jobs
+
+- `importProductsJob`: imports catalog data from CSV.
+- `syncInventoryJob`: updates inventory by SKU from CSV.
+- `cleanAbandonedCartsJob`: removes old empty carts.
+
+Batch CSV files are local and configurable through environment variables. Spring Batch metadata tables are managed by Spring Batch; Aurora also stores simplified job audit rows in `batch_job_audit`.

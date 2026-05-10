@@ -12,6 +12,8 @@ public interface CategoryRepository extends JpaRepository<Category, UUID> {
 
     List<Category> findByActiveTrueOrderByNameAsc();
 
+    Optional<Category> findBySlug(String slug);
+
     Optional<Category> findByIdAndActiveTrue(UUID id);
 
     boolean existsBySlug(String slug);

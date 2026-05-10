@@ -54,3 +54,10 @@ app:
       # Development default only. Override APP_SECURITY_JWT_SECRET in production.
       secret: ${APP_SECURITY_JWT_SECRET:aurora-marketplace-development-secret-change-me-before-production-1234567890}
       expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:60}
+
+  batch:
+    files:
+      import-products: ${APP_BATCH_IMPORT_PRODUCTS_FILE:data/import/products.csv}
+      sync-inventory: ${APP_BATCH_SYNC_INVENTORY_FILE:data/import/inventory.csv}
+    clean-abandoned-carts:
+      retention-hours: ${APP_BATCH_ABANDONED_CART_RETENTION_HOURS:24}

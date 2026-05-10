@@ -12,6 +12,8 @@ public interface BrandRepository extends JpaRepository<Brand, UUID> {
 
     List<Brand> findByActiveTrueOrderByNameAsc();
 
+    Optional<Brand> findBySlug(String slug);
+
     Optional<Brand> findByIdAndActiveTrue(UUID id);
 
     boolean existsBySlug(String slug);
