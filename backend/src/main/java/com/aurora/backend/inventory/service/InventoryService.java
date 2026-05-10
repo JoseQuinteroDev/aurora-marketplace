@@ -64,7 +64,7 @@ public class InventoryService {
     private void applyMovement(Inventory inventory, StockMovementType type, int quantity) {
         switch (type) {
             case IN -> inventory.adjustAvailableQuantity(inventory.getAvailableQuantity() + quantity);
-            case OUT -> decreaseAvailable(inventory, quantity);
+            case OUT, SALE -> decreaseAvailable(inventory, quantity);
             case RESERVE -> reserve(inventory, quantity);
             case RELEASE -> release(inventory, quantity);
             case ADJUSTMENT -> inventory.adjustAvailableQuantity(quantity);

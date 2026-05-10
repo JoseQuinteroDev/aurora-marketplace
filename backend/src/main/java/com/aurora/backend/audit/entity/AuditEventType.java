@@ -1,0 +1,9 @@
+package com.aurora.backend.audit.entity;
+
+public enum AuditEventType {
+    ORDER_CREATED,
+    ORDER_STATUS_CHANGED,
+    PAYMENT_SIMULATED_SUCCESS,
+    PAYMENT_SIMULATED_FAILED,
+    COUPON_USED
+}
