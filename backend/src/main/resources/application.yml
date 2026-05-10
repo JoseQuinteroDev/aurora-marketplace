@@ -47,3 +47,10 @@ logging:
   level:
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG
+
+app:
+  security:
+    jwt:
+      # Development default only. Override APP_SECURITY_JWT_SECRET in production.
+      secret: ${APP_SECURITY_JWT_SECRET:aurora-marketplace-development-secret-change-me-before-production-1234567890}
+      expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:60}
