@@ -15,6 +15,7 @@ import {
   Zap
 } from 'lucide-angular';
 import { Product } from '../../core/models/product.model';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { CatalogService } from '../../services/catalog.service';
 import { ProductCardComponent } from '../../shared/product-card/product-card.component';
 import { SectionHeaderComponent } from '../../shared/section-header/section-header.component';
@@ -26,6 +27,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
   imports: [
     RouterLink,
     LucideAngularModule,
+    TranslatePipe,
     ProductCardComponent,
     SectionHeaderComponent,
     SkeletonProductCardComponent,
@@ -37,21 +39,21 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         <div class="relative z-10 max-w-3xl animate-fadeUp">
           <div class="inline-flex items-center gap-2 rounded-ui border border-white/70 bg-white/80 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-aurora-gold shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-amber-300">
             <lucide-icon [img]="Sparkles" size="14" />
-            New season edit
+            {{ 'home.badge' | t }}
           </div>
           <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-normal text-aurora-ink sm:text-6xl lg:text-7xl dark:text-white">
-            Curated commerce for people who notice the details.
+            {{ 'home.title' | t }}
           </h1>
           <p class="mt-6 max-w-2xl text-base leading-8 text-aurora-muted sm:text-lg dark:text-stone-300">
-            Shop polished tech, audio, home and travel essentials in a calm storefront built for confident decisions.
+            {{ 'home.subtitle' | t }}
           </p>
 
           <div class="mt-8 flex flex-col gap-3 sm:flex-row">
             <a routerLink="/catalog" class="ui-button ui-button-primary">
-              Shop the edit
+              {{ 'home.cta' | t }}
               <lucide-icon [img]="ArrowRight" size="18" />
             </a>
-            <a routerLink="/register" class="ui-button ui-button-secondary">Create account</a>
+            <a routerLink="/register" class="ui-button ui-button-secondary">{{ 'home.account' | t }}</a>
           </div>
 
           <div class="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
@@ -102,8 +104,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     </section>
 
     <section class="page-shell py-14">
-      <app-section-header eyebrow="Featured paths" title="Shop the moments" description="Visual entry points for focused browsing, from desk upgrades to travel-ready essentials.">
-        <a routerLink="/catalog" class="ui-button ui-button-secondary">View all</a>
+      <app-section-header eyebrow="Featured paths" title="{{ 'home.categories' | t }}" description="Visual entry points for focused browsing, from desk upgrades to travel-ready essentials.">
+        <a routerLink="/catalog" class="ui-button ui-button-secondary">{{ 'home.openCatalog' | t }}</a>
       </app-section-header>
 
       <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -124,8 +126,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
     <section class="border-y border-aurora-line/80 bg-white/70 py-14 dark:border-white/10 dark:bg-white/[0.03]">
       <div class="page-shell">
-        <app-section-header eyebrow="Featured products" title="Selected for this week" description="A polished product rail that already handles loading, empty and service-error states.">
-          <a routerLink="/catalog" class="ui-button ui-button-primary">Open catalog</a>
+        <app-section-header eyebrow="Featured products" title="{{ 'home.featured' | t }}" description="A polished product rail that already handles loading, empty and service-error states.">
+          <a routerLink="/catalog" class="ui-button ui-button-primary">{{ 'home.openCatalog' | t }}</a>
         </app-section-header>
 
         @if (loading()) {
@@ -140,7 +142,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           </div>
         } @else if (featuredProducts().length === 0) {
           <div class="mt-8">
-            <app-state-panel title="The shelf is waiting" message="Create active products in the admin API and they will appear here." />
+            <app-state-panel title="{{ 'home.empty' | t }}" message="{{ 'home.emptyMessage' | t }}" />
           </div>
         } @else {
           <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

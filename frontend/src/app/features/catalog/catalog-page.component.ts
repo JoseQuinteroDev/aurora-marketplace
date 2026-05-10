@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule, Grid3X3, Search, SlidersHorizontal, Sparkles, X } from 'lucide-angular';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { Brand, Category, Product } from '../../core/models/product.model';
 import { CatalogService } from '../../services/catalog.service';
 import { ProductCardComponent } from '../../shared/product-card/product-card.component';
@@ -10,16 +11,16 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
 @Component({
   selector: 'app-catalog-page',
-  imports: [LucideAngularModule, ProductCardComponent, SectionHeaderComponent, SkeletonProductCardComponent, StatePanelComponent],
+  imports: [LucideAngularModule, TranslatePipe, ProductCardComponent, SectionHeaderComponent, SkeletonProductCardComponent, StatePanelComponent],
   template: `
     <section class="page-shell py-10 sm:py-12">
       <div class="premium-shell overflow-hidden">
         <div class="grid gap-0 lg:grid-cols-[0.85fr_1.15fr]">
           <div class="p-6 sm:p-8 lg:p-10">
-            <p class="section-kicker">Catalog</p>
-            <h1 class="mt-3 max-w-2xl text-4xl font-black leading-tight text-aurora-ink sm:text-5xl dark:text-white">Find the right piece without the noise.</h1>
+            <p class="section-kicker">{{ 'nav.catalog' | t }}</p>
+            <h1 class="mt-3 max-w-2xl text-4xl font-black leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ 'catalog.title' | t }}</h1>
             <p class="mt-4 max-w-xl text-sm leading-6 text-aurora-muted dark:text-stone-300">
-              Search curated products, scan brand/category signals and move from discovery to detail quickly.
+              {{ 'catalog.subtitle' | t }}
             </p>
           </div>
           <div class="relative min-h-64 overflow-hidden bg-aurora-night">
@@ -45,10 +46,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" placeholder="Search the catalog" />
         </label>
         <div class="grid grid-cols-2 gap-3">
-          <button class="ui-button ui-button-primary" type="button" (click)="search()">Search</button>
+          <button class="ui-button ui-button-primary" type="button" (click)="search()">{{ 'catalog.search' | t }}</button>
           <button class="ui-button ui-button-secondary" type="button" (click)="filtersOpen.set(true)">
             <lucide-icon [img]="SlidersHorizontal" size="17" />
-            Filters
+            {{ 'catalog.filters' | t }}
           </button>
         </div>
       </div>
@@ -59,22 +60,22 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <div class="flex items-center justify-between gap-3">
               <div class="flex items-center gap-2 font-black text-aurora-ink dark:text-white">
                 <lucide-icon [img]="SlidersHorizontal" size="18" />
-                Refine
+                {{ 'catalog.refine' | t }}
               </div>
               <span class="text-xs font-bold text-aurora-muted dark:text-stone-400">{{ products().length }} items</span>
             </div>
 
             <label class="mt-5 block">
-              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">Search</span>
+              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'catalog.search' | t }}</span>
               <span class="field-shell">
                 <lucide-icon class="text-stone-400" [img]="Search" size="17" />
                 <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" placeholder="MacBook, audio, travel" />
               </span>
             </label>
-            <button class="ui-button ui-button-primary mt-4 w-full" type="button" (click)="search()">Apply search</button>
+            <button class="ui-button ui-button-primary mt-4 w-full" type="button" (click)="search()">{{ 'catalog.apply' | t }}</button>
 
             <div class="mt-6 border-t border-aurora-line pt-6 dark:border-white/10">
-              <p class="text-sm font-black text-aurora-ink dark:text-white">Categories</p>
+              <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 @for (category of categories(); track category.id) {
                   <button class="aurora-chip" type="button">{{ category.name }}</button>
@@ -85,7 +86,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             </div>
 
             <div class="mt-6 border-t border-aurora-line pt-6 dark:border-white/10">
-              <p class="text-sm font-black text-aurora-ink dark:text-white">Brands</p>
+              <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 @for (brand of brands(); track brand.id) {
                   <button class="aurora-chip" type="button">{{ brand.name }}</button>
@@ -99,7 +100,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
         <div>
           <div class="mb-5 hidden items-center justify-between gap-4 lg:flex">
-            <app-section-header eyebrow="Results" title="Product grid" description="Built for fast scanning with clear pricing, rating and category cues." />
+            <app-section-header eyebrow="{{ 'catalog.results' | t }}" title="{{ 'catalog.grid' | t }}" description="Built for fast scanning with clear pricing, rating and category cues." />
           </div>
 
           @if (loading()) {
@@ -109,9 +110,9 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               }
             </div>
           } @else if (error()) {
-            <app-state-panel mode="error" title="Catalog unavailable" [message]="error()!" />
+            <app-state-panel mode="error" title="{{ 'catalog.error' | t }}" [message]="error()!" />
           } @else if (products().length === 0) {
-            <app-state-panel title="No products found" message="Try a different search or add products from the admin API." />
+            <app-state-panel title="{{ 'catalog.empty' | t }}" message="{{ 'catalog.emptyMessage' | t }}" />
           } @else {
             <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               @for (product of products(); track product.id) {
@@ -129,7 +130,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-black text-aurora-ink dark:text-white">
               <lucide-icon [img]="SlidersHorizontal" size="18" />
-              Filters
+              {{ 'catalog.filters' | t }}
             </div>
             <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" (click)="filtersOpen.set(false)" aria-label="Close filters">
               <lucide-icon [img]="X" size="18" />
@@ -137,7 +138,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           </div>
 
           <div class="mt-5">
-            <p class="text-sm font-black text-aurora-ink dark:text-white">Categories</p>
+            <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (category of categories(); track category.id) {
                 <button class="aurora-chip" type="button">{{ category.name }}</button>
@@ -148,7 +149,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           </div>
 
           <div class="mt-5">
-            <p class="text-sm font-black text-aurora-ink dark:text-white">Brands</p>
+            <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (brand of brands(); track brand.id) {
                 <button class="aurora-chip" type="button">{{ brand.name }}</button>
@@ -158,7 +159,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             </div>
           </div>
 
-          <button class="ui-button ui-button-primary mt-6 w-full" type="button" (click)="filtersOpen.set(false)">Apply filters</button>
+          <button class="ui-button ui-button-primary mt-6 w-full" type="button" (click)="filtersOpen.set(false)">{{ 'catalog.filters' | t }}</button>
         </div>
       </div>
     }

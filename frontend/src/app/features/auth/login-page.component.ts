@@ -2,12 +2,14 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ArrowRight, LockKeyhole, Mail, ShieldCheck, Sparkles } from 'lucide-angular';
+import { LanguageService } from '../../core/i18n/language.service';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
 
 @Component({
   selector: 'app-login-page',
-  imports: [ReactiveFormsModule, RouterLink, LucideAngularModule, StatePanelComponent],
+  imports: [ReactiveFormsModule, RouterLink, LucideAngularModule, TranslatePipe, StatePanelComponent],
   template: `
     <section class="page-shell grid min-h-[760px] items-center gap-10 py-10 lg:grid-cols-[0.96fr_1.04fr]">
       <div class="relative hidden min-h-[660px] overflow-hidden rounded-ui bg-aurora-night shadow-premium lg:block">
@@ -18,7 +20,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <lucide-icon [img]="Sparkles" size="14" />
             Member access
           </div>
-          <h1 class="mt-5 max-w-md text-4xl font-black leading-tight">Pick up your cart, favorites and orders in one calm place.</h1>
+          <h1 class="mt-5 max-w-md text-4xl font-black leading-tight">{{ 'auth.login.title' | t }}</h1>
           <div class="mt-6 grid gap-3">
             @for (item of panelItems; track item) {
               <div class="flex items-center gap-3 rounded-ui border border-white/10 bg-white/10 p-3">
@@ -32,51 +34,51 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
       <div class="mx-auto w-full max-w-md">
         <div class="surface-panel p-6 sm:p-8">
-          <p class="section-kicker">Welcome back</p>
-          <h1 class="mt-3 text-4xl font-black text-aurora-ink dark:text-white">Sign in to Aurora</h1>
-          <p class="mt-3 text-sm leading-6 text-aurora-muted dark:text-stone-300">Access your saved items, carts and admin tools when your role allows it.</p>
+          <p class="section-kicker">{{ 'nav.signIn' | t }}</p>
+          <h1 class="mt-3 text-4xl font-black text-aurora-ink dark:text-white">{{ 'auth.login.title' | t }}</h1>
+          <p class="mt-3 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'auth.login.subtitle' | t }}</p>
 
           <form class="mt-8 space-y-4" [formGroup]="form" (ngSubmit)="submit()">
             <label class="block">
-              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">Email</span>
+              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.email' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="emailInvalid()">
                 <lucide-icon class="text-stone-400" [img]="Mail" size="17" />
                 <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" placeholder="you@aurora.dev" />
               </span>
               @if (emailInvalid()) {
-                <span class="mt-2 block text-xs font-bold text-aurora-rose">Enter a valid email address.</span>
+                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
               }
             </label>
 
             <label class="block">
-              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">Password</span>
+              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.password' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="passwordInvalid()">
                 <lucide-icon class="text-stone-400" [img]="LockKeyhole" size="17" />
                 <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="password" type="password" autocomplete="current-password" placeholder="Your password" />
               </span>
               @if (passwordInvalid()) {
-                <span class="mt-2 block text-xs font-bold text-aurora-rose">Password is required.</span>
+                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
               }
             </label>
 
             @if (error()) {
-              <app-state-panel mode="error" title="Login failed" [message]="error()!" />
+              <app-state-panel mode="error" title="{{ 'auth.login.failed' | t }}" [message]="error()!" />
             }
 
             <button class="ui-button ui-button-primary w-full" type="submit" [disabled]="form.invalid || loading()">
               <lucide-icon [img]="ShieldCheck" size="18" />
-              {{ loading() ? 'Signing in...' : 'Sign in securely' }}
+            {{ loading() ? ('auth.login.loading' | t) : ('auth.login.submit' | t) }}
             </button>
           </form>
 
           <p class="mt-6 text-center text-sm text-aurora-muted dark:text-stone-300">
-            New to Aurora?
-            <a routerLink="/register" class="premium-link">Create an account</a>
+            {{ 'auth.new' | t }}
+            <a routerLink="/register" class="premium-link">{{ 'auth.create' | t }}</a>
           </p>
         </div>
 
         <a routerLink="/catalog" class="mt-5 flex cursor-pointer items-center justify-center gap-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:text-aurora-gold dark:text-stone-300">
-          Continue browsing
+          {{ 'auth.continue' | t }}
           <lucide-icon [img]="ArrowRight" size="16" />
         </a>
       </div>
@@ -102,6 +104,7 @@ export class LoginPageComponent {
 
   constructor(
     private readonly authService: AuthService,
+    private readonly language: LanguageService,
     private readonly router: Router
   ) {}
 
@@ -126,7 +129,7 @@ export class LoginPageComponent {
     this.authService.login(this.form.getRawValue()).subscribe({
       next: () => this.router.navigateByUrl('/'),
       error: () => {
-        this.error.set('Check your email and password, then try again.');
+        this.error.set(this.language.translate('auth.login.error'));
         this.loading.set(false);
       }
     });

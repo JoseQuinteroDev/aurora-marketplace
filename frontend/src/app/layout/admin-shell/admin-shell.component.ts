@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { LucideAngularModule, Boxes, ClipboardList, LayoutDashboard, LogOut, Package, ShieldCheck } from 'lucide-angular';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { LanguageService } from '../../core/i18n/language.service';
 import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [RouterOutlet, RouterLink, LucideAngularModule],
+  imports: [RouterOutlet, RouterLink, LucideAngularModule, TranslatePipe],
   template: `
     <div class="min-h-screen bg-slate-950 text-white">
       <aside class="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl lg:block">
@@ -20,7 +22,7 @@ import { AuthService } from '../../services/auth.service';
           </a>
           <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
             <lucide-icon [img]="Package" size="18" />
-            Products
+            {{ 'nav.catalog' | t }}
           </span>
           <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
             <lucide-icon [img]="Boxes" size="18" />
@@ -28,12 +30,12 @@ import { AuthService } from '../../services/auth.service';
           </span>
           <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
             <lucide-icon [img]="ClipboardList" size="18" />
-            Orders
+            {{ 'nav.orders' | t }}
           </span>
         </nav>
         <button class="ui-button mt-8 w-full border border-white/10 bg-white/10 text-white hover:bg-white/15" type="button" (click)="auth.logout()">
           <lucide-icon [img]="LogOut" size="17" />
-          Sign out
+          {{ 'nav.signOut' | t }}
         </button>
       </aside>
 
@@ -45,6 +47,7 @@ import { AuthService } from '../../services/auth.service';
               <p class="text-sm text-slate-300">Operational command center</p>
             </div>
             <div class="flex items-center gap-2 rounded-ui border border-white/10 bg-white/10 px-3 py-2 text-sm">
+              <button class="cursor-pointer font-black text-amber-200" type="button" (click)="language.toggle()">{{ language.language().toUpperCase() }}</button>
               <lucide-icon [img]="ShieldCheck" size="17" />
               ADMIN
             </div>
@@ -63,5 +66,8 @@ export class AdminShellComponent {
   readonly LogOut = LogOut;
   readonly ShieldCheck = ShieldCheck;
 
-  constructor(readonly auth: AuthService) {}
+  constructor(
+    readonly auth: AuthService,
+    readonly language: LanguageService
+  ) {}
 }

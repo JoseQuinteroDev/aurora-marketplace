@@ -1,6 +1,7 @@
-import { CurrencyPipe } from '@angular/common';
-import { Component, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { CurrencyPipe, DatePipe } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   LucideAngularModule,
   ArrowLeft,
@@ -14,20 +15,27 @@ import {
   Truck,
   Zap
 } from 'lucide-angular';
+import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { LanguageService } from '../../core/i18n/language.service';
 import { Product } from '../../core/models/product.model';
+import { Review } from '../../core/models/review.model';
+import { AuthService } from '../../services/auth.service';
+import { CartService } from '../../services/cart.service';
 import { CatalogService } from '../../services/catalog.service';
+import { ReviewService } from '../../services/review.service';
+import { WishlistService } from '../../services/wishlist.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
 
 type ProductTab = 'description' | 'specs' | 'reviews';
 
 @Component({
   selector: 'app-product-detail-page',
-  imports: [CurrencyPipe, RouterLink, LucideAngularModule, StatePanelComponent],
+  imports: [CurrencyPipe, DatePipe, ReactiveFormsModule, RouterLink, LucideAngularModule, TranslatePipe, StatePanelComponent],
   template: `
     <section class="page-shell py-10 sm:py-12">
       <a routerLink="/catalog" class="premium-link inline-flex items-center gap-2 text-sm">
         <lucide-icon [img]="ArrowLeft" size="17" />
-        Back to catalog
+        {{ 'product.back' | t }}
       </a>
 
       @if (loading()) {
@@ -42,7 +50,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
         </div>
       } @else if (error()) {
         <div class="mt-8">
-          <app-state-panel mode="error" title="Product unavailable" [message]="error()!" />
+          <app-state-panel mode="error" title="{{ 'product.unavailable' | t }}" [message]="error()!" />
         </div>
       } @else if (product(); as item) {
         <div class="mt-8 grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
@@ -60,7 +68,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
             <div class="grid grid-cols-4 gap-3">
               @for (image of galleryUrls(item); track image) {
                 <button class="group overflow-hidden rounded-ui border border-aurora-line bg-white p-1 transition duration-200 hover:border-aurora-amber dark:border-white/10 dark:bg-white/10" type="button" (click)="selectedImage.set(image)" aria-label="Select product image">
-                  <img class="aspect-square w-full rounded-ui object-cover transition duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" [src]="image" [alt]="item.name" />
+                  <img loading="lazy" class="aspect-square w-full rounded-ui object-cover transition duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" [src]="image" [alt]="item.name" />
                 </button>
               }
             </div>
@@ -75,13 +83,13 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   <div class="mt-4 flex flex-wrap items-center gap-3">
                     <span class="inline-flex items-center gap-1.5 text-sm font-black text-amber-700 dark:text-amber-300">
                       <lucide-icon [img]="Star" size="16" />
-                      4.8
+                      {{ averageRating() }}
                     </span>
                     <span class="h-1 w-1 rounded-full bg-aurora-line dark:bg-white/20"></span>
                     <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ activeVariantCount(item) }} variants</span>
                     <span class="aurora-badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                       <lucide-icon [img]="BadgeCheck" size="14" />
-                      In stock
+                      {{ 'product.inStock' | t }}
                     </span>
                   </div>
                 </div>
@@ -89,37 +97,37 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                 <div class="surface-panel p-5">
                   <div class="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                      <p class="text-sm font-semibold text-aurora-muted dark:text-stone-400">Starting at</p>
+                      <p class="text-sm font-semibold text-aurora-muted dark:text-stone-400">{{ 'product.startingAt' | t }}</p>
                       <p class="mt-1 text-4xl font-black text-aurora-ink dark:text-white">{{ item.basePrice | currency }}</p>
                     </div>
-                    <button class="ui-button ui-button-secondary h-11 w-11 min-h-11 p-0" type="button" aria-label="Save item">
+                    <button class="ui-button h-11 w-11 min-h-11 p-0" [class.ui-button-primary]="wishlist.isWishlisted(item.id)" [class.ui-button-secondary]="!wishlist.isWishlisted(item.id)" type="button" [disabled]="wishlistLoading()" (click)="toggleWishlist(item)" [attr.aria-label]="'product.save' | t">
                       <lucide-icon [img]="Heart" size="18" />
                     </button>
                   </div>
 
                   <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                    <button class="ui-button ui-button-primary w-full" type="button">
+                    <button class="ui-button ui-button-primary w-full" type="button" [disabled]="cartLoading() || !selectedVariantId(item)" (click)="addToCart(item)">
                       <lucide-icon [img]="ShoppingBag" size="18" />
-                      Add to cart
+                      {{ cartLoading() ? ('product.adding' | t) : ('product.addToCart' | t) }}
                     </button>
-                    <button class="ui-button ui-button-accent w-full" type="button">
+                    <button class="ui-button ui-button-accent w-full" type="button" [disabled]="cartLoading() || !selectedVariantId(item)" (click)="buyNow(item)">
                       <lucide-icon [img]="Zap" size="18" />
-                      Buy now
+                      {{ 'product.buyNow' | t }}
                     </button>
                   </div>
                 </div>
 
                 <div class="surface-panel p-5">
-                  <p class="text-sm font-black text-aurora-ink dark:text-white">Choose a variant</p>
+                  <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.variant' | t }}</p>
                   <div class="mt-3 grid gap-2 sm:grid-cols-2">
                     @for (variant of item.variants; track variant.id) {
-                      <button class="rounded-ui border border-aurora-line bg-white p-3 text-left transition duration-200 hover:border-aurora-amber hover:shadow-sm dark:border-white/10 dark:bg-white/10" type="button">
+                      <button class="rounded-ui border border-aurora-line bg-white p-3 text-left transition duration-200 hover:border-aurora-amber hover:shadow-sm dark:border-white/10 dark:bg-white/10" [class.border-aurora-amber]="variant.id === selectedVariant()" type="button" (click)="selectedVariant.set(variant.id)">
                         <span class="block text-sm font-black text-aurora-ink dark:text-white">{{ variant.name }}</span>
                         <span class="mt-1 block text-xs font-semibold text-aurora-muted dark:text-stone-400">{{ variant.sku }}</span>
                         <span class="mt-2 block text-sm font-black text-aurora-gold dark:text-amber-300">{{ variant.effectivePrice | currency }}</span>
                       </button>
                     } @empty {
-                      <p class="text-sm text-aurora-muted dark:text-stone-300">Default configuration available.</p>
+                      <p class="text-sm text-aurora-muted dark:text-stone-300">{{ 'product.defaultVariant' | t }}</p>
                     }
                   </div>
                 </div>
@@ -142,15 +150,15 @@ type ProductTab = 'description' | 'specs' | 'reviews';
           <div class="grid gap-2 sm:grid-cols-3">
             <button class="ui-button justify-start" [class.ui-button-primary]="activeTab() === 'description'" [class.ui-button-secondary]="activeTab() !== 'description'" type="button" (click)="activeTab.set('description')">
               <lucide-icon [img]="MessageSquareText" size="17" />
-              Description
+              {{ 'product.description' | t }}
             </button>
             <button class="ui-button justify-start" [class.ui-button-primary]="activeTab() === 'specs'" [class.ui-button-secondary]="activeTab() !== 'specs'" type="button" (click)="activeTab.set('specs')">
               <lucide-icon [img]="ListChecks" size="17" />
-              Specifications
+              {{ 'product.specs' | t }}
             </button>
             <button class="ui-button justify-start" [class.ui-button-primary]="activeTab() === 'reviews'" [class.ui-button-secondary]="activeTab() !== 'reviews'" type="button" (click)="activeTab.set('reviews')">
               <lucide-icon [img]="Star" size="17" />
-              Reviews
+              {{ 'product.reviews' | t }}
             </button>
           </div>
 
@@ -166,16 +174,90 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.brand.name }}</p>
                 </div>
                 <div class="rounded-ui bg-stone-50 p-4 dark:bg-white/5">
-                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">Category</p>
+                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">{{ 'catalog.categories' | t }}</p>
                   <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.category.name }}</p>
                 </div>
                 <div class="rounded-ui bg-stone-50 p-4 dark:bg-white/5">
-                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">Status</p>
-                  <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.active ? 'Active' : 'Inactive' }}</p>
+                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">{{ 'orders.status' | t }}</p>
+                  <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.active ? ('common.active' | t) : ('common.inactive' | t) }}</p>
                 </div>
               </div>
             } @else {
-              <app-state-panel title="Reviews are coming" message="The backend review endpoint is ready for the next product detail iteration." />
+              <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+                <div>
+                  <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'product.reviewsTitle' | t }}</h2>
+                  @if (reviewsLoading()) {
+                    <div class="mt-4 space-y-3">
+                      @for (review of [1, 2]; track review) {
+                        <div class="skeleton-line h-28 rounded-ui"></div>
+                      }
+                    </div>
+                  } @else if (reviews().length === 0) {
+                    <div class="mt-4">
+                      <app-state-panel title="{{ 'product.noReviews' | t }}" message="{{ 'product.noReviewsMessage' | t }}" />
+                    </div>
+                  } @else {
+                    <div class="mt-4 grid gap-3">
+                      @for (review of reviews(); track review.id) {
+                        <article class="rounded-ui border border-aurora-line bg-white p-4 dark:border-white/10 dark:bg-white/5">
+                          <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p class="font-black text-aurora-ink dark:text-white">{{ review.authorName }}</p>
+                              <p class="text-xs text-aurora-muted dark:text-stone-400">{{ review.createdAt | date:'mediumDate' }}</p>
+                            </div>
+                            <div class="flex items-center gap-1 text-amber-600 dark:text-amber-300">
+                              @for (star of stars; track star) {
+                                <lucide-icon [img]="Star" size="15" [class.opacity-30]="star > review.rating" />
+                              }
+                            </div>
+                          </div>
+                          @if (review.title) {
+                            <h3 class="mt-4 font-black text-aurora-ink dark:text-white">{{ review.title }}</h3>
+                          }
+                          @if (review.comment) {
+                            <p class="mt-2 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ review.comment }}</p>
+                          }
+                        </article>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <div class="rounded-ui border border-aurora-line bg-white p-4 dark:border-white/10 dark:bg-white/5">
+                  @if (!auth.isAuthenticated()) {
+                    <app-state-panel title="{{ 'nav.signIn' | t }}" message="{{ 'product.loginToReview' | t }}" />
+                    <a routerLink="/login" class="ui-button ui-button-primary mt-4 w-full">{{ 'nav.signIn' | t }}</a>
+                  } @else {
+                    <form [formGroup]="reviewForm" (ngSubmit)="submitReview(item)" class="space-y-4">
+                      <label class="block">
+                        <span class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.reviewRating' | t }}</span>
+                        <div class="mt-2 flex gap-2">
+                          @for (star of stars; track star) {
+                            <button class="ui-button h-10 w-10 min-h-10 p-0" [class.ui-button-primary]="reviewForm.controls.rating.value >= star" [class.ui-button-secondary]="reviewForm.controls.rating.value < star" type="button" (click)="reviewForm.controls.rating.setValue(star)">
+                              <lucide-icon [img]="Star" size="16" />
+                            </button>
+                          }
+                        </div>
+                      </label>
+                      <label class="block">
+                        <span class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.reviewTitle' | t }}</span>
+                        <input class="ui-input mt-2" formControlName="title" maxlength="160" />
+                      </label>
+                      <label class="block">
+                        <span class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.reviewComment' | t }}</span>
+                        <textarea class="ui-input mt-2 h-auto min-h-28 py-3" formControlName="comment"></textarea>
+                      </label>
+                      @if (reviewMessage()) {
+                        <p class="rounded-ui bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{{ reviewMessage() }}</p>
+                      }
+                      @if (reviewError()) {
+                        <p class="rounded-ui bg-rose-50 px-3 py-2 text-sm font-bold text-aurora-rose dark:bg-rose-500/15">{{ reviewError() }}</p>
+                      }
+                      <button class="ui-button ui-button-primary w-full" type="submit" [disabled]="reviewForm.invalid || reviewSubmitting()">{{ 'product.submitReview' | t }}</button>
+                    </form>
+                  }
+                </div>
+              </div>
             }
           </div>
         </div>
@@ -184,11 +266,27 @@ type ProductTab = 'description' | 'specs' | 'reviews';
   `
 })
 export class ProductDetailPageComponent implements OnInit {
+  private readonly formBuilder = inject(FormBuilder);
+
   readonly product = signal<Product | null>(null);
+  readonly reviews = signal<Review[]>([]);
   readonly selectedImage = signal<string | null>(null);
+  readonly selectedVariant = signal<string | null>(null);
   readonly activeTab = signal<ProductTab>('description');
   readonly loading = signal(true);
+  readonly reviewsLoading = signal(false);
+  readonly cartLoading = signal(false);
+  readonly wishlistLoading = signal(false);
+  readonly reviewSubmitting = signal(false);
+  readonly reviewMessage = signal<string | null>(null);
+  readonly reviewError = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+
+  readonly reviewForm = this.formBuilder.nonNullable.group({
+    rating: [5, [Validators.required, Validators.min(1), Validators.max(5)]],
+    title: ['', [Validators.maxLength(160)]],
+    comment: ['']
+  });
 
   readonly ArrowLeft = ArrowLeft;
   readonly BadgeCheck = BadgeCheck;
@@ -200,6 +298,7 @@ export class ProductDetailPageComponent implements OnInit {
   readonly Star = Star;
   readonly Truck = Truck;
   readonly Zap = Zap;
+  readonly stars = [1, 2, 3, 4, 5];
 
   readonly promises = [
     { icon: Truck, title: 'Fast shipping', copy: 'Clear delivery expectation.' },
@@ -208,30 +307,142 @@ export class ProductDetailPageComponent implements OnInit {
   ];
 
   constructor(
+    readonly auth: AuthService,
     private readonly route: ActivatedRoute,
-    private readonly catalogService: CatalogService
+    private readonly router: Router,
+    private readonly cartService: CartService,
+    private readonly catalogService: CatalogService,
+    private readonly language: LanguageService,
+    private readonly reviewService: ReviewService,
+    readonly wishlist: WishlistService
   ) {}
 
   ngOnInit(): void {
     const slug = this.route.snapshot.paramMap.get('slug');
 
     if (!slug) {
-      this.error.set('Missing product slug.');
+      this.error.set(this.language.translate('product.unavailable'));
       this.loading.set(false);
       return;
+    }
+
+    if (this.auth.isAuthenticated()) {
+      this.wishlist.loadWishlist().subscribe({ error: () => undefined });
     }
 
     this.catalogService.getProduct(slug).subscribe({
       next: (product) => {
         this.product.set(product);
         this.selectedImage.set(this.imageUrl(product));
+        this.selectedVariant.set(product.variants.find((variant) => variant.active)?.id ?? product.variants[0]?.id ?? null);
         this.loading.set(false);
+        this.loadReviews(product.id);
       },
       error: () => {
-        this.error.set('The product could not be loaded.');
+        this.error.set(this.language.translate('product.unavailable'));
         this.loading.set(false);
       }
     });
+  }
+
+  addToCart(product: Product): void {
+    const variantId = this.selectedVariantId(product);
+    if (!variantId) {
+      return;
+    }
+
+    if (!this.auth.isAuthenticated()) {
+      this.router.navigateByUrl('/login');
+      return;
+    }
+
+    this.cartLoading.set(true);
+    this.cartService.addItem({ variantId, quantity: 1 }).subscribe({
+      next: () => this.cartLoading.set(false),
+      error: () => this.cartLoading.set(false)
+    });
+  }
+
+  buyNow(product: Product): void {
+    const variantId = this.selectedVariantId(product);
+    if (!variantId) {
+      return;
+    }
+
+    if (!this.auth.isAuthenticated()) {
+      this.router.navigateByUrl('/login');
+      return;
+    }
+
+    this.cartLoading.set(true);
+    this.cartService.addItem({ variantId, quantity: 1 }).subscribe({
+      next: () => this.router.navigateByUrl('/checkout'),
+      error: () => this.cartLoading.set(false)
+    });
+  }
+
+  toggleWishlist(product: Product): void {
+    if (!this.auth.isAuthenticated()) {
+      this.router.navigateByUrl('/login');
+      return;
+    }
+
+    this.wishlistLoading.set(true);
+
+    if (this.wishlist.isWishlisted(product.id)) {
+      this.wishlist.remove(product.id).subscribe({
+        next: () => this.wishlistLoading.set(false),
+        error: () => this.wishlistLoading.set(false)
+      });
+      return;
+    }
+
+    this.wishlist.add(product.id).subscribe({
+      next: () => this.wishlistLoading.set(false),
+      error: () => this.wishlistLoading.set(false)
+    });
+  }
+
+  submitReview(product: Product): void {
+    if (this.reviewForm.invalid) {
+      this.reviewForm.markAllAsTouched();
+      return;
+    }
+
+    this.reviewSubmitting.set(true);
+    this.reviewMessage.set(null);
+    this.reviewError.set(null);
+    const value = this.reviewForm.getRawValue();
+
+    this.reviewService.create(product.id, {
+      rating: value.rating,
+      title: value.title.trim() || null,
+      comment: value.comment.trim() || null
+    }).subscribe({
+      next: (review) => {
+        this.reviews.set([review, ...this.reviews()]);
+        this.reviewForm.reset({ rating: 5, title: '', comment: '' });
+        this.reviewMessage.set(this.language.translate('product.reviewSuccess'));
+        this.reviewSubmitting.set(false);
+      },
+      error: () => {
+        this.reviewError.set(this.language.translate('product.reviewError'));
+        this.reviewSubmitting.set(false);
+      }
+    });
+  }
+
+  selectedVariantId(product: Product): string | null {
+    return this.selectedVariant() ?? product.variants.find((variant) => variant.active)?.id ?? product.variants[0]?.id ?? null;
+  }
+
+  averageRating(): string {
+    if (this.reviews().length === 0) {
+      return '4.8';
+    }
+
+    const total = this.reviews().reduce((sum, review) => sum + review.rating, 0);
+    return (total / this.reviews().length).toFixed(1);
   }
 
   imageUrl(product: Product): string {
@@ -258,5 +469,16 @@ export class ProductDetailPageComponent implements OnInit {
 
   activeVariantCount(product: Product): number {
     return product.variants.filter((variant) => variant.active).length || 1;
+  }
+
+  private loadReviews(productId: string): void {
+    this.reviewsLoading.set(true);
+    this.reviewService.list(productId).subscribe({
+      next: (reviews) => {
+        this.reviews.set(reviews);
+        this.reviewsLoading.set(false);
+      },
+      error: () => this.reviewsLoading.set(false)
+    });
   }
 }
