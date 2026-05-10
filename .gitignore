@@ -1,0 +1,28 @@
+﻿# IDE
+.idea/
+.vscode/
+*.iml
+
+# Backups
+*.bak
+
+# Java / Spring Boot
+backend/target/
+*.class
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Angular / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
