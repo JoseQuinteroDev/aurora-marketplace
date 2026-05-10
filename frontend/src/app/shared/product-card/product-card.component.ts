@@ -1,7 +1,7 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { LucideAngularModule, Heart, ShoppingCart, Star } from 'lucide-angular';
+import { LucideAngularModule, ArrowUpRight, Heart, ShoppingBag, Star } from 'lucide-angular';
 import { Product } from '../../core/models/product.model';
 
 @Component({
@@ -9,42 +9,52 @@ import { Product } from '../../core/models/product.model';
   imports: [CurrencyPipe, RouterLink, LucideAngularModule],
   template: `
     <article class="soft-card group overflow-hidden">
-      <a [routerLink]="['/products', product().slug]" class="block cursor-pointer">
-        <div class="aspect-[4/3] overflow-hidden bg-slate-100 dark:bg-white/10">
+      <a [routerLink]="['/products', product().slug]" class="relative block cursor-pointer">
+        <div class="aspect-[4/3] overflow-hidden bg-stone-100 dark:bg-white/10">
           <img
-            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+            class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             [src]="imageUrl()"
             [alt]="product().name"
           />
+          <div class="absolute inset-0 bg-gradient-to-t from-aurora-night/35 via-transparent to-transparent opacity-70"></div>
+          <div class="absolute left-3 top-3 flex flex-wrap gap-2">
+            @if (product().featured) {
+              <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">Featured</span>
+            }
+            <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">{{ product().category.name }}</span>
+          </div>
+          <span class="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-ui border border-white/60 bg-white/90 text-aurora-ink shadow-sm transition duration-200 group-hover:bg-aurora-ink group-hover:text-white dark:border-white/10 dark:bg-white/15 dark:text-white">
+            <lucide-icon [img]="ArrowUpRight" size="18" />
+          </span>
         </div>
       </a>
-      <div class="p-4">
+      <div class="p-4 sm:p-5">
         <div class="flex items-center justify-between gap-3">
-          <p class="text-xs font-semibold uppercase tracking-[0.14em] text-aurora-ocean">
+          <p class="text-xs font-black uppercase tracking-[0.14em] text-aurora-gold dark:text-amber-300">
             {{ product().brand.name }}
           </p>
-          <div class="flex items-center gap-1 text-xs font-semibold text-amber-600">
+          <div class="flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-300">
             <lucide-icon [img]="Star" size="14" />
             4.8
           </div>
         </div>
-        <a [routerLink]="['/products', product().slug]" class="mt-2 line-clamp-2 block cursor-pointer text-base font-bold text-slate-950 hover:text-aurora-ocean dark:text-white">
+        <a [routerLink]="['/products', product().slug]" class="mt-2 line-clamp-2 block cursor-pointer text-lg font-black leading-6 text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white dark:hover:text-amber-300">
           {{ product().name }}
         </a>
-        <p class="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-600 dark:text-slate-300">
+        <p class="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-aurora-muted dark:text-stone-300">
           {{ product().shortDescription || 'Premium marketplace item ready for Aurora checkout.' }}
         </p>
-        <div class="mt-4 flex items-center justify-between gap-3">
+        <div class="mt-5 flex items-end justify-between gap-3">
           <div>
-            <p class="text-xs text-slate-500 dark:text-slate-400">From</p>
-            <p class="text-lg font-bold text-slate-950 dark:text-white">{{ product().basePrice | currency }}</p>
+            <p class="text-xs font-semibold text-aurora-muted dark:text-stone-400">From</p>
+            <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ product().basePrice | currency }}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button class="ui-button h-10 w-10 border border-slate-200 bg-white p-0 text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-white/10 dark:text-white" type="button" aria-label="Save item">
+            <button class="ui-button ui-button-secondary h-10 w-10 p-0" type="button" aria-label="Save item">
               <lucide-icon [img]="Heart" size="17" />
             </button>
             <button class="ui-button ui-button-primary h-10 w-10 p-0" type="button" aria-label="Add item to cart">
-              <lucide-icon [img]="ShoppingCart" size="17" />
+              <lucide-icon [img]="ShoppingBag" size="17" />
             </button>
           </div>
         </div>
@@ -54,8 +64,9 @@ import { Product } from '../../core/models/product.model';
 })
 export class ProductCardComponent {
   readonly product = input.required<Product>();
+  readonly ArrowUpRight = ArrowUpRight;
   readonly Heart = Heart;
-  readonly ShoppingCart = ShoppingCart;
+  readonly ShoppingBag = ShoppingBag;
   readonly Star = Star;
 
   imageUrl(): string {

@@ -6,17 +6,17 @@ import { LucideAngularModule, AlertCircle, CheckCircle2, PackageOpen } from 'luc
   imports: [LucideAngularModule],
   template: `
     <div class="state-surface">
-      <div class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-ui bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-white">
+      <div class="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-ui border border-aurora-line bg-white text-aurora-charcoal shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white">
         @if (mode() === 'error') {
-          <lucide-icon [img]="AlertCircle" size="20" />
+          <lucide-icon class="text-aurora-rose" [img]="AlertCircle" size="20" />
         } @else if (mode() === 'success') {
-          <lucide-icon [img]="CheckCircle2" size="20" />
+          <lucide-icon class="text-aurora-emerald" [img]="CheckCircle2" size="20" />
         } @else {
-          <lucide-icon [img]="PackageOpen" size="20" />
+          <lucide-icon class="text-aurora-gold" [img]="PackageOpen" size="20" />
         }
       </div>
-      <p class="font-semibold text-slate-950 dark:text-white">{{ title() }}</p>
-      <p class="mt-1">{{ message() }}</p>
+      <p class="font-black text-aurora-ink dark:text-white">{{ title() }}</p>
+      <p class="mx-auto mt-1 max-w-md leading-6">{{ message() }}</p>
     </div>
   `
 })
