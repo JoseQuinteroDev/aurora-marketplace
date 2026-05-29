@@ -95,6 +95,72 @@
     networks:
       - aurora_network
 
+  # ---------------------------------------------------------------------------
+  # Application services. Opt-in via the "apps" profile so the default
+  # `docker compose up -d` still brings up infrastructure only:
+  #
+  #   docker compose up -d                      # infra only (run apps locally)
+  #   docker compose --profile apps up -d --build   # full containerized stack
+  # ---------------------------------------------------------------------------
+
+  # Core commerce service (catalog, cart, checkout, orders, payments, admin).
+  backend:
+    build:
+      context: ./backend
+    image: aurora/backend:latest
+    container_name: aurora_backend
+    profiles: ["apps"]
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - kafka
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/aurora_marketplace
+      SPRING_DATASOURCE_USERNAME: aurora_user
+      SPRING_DATASOURCE_PASSWORD: aurora_password
+      APP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - aurora_network
+
+  # Standalone microservice: turns domain events into transactional emails.
+  notification-service:
+    build:
+      context: ./services/notification-service
+    image: aurora/notification-service:latest
+    container_name: aurora_notification_service
+    profiles: ["apps"]
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - mailpit
+    environment:
+      APP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_MAIL_HOST: mailpit
+      APP_MAIL_PORT: "1025"
+    ports:
+      - "8082:8082"
+    networks:
+      - aurora_network
+
+  # Single entry point: routes the storefront to the core service.
+  gateway:
+    build:
+      context: ./gateway
+    image: aurora/gateway:latest
+    container_name: aurora_gateway
+    profiles: ["apps"]
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URI: http://backend:8080
+    ports:
+      - "8088:8088"
+    networks:
+      - aurora_network
+
 volumes:
   aurora_postgres_data:
   aurora_minio_data:

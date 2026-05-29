@@ -1,6 +1,6 @@
 # Backend Architecture
 
-Aurora Marketplace backend is a modular Spring Boot monolith. It is intentionally not split into microservices because the current goal is a portfolio-ready, testable and understandable e-commerce backend.
+Aurora Marketplace backend is a modular Spring Boot service that owns the commerce domain. It started as a self-contained monolith and now also acts as the **core service** in an event-driven landscape: it publishes domain events to Kafka that decoupled microservices (e.g. notification-service) consume. See [03_event_driven_microservices.md](03_event_driven_microservices.md) for the platform view.
 
 ## Core Principles
 
@@ -52,6 +52,11 @@ JWT contains the user email as subject and role as a claim. Spring Security relo
 8. A pending simulated payment is created.
 9. Coupon usage and audit logs are recorded.
 10. Cart is cleared.
+11. An `aurora.orders.created` event is published to Kafka (best-effort).
+
+Payment confirmation/failure publish `aurora.payments.confirmed` /
+`aurora.payments.failed`. Event publishing never blocks or breaks the
+commerce transaction — a broker outage only logs a warning.
 
 ## Batch v1
 
