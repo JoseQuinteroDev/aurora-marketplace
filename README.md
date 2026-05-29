@@ -40,9 +40,18 @@ flowchart LR
 ### Microservices & Gateway
 
 - Spring Cloud Gateway (single entry point, routing, CORS)
+- Redis-backed per-client rate limiting, automatic retries, per-call timeouts
 - Resilience4j circuit breaker + fallback
 - Apache Kafka (KRaft) event backbone
+- **Transactional Outbox** for reliable, consistent event publishing
+- **Idempotent** consumers + **retry with Dead Letter Topics**
 - notification-service (event consumer → transactional email)
+
+### Observability
+
+- Spring Boot Actuator health probes
+- Micrometer + Prometheus metrics (`/actuator/prometheus`) on every service
+- Micrometer Tracing (Brave) — `traceId`/`spanId` correlation in logs
 
 ### Frontend
 
@@ -83,7 +92,10 @@ Also implemented:
 
 - Angular 21 storefront + admin UI (premium design, dark mode, EN/ES, global search).
 - Event-driven architecture: Kafka domain events + notification microservice.
-- API gateway as the single entry point.
+- Reliable eventing: transactional outbox (producer), idempotent consumers and
+  retry + dead-letter topics (consumer).
+- API gateway as the single entry point (rate limiting, retries, timeouts, circuit breaker).
+- Observability: Prometheus metrics + distributed tracing across all services.
 
 Not implemented yet:
 
@@ -92,6 +104,29 @@ Not implemented yet:
 - Email verification.
 - Password recovery.
 - Orders shipping integrations.
+
+## Security & AppSec
+
+Security is treated as a first-class concern, with a documented AppSec program
+and an automated DevSecOps pipeline. Start with the
+**[AppSec program overview](docs/appsec/README.md)**.
+
+| Document | What it covers |
+|---|---|
+| [AppSec program](docs/appsec/README.md) | Security posture (implemented vs. gaps) and defense-in-depth. |
+| [Threat model (STRIDE)](docs/appsec/threat-model.md) | Assets, trust boundaries, attack surface, and mitigations mapped to code. |
+| [OWASP Top 10 coverage](docs/appsec/owasp-top-10.md) | Each 2021 risk mapped to controls, file references, and remediation status. |
+| [Security controls](docs/appsec/security-controls.md) | Catalog of implemented controls and where each lives. |
+| [Security testing](docs/appsec/security-testing.md) | Test strategy, shipped security tests, and a manual pentest checklist. |
+| [Vulnerable lab](docs/appsec/vulnerable-lab.md) | Deliberately-vulnerable branch design — attack & remediate writeups. |
+| [DevSecOps pipeline](docs/devops/cicd-security.md) | CI/CD security gates: SAST, SCA, secret scanning, IaC scan, SBOM. |
+| [Vulnerability disclosure](SECURITY.md) | How to report a security issue. |
+
+Automated on every push/PR via [GitHub Actions](.github/workflows/security.yml):
+**CodeQL** (SAST), **Trivy** (dependency & IaC scanning), **Gitleaks** (secret
+scanning, hard gate), **CycloneDX** (SBOM), plus **Dependabot** updates.
+Security regression tests live in
+`backend/src/test/java/com/aurora/backend/security/jwt/`.
 
 ## Local Services
 
@@ -151,6 +186,10 @@ JWT development defaults exist in `application.yml`. In production, override at 
 $env:APP_SECURITY_JWT_SECRET="replace-with-a-real-secret-of-at-least-32-chars"
 $env:APP_SECURITY_JWT_EXPIRATION_MINUTES="60"
 ```
+
+For the containerized stack, copy [`.env.example`](.env.example) to `.env` and
+override the development defaults (credentials, JWT secret). `.env` is gitignored;
+never commit real secrets — the CI secret scanner enforces this.
 
 Batch file locations can be overridden:
 

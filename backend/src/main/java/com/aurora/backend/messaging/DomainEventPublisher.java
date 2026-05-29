@@ -1,5 +1,7 @@
 package com.aurora.backend.messaging;
 
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -7,54 +9,50 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Publishes domain events to Kafka.
+ * Low-level transport that sends an already-serialized JSON event to Kafka.
  *
- * <p>Publishing is deliberately <strong>best-effort</strong>: the core commerce
- * flows (checkout, payment) must never fail because the event backbone is
- * degraded. Send failures are logged and swallowed, and publishing can be
- * disabled entirely via {@code app.events.enabled=false}.</p>
+ * <p>This is the broker-facing half of the outbox: {@link com.aurora.backend.messaging.outbox.OutboxRelay}
+ * calls {@link #publish} for each staged row and uses the boolean result to
+ * decide whether to mark the row published or schedule a retry. The send is
+ * <strong>synchronous</strong> (it waits for the broker ack) precisely so the
+ * relay can react to the outcome — unlike the commerce flow, the relay runs off
+ * the request thread, so blocking here is fine.</p>
  */
 @Component
 public class DomainEventPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(DomainEventPublisher.class);
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
-    private final boolean enabled;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final long sendTimeoutMs;
 
     public DomainEventPublisher(
-            KafkaTemplate<String, Object> kafkaTemplate,
-            @Value("${app.events.enabled:true}") boolean enabled
+            KafkaTemplate<String, String> kafkaTemplate,
+            @Value("${app.events.send-timeout-ms:8000}") long sendTimeoutMs
     ) {
         this.kafkaTemplate = kafkaTemplate;
-        this.enabled = enabled;
+        this.sendTimeoutMs = sendTimeoutMs;
     }
 
     /**
-     * Publish an event to a topic, keyed for ordering/partitioning (typically by
-     * order number). Never throws.
+     * Publish a JSON payload to a topic, keyed for partitioning/ordering.
      *
-     * @param topic   destination topic
-     * @param key     partition key (e.g. order number); may be {@code null}
-     * @param payload event record, serialized as JSON
+     * @return {@code true} once the broker has acknowledged the record.
      */
-    public void publish(String topic, String key, Object payload) {
-        if (!enabled) {
-            log.debug("Event publishing disabled; skipping {} for key {}", topic, key);
-            return;
-        }
-
+    public boolean publish(String topic, String key, String payloadJson) {
         try {
-            kafkaTemplate.send(topic, key, payload).whenComplete((result, ex) -> {
-                if (ex != null) {
-                    log.warn("Failed to publish event to topic {} (key {}): {}", topic, key, ex.getMessage());
-                } else if (log.isDebugEnabled()) {
-                    log.debug("Published event to topic {} (key {}) at offset {}",
-                            topic, key, result.getRecordMetadata().offset());
-                }
-            });
+            kafkaTemplate.send(topic, key, payloadJson).get(sendTimeoutMs, TimeUnit.MILLISECONDS);
+            if (log.isDebugEnabled()) {
+                log.debug("Published event to topic {} (key {})", topic, key);
+            }
+            return true;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while publishing to topic {} (key {})", topic, key);
+            return false;
         } catch (Exception ex) {
-            log.warn("Unable to dispatch event to topic {} (key {}): {}", topic, key, ex.getMessage());
+            log.warn("Failed to publish event to topic {} (key {}): {}", topic, key, ex.getMessage());
+            return false;
         }
     }
 }

@@ -22,11 +22,20 @@ public class FallbackController {
 
     @GetMapping("/core")
     public Mono<ResponseEntity<Map<String, Object>>> coreFallback() {
+        return unavailable("The commerce service is temporarily unavailable. Please try again shortly.");
+    }
+
+    @GetMapping("/notifications")
+    public Mono<ResponseEntity<Map<String, Object>>> notificationsFallback() {
+        return unavailable("The notification service is temporarily unavailable. Please try again shortly.");
+    }
+
+    private Mono<ResponseEntity<Map<String, Object>>> unavailable(String message) {
         Map<String, Object> body = Map.of(
                 "success", false,
                 "error", Map.of(
                         "code", "SERVICE_UNAVAILABLE",
-                        "message", "The commerce service is temporarily unavailable. Please try again shortly."
+                        "message", message
                 ),
                 "timestamp", Instant.now().toString()
         );

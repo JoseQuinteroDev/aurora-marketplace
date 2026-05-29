@@ -33,13 +33,13 @@
   kafka:
     bootstrap-servers: ${APP_KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
     producer:
+      # Events are serialized to JSON up-front and stored in the outbox, so the
+      # relay sends ready-made JSON strings (no JsonSerializer double-encoding).
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
       retries: 3
       properties:
-        spring.json.add.type.headers: false
-        # Fail fast instead of blocking checkout/payment when the broker is down.
         max.block.ms: 5000
         delivery.timeout.ms: 8000
         request.timeout.ms: 4000
@@ -51,16 +51,26 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
-
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
 
 logging:
   level:
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG
+  pattern:
+    # Surface trace/span ids so a request can be followed across services.
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
 app:
   security:
@@ -70,9 +80,21 @@ app:
       expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:60}
 
   events:
-    # When true, domain events are published to Kafka. Publishing is always
-    # best-effort: a broker outage never breaks checkout or payment.
+    # When true, domain events are recorded to the transactional outbox and then
+    # relayed to Kafka. A broker outage never breaks checkout or payment: events
+    # simply stay PENDING in the outbox until the broker is reachable again.
     enabled: ${APP_EVENTS_ENABLED:true}
+    # How long the relay waits for a broker ack before treating a send as failed.
+    send-timeout-ms: ${APP_EVENTS_SEND_TIMEOUT_MS:8000}
+
+  outbox:
+    relay:
+      # Delay between relay sweeps that drain PENDING outbox rows to Kafka.
+      fixed-delay-ms: ${APP_OUTBOX_RELAY_FIXED_DELAY_MS:2000}
+      # Rows claimed per sweep.
+      batch-size: ${APP_OUTBOX_RELAY_BATCH_SIZE:100}
+      # Send attempts before a row is parked as FAILED for inspection.
+      max-attempts: ${APP_OUTBOX_RELAY_MAX_ATTEMPTS:10}
 
   batch:
     files:

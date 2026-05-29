@@ -4,13 +4,19 @@
     container_name: aurora_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: aurora_marketplace
-      POSTGRES_USER: aurora_user
-      POSTGRES_PASSWORD: aurora_password
+      # Defaults keep local dev zero-config; override via .env (see .env.example).
+      POSTGRES_DB: ${POSTGRES_DB:-aurora_marketplace}
+      POSTGRES_USER: ${POSTGRES_USER:-aurora_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aurora_password}
     ports:
       - "5433:5432"
     volumes:
       - aurora_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aurora_user} -d ${POSTGRES_DB:-aurora_marketplace}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - aurora_network
 
@@ -20,6 +26,11 @@
     restart: unless-stopped
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - aurora_network
 
@@ -29,8 +40,8 @@
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: aurora_minio
-      MINIO_ROOT_PASSWORD: aurora_minio_password
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-aurora_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-aurora_minio_password}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -46,6 +57,11 @@
     ports:
       - "8025:8025"
       - "1025:1025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - aurora_network
 
@@ -112,15 +128,26 @@
     profiles: ["apps"]
     restart: unless-stopped
     depends_on:
-      - postgres
-      - kafka
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/aurora_marketplace
-      SPRING_DATASOURCE_USERNAME: aurora_user
-      SPRING_DATASOURCE_PASSWORD: aurora_password
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-aurora_marketplace}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-aurora_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-aurora_password}
       APP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Provide a strong secret in production (see .env.example). Dev fallback below.
+      APP_SECURITY_JWT_SECRET: ${APP_SECURITY_JWT_SECRET:-dev-only-insecure-jwt-secret-change-me-32}
+      APP_SECURITY_JWT_EXPIRATION_MINUTES: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:-60}
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     networks:
       - aurora_network
 
@@ -133,18 +160,26 @@
     profiles: ["apps"]
     restart: unless-stopped
     depends_on:
-      - kafka
-      - mailpit
+      kafka:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
     environment:
       APP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       APP_MAIL_HOST: mailpit
       APP_MAIL_PORT: "1025"
     ports:
       - "8082:8082"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
     networks:
       - aurora_network
 
-  # Single entry point: routes the storefront to the core service.
+  # Single entry point: routes the storefront to the core and notification services.
   gateway:
     build:
       context: ./gateway
@@ -153,11 +188,23 @@
     profiles: ["apps"]
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       BACKEND_URI: http://backend:8080
+      NOTIFICATION_URI: http://notification-service:8082
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     ports:
       - "8088:8088"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
     networks:
       - aurora_network
 

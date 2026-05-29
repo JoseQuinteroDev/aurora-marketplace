@@ -20,7 +20,16 @@ import org.springframework.stereotype.Component;
  * Subscribes to Aurora domain events and turns them into customer emails.
  *
  * <p>Events are consumed as raw JSON strings and mapped locally, which keeps
- * this service fully decoupled from the producer's classes.</p>
+ * this service fully decoupled from the producer's classes. Two reliability
+ * properties matter here:</p>
+ * <ul>
+ *   <li><b>Idempotent:</b> each event id is delivered once even if Kafka
+ *       redelivers the record (see {@link ProcessedEventTracker}).</li>
+ *   <li><b>Resilient:</b> a malformed payload is non-retryable and goes straight
+ *       to the dead-letter topic; a transient delivery failure is retried (the
+ *       exception propagates to the configured error handler) and dead-lettered
+ *       only after the retry budget is spent.</li>
+ * </ul>
  */
 @Component
 public class NotificationListener {
@@ -34,17 +43,20 @@ public class NotificationListener {
     private final ObjectMapper objectMapper;
     private final EmailService emailService;
     private final NotificationStore store;
+    private final ProcessedEventTracker processedEvents;
 
-    public NotificationListener(ObjectMapper objectMapper, EmailService emailService, NotificationStore store) {
+    public NotificationListener(ObjectMapper objectMapper, EmailService emailService,
+                                NotificationStore store, ProcessedEventTracker processedEvents) {
         this.objectMapper = objectMapper;
         this.emailService = emailService;
         this.store = store;
+        this.processedEvents = processedEvents;
     }
 
     @KafkaListener(topics = TOPIC_ORDER_CREATED)
     public void onOrderCreated(String payload) {
         OrderCreatedEvent event = parse(payload, OrderCreatedEvent.class, TOPIC_ORDER_CREATED);
-        if (event == null) {
+        if (isDuplicate(event.eventId(), TOPIC_ORDER_CREATED)) {
             return;
         }
 
@@ -68,13 +80,13 @@ public class NotificationListener {
                 event.currency()
         );
 
-        deliver("ORDER_CREATED", event.customerEmail(), subject, event.orderNumber(), body);
+        deliver(event.eventId(), "ORDER_CREATED", event.customerEmail(), subject, event.orderNumber(), body);
     }
 
     @KafkaListener(topics = TOPIC_PAYMENT_CONFIRMED)
     public void onPaymentConfirmed(String payload) {
         PaymentConfirmedEvent event = parse(payload, PaymentConfirmedEvent.class, TOPIC_PAYMENT_CONFIRMED);
-        if (event == null) {
+        if (isDuplicate(event.eventId(), TOPIC_PAYMENT_CONFIRMED)) {
             return;
         }
 
@@ -95,13 +107,13 @@ public class NotificationListener {
                 event.orderNumber()
         );
 
-        deliver("PAYMENT_CONFIRMED", event.customerEmail(), subject, event.orderNumber(), body);
+        deliver(event.eventId(), "PAYMENT_CONFIRMED", event.customerEmail(), subject, event.orderNumber(), body);
     }
 
     @KafkaListener(topics = TOPIC_PAYMENT_FAILED)
     public void onPaymentFailed(String payload) {
         PaymentFailedEvent event = parse(payload, PaymentFailedEvent.class, TOPIC_PAYMENT_FAILED);
-        if (event == null) {
+        if (isDuplicate(event.eventId(), TOPIC_PAYMENT_FAILED)) {
             return;
         }
 
@@ -125,11 +137,29 @@ public class NotificationListener {
                 event.reason()
         );
 
-        deliver("PAYMENT_FAILED", event.customerEmail(), subject, event.orderNumber(), body);
+        deliver(event.eventId(), "PAYMENT_FAILED", event.customerEmail(), subject, event.orderNumber(), body);
     }
 
-    private void deliver(String type, String recipient, String subject, String orderNumber, String body) {
+    private boolean isDuplicate(String eventId, String topic) {
+        if (processedEvents.alreadyProcessed(eventId)) {
+            log.info("Skipping duplicate event {} on topic {}", eventId, topic);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Sends the email and records the outcome. A delivery failure is rethrown so
+     * the Kafka error handler can retry it and, ultimately, dead-letter it — the
+     * event id is marked processed only once delivery actually succeeds.
+     */
+    private void deliver(String eventId, String type, String recipient,
+                         String subject, String orderNumber, String body) {
         boolean sent = emailService.send(recipient, subject, body);
+        if (!sent) {
+            throw new IllegalStateException("Email delivery failed for event " + eventId + " (" + type + ")");
+        }
+
         store.add(new NotificationRecord(
                 UUID.randomUUID().toString(),
                 type,
@@ -137,17 +167,19 @@ public class NotificationListener {
                 recipient,
                 subject,
                 orderNumber,
-                sent ? "SENT" : "FAILED",
+                "SENT",
                 Instant.now()
         ));
+        processedEvents.markProcessed(eventId);
     }
 
     private <T> T parse(String payload, Class<T> type, String topic) {
         try {
             return objectMapper.readValue(payload, type);
         } catch (Exception ex) {
-            log.warn("Discarding malformed event on topic {}: {}", topic, ex.getMessage());
-            return null;
+            // Unrecoverable: no number of retries will fix a malformed payload.
+            // Signal the error handler to dead-letter it immediately.
+            throw new NonRetryableEventException("Malformed event on topic " + topic, ex);
         }
     }
 }

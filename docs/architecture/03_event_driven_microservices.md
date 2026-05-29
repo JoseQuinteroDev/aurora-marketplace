@@ -55,15 +55,42 @@ Event records carry an `eventId`, `occurredAt`, the order identifiers, the
 customer email/name and the relevant monetary fields — enough context for a
 consumer to act without calling back into the core.
 
+## Reliability
+
+Delivery is **at-least-once**, end to end:
+
+- **Producer — Transactional Outbox.** The core never writes to Kafka inside the
+  commerce transaction. It records events to an `event_outbox` table in the same
+  DB transaction, and a scheduled relay (`FOR UPDATE SKIP LOCKED`, multi-instance
+  safe) publishes them. A broker outage delays delivery instead of losing events;
+  a rolled-back checkout produces no event.
+- **Consumer — Idempotent.** Each event carries an `eventId`. The
+  notification-service skips ids it has already delivered, so a Kafka redelivery
+  (rebalance, restart) never sends a duplicate email.
+- **Consumer — Retry + Dead Letter Topic.** Transient failures (e.g. SMTP down)
+  are retried with exponential backoff; a malformed/poison record is
+  non-retryable. Exhausted or poison records are routed to `<topic>.DLT` for
+  inspection and replay instead of being silently dropped or blocking the
+  partition.
+
+| Dead-letter topic | Source topic |
+|---|---|
+| `aurora.orders.created.DLT` | `aurora.orders.created` |
+| `aurora.payments.confirmed.DLT` | `aurora.payments.confirmed` |
+| `aurora.payments.failed.DLT` | `aurora.payments.failed` |
+
 ## Design Principles
 
-- **Resilience first.** Publishing is best-effort and fail-fast: if Kafka is
-  down, checkout and payment still succeed; the producer logs a warning. It can
-  be disabled entirely with `app.events.enabled=false`.
 - **No shared state.** Services integrate only through events. Each service owns
   its data (notification-service keeps an in-memory log of what it processed).
-- **Single entry point.** The gateway centralizes routing, CORS and resilience
-  (Resilience4j circuit breaker with a JSON fallback when the core is down).
+- **Single entry point.** The gateway centralizes routing, CORS, per-client-IP
+  **rate limiting** (Redis-backed), automatic **retries** for idempotent GETs,
+  per-call **timeouts** and a Resilience4j **circuit breaker** with a JSON
+  fallback when a downstream is down. It routes `/api/notifications/**` to the
+  notification-service and everything else under `/api/**` to the core.
+- **Observability.** Every service exposes Prometheus metrics
+  (`/actuator/prometheus`) and emits `traceId`/`spanId` in its logs via
+  Micrometer Tracing.
 - **Independent deployability.** Each service has its own Maven build and
   Dockerfile and can be scaled or released on its own.
 

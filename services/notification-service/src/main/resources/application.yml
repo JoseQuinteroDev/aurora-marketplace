@@ -27,11 +27,32 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
 
 app:
   notification:
     from: ${APP_NOTIFICATION_FROM:Aurora Marketplace <no-reply@aurora.dev>}
+
+  # Consumer resilience: transient failures are retried with exponential backoff;
+  # exhausted/poison records are routed to "<topic>.DLT".
+  consumer:
+    retry:
+      attempts: ${APP_CONSUMER_RETRY_ATTEMPTS:3}
+      initial-interval-ms: ${APP_CONSUMER_RETRY_INITIAL_MS:1000}
+      multiplier: ${APP_CONSUMER_RETRY_MULTIPLIER:2.0}
+      max-interval-ms: ${APP_CONSUMER_RETRY_MAX_MS:10000}

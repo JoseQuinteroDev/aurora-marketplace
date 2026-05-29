@@ -1,0 +1,73 @@
+version: 2
+
+# Automated dependency updates across every ecosystem in the repo.
+# Security updates are raised by Dependabot regardless of schedule; the weekly
+# cadence below covers routine version bumps. Each ecosystem groups patch/minor
+# bumps into a single PR to keep review noise low.
+
+updates:
+  # --- Java services (Maven) ---
+  - package-ecosystem: maven
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      spring-and-minor:
+        update-types: [minor, patch]
+    labels: [dependencies, backend]
+
+  - package-ecosystem: maven
+    directory: /gateway
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      spring-and-minor:
+        update-types: [minor, patch]
+    labels: [dependencies, gateway]
+
+  - package-ecosystem: maven
+    directory: /services/notification-service
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      spring-and-minor:
+        update-types: [minor, patch]
+    labels: [dependencies, notification-service]
+
+  # --- Frontend (npm) ---
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      angular-and-minor:
+        update-types: [minor, patch]
+    labels: [dependencies, frontend]
+
+  # --- Container base images ---
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]
+  - package-ecosystem: docker
+    directory: /gateway
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]
+  - package-ecosystem: docker
+    directory: /services/notification-service
+    schedule:
+      interval: weekly
+    labels: [dependencies, docker]
+
+  # --- GitHub Actions (pin & update workflow dependencies) ---
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies, ci]

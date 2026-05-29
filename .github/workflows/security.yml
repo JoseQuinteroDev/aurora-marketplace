@@ -1,0 +1,178 @@
+name: Security
+
+# The "Sec" in DevSecOps. Every push and PR runs a layered set of scanners:
+#   - SAST           (CodeQL)            -> code-level vulnerabilities
+#   - SCA            (Trivy filesystem)  -> vulnerable dependencies
+#   - Secret scan    (Gitleaks)          -> committed credentials  [hard gate]
+#   - IaC / image    (Trivy config + Hadolint) -> Dockerfile & compose misconfig
+#   - SBOM           (CycloneDX)         -> supply-chain inventory artifact
+#
+# Findings land in the repository's Security tab (code scanning) via SARIF.
+# Gating philosophy: secrets fail the build; vulnerability findings are reported
+# (base images always carry some CVEs) and triaged from the Security tab.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly baseline scan so newly-disclosed CVEs surface even without a push.
+    - cron: '23 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # SAST — CodeQL for the Java services and the Angular frontend.
+  # build-mode: none uses CodeQL's buildless extraction (no Maven/npm build).
+  # ---------------------------------------------------------------------------
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}
+
+  # ---------------------------------------------------------------------------
+  # SCA — dependency vulnerabilities across all modules (Maven + npm).
+  # Reports to the Security tab; does not block (triage from there).
+  # ---------------------------------------------------------------------------
+  dependency-scan:
+    name: Dependency vulnerabilities (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scanners: vuln
+          format: sarif
+          output: trivy-deps.sarif
+          severity: CRITICAL,HIGH
+        env:
+          # Pin the DB source so rate-limited pulls don't fail the job.
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-deps.sarif
+          category: trivy-dependencies
+
+  # ---------------------------------------------------------------------------
+  # Secret scanning — committed credentials. This is a HARD GATE.
+  # ---------------------------------------------------------------------------
+  secret-scan:
+    name: Secret scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so Gitleaks can scan past commits
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # IaC / container — Dockerfile and compose misconfiguration.
+  # ---------------------------------------------------------------------------
+  iac-scan:
+    name: IaC & Dockerfile scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Trivy config scan (Dockerfiles, compose)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          format: sarif
+          output: trivy-config.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
+
+      - name: Hadolint (backend)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: backend/Dockerfile
+          failure-threshold: warning
+
+      - name: Hadolint (gateway)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: gateway/Dockerfile
+          failure-threshold: warning
+
+      - name: Hadolint (notification-service)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: services/notification-service/Dockerfile
+          failure-threshold: warning
+
+  # ---------------------------------------------------------------------------
+  # SBOM — supply-chain inventory (CycloneDX) published as a build artifact.
+  # ---------------------------------------------------------------------------
+  sbom:
+    name: SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          artifact-name: aurora-sbom.cyclonedx.json
+
+      - name: Publish SBOM artifact
+        uses: anchore/sbom-action/publish-sbom@v0
+        with:
+          sbom-artifact-match: ".*\\.cyclonedx\\.json$"

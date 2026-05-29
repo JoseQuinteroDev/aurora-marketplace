@@ -5,6 +5,11 @@ spring:
   application:
     name: aurora-gateway
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
   cloud:
     gateway:
       # Global CORS so the Angular storefront can talk to the platform through
@@ -26,11 +31,35 @@ spring:
             allow-credentials: true
             max-age: 3600
 
-      # Default filters applied to every route.
+      # Applied to every route: dedupe CORS headers and throttle per client IP
+      # using a Redis-backed token bucket shared across gateway instances.
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+        - name: RequestRateLimiter
+          args:
+            key-resolver: "#{@clientIpKeyResolver}"
+            redis-rate-limiter.replenishRate: ${RATE_LIMIT_REPLENISH:20}
+            redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
+            redis-rate-limiter.requestedTokens: 1
 
       routes:
+        # Notification service read API. Declared before the core catch-all so
+        # /api/notifications/** is routed here, not to the commerce core.
+        - id: aurora-notifications-api
+          uri: ${NOTIFICATION_URI:http://localhost:8082}
+          predicates:
+            - Path=/api/notifications/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: notificationApiCircuitBreaker
+                fallbackUri: forward:/fallback/notifications
+            - name: Retry
+              args:
+                retries: 2
+                methods: GET
+                series: SERVER_ERROR
+
         # Core commerce service (catalog, cart, checkout, orders, payments, admin).
         - id: aurora-core-api
           uri: ${BACKEND_URI:http://localhost:8080}
@@ -41,6 +70,12 @@ spring:
               args:
                 name: coreApiCircuitBreaker
                 fallbackUri: forward:/fallback/core
+            - name: Retry
+              args:
+                retries: 2
+                # Only safe (idempotent) reads are retried automatically.
+                methods: GET
+                series: SERVER_ERROR
 
         # Core actuator surface, namespaced behind the gateway.
         - id: aurora-core-actuator
@@ -50,15 +85,51 @@ spring:
           filters:
             - RewritePath=/core-actuator/(?<segment>.*), /actuator/$\{segment}
 
+# Per-call latency ceiling: if the core takes longer than this, the circuit
+# breaker trips and the request is sent to the fallback instead of hanging.
+resilience4j:
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: ${GATEWAY_TIMEOUT:5s}
+        cancel-running-future: true
+    instances:
+      coreApiCircuitBreaker:
+        base-config: default
+      notificationApiCircuitBreaker:
+        base-config: default
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 5
+    instances:
+      coreApiCircuitBreaker:
+        base-config: default
+      notificationApiCircuitBreaker:
+        base-config: default
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: health,info,gateway,prometheus,metrics
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
 
 logging:
   level:
     org.springframework.cloud.gateway: INFO
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"

@@ -52,11 +52,26 @@ JWT contains the user email as subject and role as a claim. Spring Security relo
 8. A pending simulated payment is created.
 9. Coupon usage and audit logs are recorded.
 10. Cart is cleared.
-11. An `aurora.orders.created` event is published to Kafka (best-effort).
+11. An `aurora.orders.created` event is **recorded to the transactional outbox**
+    in the same transaction (see below).
 
-Payment confirmation/failure publish `aurora.payments.confirmed` /
-`aurora.payments.failed`. Event publishing never blocks or breaks the
-commerce transaction — a broker outage only logs a warning.
+Payment confirmation/failure record `aurora.payments.confirmed` /
+`aurora.payments.failed` to the outbox.
+
+## Transactional Outbox
+
+Events are never sent to Kafka directly from the commerce flow. Instead
+`OutboxEventRecorder` writes them to an `event_outbox` table **inside the same
+database transaction** as the order/payment change. A scheduled `OutboxRelay`
+then drains PENDING rows to Kafka and marks them PUBLISHED.
+
+This removes the *dual-write problem*: an event exists if and only if its
+business transaction committed (no phantom events on rollback, no lost events on
+a broker outage — they stay PENDING until Kafka is reachable). The relay's claim
+query uses `FOR UPDATE SKIP LOCKED`, so several core instances can relay
+concurrently without producing duplicates. Delivery is therefore **at-least-once**;
+consumers must be idempotent. Recording can be disabled with
+`app.events.enabled=false`.
 
 ## Batch v1
 

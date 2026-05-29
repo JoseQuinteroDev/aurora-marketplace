@@ -11,9 +11,9 @@ import com.aurora.backend.order.entity.OrderStatus;
 import com.aurora.backend.order.entity.OrderStatusHistory;
 import com.aurora.backend.order.repository.OrderRepository;
 import com.aurora.backend.messaging.AuroraTopics;
-import com.aurora.backend.messaging.DomainEventPublisher;
 import com.aurora.backend.messaging.event.PaymentConfirmedEvent;
 import com.aurora.backend.messaging.event.PaymentFailedEvent;
+import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.payment.dto.PaymentResponse;
 import com.aurora.backend.payment.dto.PaymentSimulationRequest;
 import com.aurora.backend.payment.entity.Payment;
@@ -33,7 +33,7 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final AuditLogService auditLogService;
-    private final DomainEventPublisher eventPublisher;
+    private final OutboxEventRecorder outboxRecorder;
 
     private static final String CURRENCY = "USD";
 
@@ -41,12 +41,12 @@ public class PaymentService {
             OrderRepository orderRepository,
             PaymentRepository paymentRepository,
             AuditLogService auditLogService,
-            DomainEventPublisher eventPublisher
+            OutboxEventRecorder outboxRecorder
     ) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.auditLogService = auditLogService;
-        this.eventPublisher = eventPublisher;
+        this.outboxRecorder = outboxRecorder;
     }
 
     @Transactional
@@ -109,7 +109,10 @@ public class PaymentService {
 
         String customerName = user.getFirstName() + " " + user.getLastName();
         if (Boolean.TRUE.equals(request.success())) {
-            eventPublisher.publish(
+            outboxRecorder.record(
+                    "ORDER",
+                    order.getOrderNumber(),
+                    "PAYMENT_CONFIRMED",
                     AuroraTopics.PAYMENT_CONFIRMED,
                     order.getOrderNumber(),
                     PaymentConfirmedEvent.of(
@@ -123,7 +126,10 @@ public class PaymentService {
                     )
             );
         } else {
-            eventPublisher.publish(
+            outboxRecorder.record(
+                    "ORDER",
+                    order.getOrderNumber(),
+                    "PAYMENT_FAILED",
                     AuroraTopics.PAYMENT_FAILED,
                     order.getOrderNumber(),
                     PaymentFailedEvent.of(

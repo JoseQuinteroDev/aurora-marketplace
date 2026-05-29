@@ -19,8 +19,8 @@ import com.aurora.backend.inventory.entity.StockMovementType;
 import com.aurora.backend.inventory.repository.InventoryRepository;
 import com.aurora.backend.inventory.repository.StockMovementRepository;
 import com.aurora.backend.messaging.AuroraTopics;
-import com.aurora.backend.messaging.DomainEventPublisher;
 import com.aurora.backend.messaging.event.OrderCreatedEvent;
+import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.order.dto.OrderResponse;
 import com.aurora.backend.order.entity.Order;
 import com.aurora.backend.order.entity.OrderItem;
@@ -52,7 +52,7 @@ public class CheckoutService {
     private final CouponService couponService;
     private final CouponUsageRepository couponUsageRepository;
     private final AuditLogService auditLogService;
-    private final DomainEventPublisher eventPublisher;
+    private final OutboxEventRecorder outboxRecorder;
 
     private static final String CURRENCY = "USD";
 
@@ -65,7 +65,7 @@ public class CheckoutService {
             CouponService couponService,
             CouponUsageRepository couponUsageRepository,
             AuditLogService auditLogService,
-            DomainEventPublisher eventPublisher
+            OutboxEventRecorder outboxRecorder
     ) {
         this.cartRepository = cartRepository;
         this.inventoryRepository = inventoryRepository;
@@ -75,7 +75,7 @@ public class CheckoutService {
         this.couponService = couponService;
         this.couponUsageRepository = couponUsageRepository;
         this.auditLogService = auditLogService;
-        this.eventPublisher = eventPublisher;
+        this.outboxRecorder = outboxRecorder;
     }
 
     @Transactional
@@ -161,7 +161,10 @@ public class CheckoutService {
 
         cart.clearItems();
 
-        eventPublisher.publish(
+        outboxRecorder.record(
+                "ORDER",
+                savedOrder.getOrderNumber(),
+                "ORDER_CREATED",
                 AuroraTopics.ORDER_CREATED,
                 savedOrder.getOrderNumber(),
                 OrderCreatedEvent.of(
