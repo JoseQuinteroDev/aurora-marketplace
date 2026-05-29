@@ -49,6 +49,118 @@
     networks:
       - aurora_network
 
+  # Event backbone for the event-driven architecture (KRaft mode, no ZooKeeper).
+  # Host apps connect via localhost:29092; in-network services via kafka:9092.
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: aurora_kafka
+    restart: unless-stopped
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - aurora_network
+
+  # Web console to inspect topics, events and consumer groups.
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: aurora_kafka_ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: aurora-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - aurora_network
+
+  # ---------------------------------------------------------------------------
+  # Application services. Opt-in via the "apps" profile so the default
+  # `docker compose up -d` still brings up infrastructure only:
+  #
+  #   docker compose up -d                      # infra only (run apps locally)
+  #   docker compose --profile apps up -d --build   # full containerized stack
+  # ---------------------------------------------------------------------------
+
+  # Core commerce service (catalog, cart, checkout, orders, payments, admin).
+  backend:
+    build:
+      context: ./backend
+    image: aurora/backend:latest
+    container_name: aurora_backend
+    profiles: ["apps"]
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - kafka
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/aurora_marketplace
+      SPRING_DATASOURCE_USERNAME: aurora_user
+      SPRING_DATASOURCE_PASSWORD: aurora_password
+      APP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+    networks:
+      - aurora_network
+
+  # Standalone microservice: turns domain events into transactional emails.
+  notification-service:
+    build:
+      context: ./services/notification-service
+    image: aurora/notification-service:latest
+    container_name: aurora_notification_service
+    profiles: ["apps"]
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - mailpit
+    environment:
+      APP_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_MAIL_HOST: mailpit
+      APP_MAIL_PORT: "1025"
+    ports:
+      - "8082:8082"
+    networks:
+      - aurora_network
+
+  # Single entry point: routes the storefront to the core service.
+  gateway:
+    build:
+      context: ./gateway
+    image: aurora/gateway:latest
+    container_name: aurora_gateway
+    profiles: ["apps"]
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URI: http://backend:8080
+    ports:
+      - "8088:8088"
+    networks:
+      - aurora_network
+
 volumes:
   aurora_postgres_data:
   aurora_minio_data:

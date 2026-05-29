@@ -1,0 +1,41 @@
+package com.aurora.backend.messaging.event;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
+
+/** Published when a payment attempt for an order fails. */
+public record PaymentFailedEvent(
+        String eventId,
+        Instant occurredAt,
+        UUID orderId,
+        String orderNumber,
+        String customerEmail,
+        String customerName,
+        BigDecimal amount,
+        String currency,
+        String reason
+) {
+
+    public static PaymentFailedEvent of(
+            UUID orderId,
+            String orderNumber,
+            String customerEmail,
+            String customerName,
+            BigDecimal amount,
+            String currency,
+            String reason
+    ) {
+        return new PaymentFailedEvent(
+                UUID.randomUUID().toString(),
+                Instant.now(),
+                orderId,
+                orderNumber,
+                customerEmail,
+                customerName,
+                amount,
+                currency,
+                reason
+        );
+    }
+}

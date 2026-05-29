@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideAngularModule,
   ArrowRight,
@@ -56,7 +56,7 @@ import { WishlistService } from '../../services/wishlist.service';
 
           <label class="ml-auto hidden h-12 min-w-0 flex-1 max-w-xl items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm transition duration-200 focus-within:border-aurora-amber focus-within:ring-2 focus-within:ring-aurora-amber/20 lg:flex dark:border-white/10 dark:bg-white/10">
             <lucide-icon [img]="Search" size="18" />
-            <input class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.search' | t" />
+            <input #deskSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.search' | t" (keyup.enter)="submitSearch(deskSearch.value)" />
             <span class="rounded-ui bg-stone-100 px-2 py-1 text-[11px] font-black text-aurora-muted dark:bg-white/10 dark:text-stone-300">/</span>
           </label>
 
@@ -93,7 +93,7 @@ import { WishlistService } from '../../services/wishlist.service';
         <div class="page-shell pb-3 lg:hidden">
           <label class="flex h-11 items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm dark:border-white/10 dark:bg-white/10">
             <lucide-icon [img]="Search" size="17" />
-            <input class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.mobileSearch' | t" />
+            <input #mobSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.mobileSearch' | t" (keyup.enter)="submitSearch(mobSearch.value)" />
           </label>
         </div>
       </header>
@@ -176,8 +176,16 @@ export class StorefrontLayoutComponent implements OnInit {
     readonly auth: AuthService,
     readonly cart: CartService,
     readonly language: LanguageService,
-    readonly wishlist: WishlistService
+    readonly wishlist: WishlistService,
+    private readonly router: Router
   ) {}
+
+  submitSearch(term: string): void {
+    const value = (term ?? '').trim();
+    this.router.navigate(['/catalog'], {
+      queryParams: value ? { q: value } : {}
+    });
+  }
 
   ngOnInit(): void {
     if (!this.auth.isAuthenticated()) {
