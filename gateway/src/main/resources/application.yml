@@ -1,0 +1,64 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: aurora-gateway
+
+  cloud:
+    gateway:
+      # Global CORS so the Angular storefront can talk to the platform through
+      # a single origin (the gateway) in any environment.
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns:
+              - "http://localhost:4200"
+              - "http://localhost:*"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
+
+      # Default filters applied to every route.
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+
+      routes:
+        # Core commerce service (catalog, cart, checkout, orders, payments, admin).
+        - id: aurora-core-api
+          uri: ${BACKEND_URI:http://localhost:8080}
+          predicates:
+            - Path=/api/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: coreApiCircuitBreaker
+                fallbackUri: forward:/fallback/core
+
+        # Core actuator surface, namespaced behind the gateway.
+        - id: aurora-core-actuator
+          uri: ${BACKEND_URI:http://localhost:8080}
+          predicates:
+            - Path=/core-actuator/**
+          filters:
+            - RewritePath=/core-actuator/(?<segment>.*), /actuator/$\{segment}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
