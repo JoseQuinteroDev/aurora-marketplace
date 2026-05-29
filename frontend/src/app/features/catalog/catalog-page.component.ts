@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { LucideAngularModule, Grid3X3, Search, SlidersHorizontal, Sparkles, X } from 'lucide-angular';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { Brand, Category, Product } from '../../core/models/product.model';
@@ -181,28 +181,28 @@ export class CatalogPageComponent implements OnInit {
   readonly X = X;
   readonly skeletonItems = [1, 2, 3, 4, 5, 6];
 
-  constructor(private readonly catalogService: CatalogService) {}
+  constructor(
+    private readonly catalogService: CatalogService,
+    private readonly route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
-    forkJoin({
-      products: this.catalogService.getProducts(),
-      categories: this.catalogService.getCategories(),
-      brands: this.catalogService.getBrands()
-    }).subscribe({
-      next: ({ products, categories, brands }) => {
-        this.products.set(products);
-        this.categories.set(categories);
-        this.brands.set(brands);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Start the backend on port 8080 to load the catalog.');
-        this.loading.set(false);
-      }
+    // Filters load once; product errors are surfaced by the results grid.
+    this.catalogService.getCategories().subscribe({ next: (c) => this.categories.set(c), error: () => undefined });
+    this.catalogService.getBrands().subscribe({ next: (b) => this.brands.set(b), error: () => undefined });
+
+    // React to the global search box (?q=...) as well as in-page searches.
+    this.route.queryParamMap.subscribe((params) => {
+      this.query.set(params.get('q') ?? '');
+      this.loadProducts();
     });
   }
 
   search(): void {
+    this.loadProducts();
+  }
+
+  private loadProducts(): void {
     const value = this.query().trim();
     this.loading.set(true);
     this.error.set(null);
@@ -214,7 +214,11 @@ export class CatalogPageComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Search failed. Check that the backend is running.');
+        this.error.set(
+          value
+            ? 'Search failed. Check that the backend is running.'
+            : 'Start the backend on port 8080 to load the catalog.'
+        );
         this.loading.set(false);
       }
     });
