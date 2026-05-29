@@ -18,6 +18,9 @@ import com.aurora.backend.inventory.entity.StockMovement;
 import com.aurora.backend.inventory.entity.StockMovementType;
 import com.aurora.backend.inventory.repository.InventoryRepository;
 import com.aurora.backend.inventory.repository.StockMovementRepository;
+import com.aurora.backend.messaging.AuroraTopics;
+import com.aurora.backend.messaging.DomainEventPublisher;
+import com.aurora.backend.messaging.event.OrderCreatedEvent;
 import com.aurora.backend.order.dto.OrderResponse;
 import com.aurora.backend.order.entity.Order;
 import com.aurora.backend.order.entity.OrderItem;
@@ -49,6 +52,9 @@ public class CheckoutService {
     private final CouponService couponService;
     private final CouponUsageRepository couponUsageRepository;
     private final AuditLogService auditLogService;
+    private final DomainEventPublisher eventPublisher;
+
+    private static final String CURRENCY = "USD";
 
     public CheckoutService(
             CartRepository cartRepository,
@@ -58,7 +64,8 @@ public class CheckoutService {
             PaymentRepository paymentRepository,
             CouponService couponService,
             CouponUsageRepository couponUsageRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            DomainEventPublisher eventPublisher
     ) {
         this.cartRepository = cartRepository;
         this.inventoryRepository = inventoryRepository;
@@ -68,6 +75,7 @@ public class CheckoutService {
         this.couponService = couponService;
         this.couponUsageRepository = couponUsageRepository;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -152,6 +160,24 @@ public class CheckoutService {
         );
 
         cart.clearItems();
+
+        eventPublisher.publish(
+                AuroraTopics.ORDER_CREATED,
+                savedOrder.getOrderNumber(),
+                OrderCreatedEvent.of(
+                        savedOrder.getId(),
+                        savedOrder.getOrderNumber(),
+                        user.getEmail(),
+                        user.getFirstName() + " " + user.getLastName(),
+                        savedOrder.getItems().size(),
+                        savedOrder.getSubtotal(),
+                        savedOrder.getDiscountTotal(),
+                        savedOrder.getTotal(),
+                        CURRENCY,
+                        savedOrder.getStatus().name()
+                )
+        );
+
         return OrderResponse.from(savedOrder);
     }
 

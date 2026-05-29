@@ -71,6 +71,12 @@
             <artifactId>spring-boot-starter-batch</artifactId>
         </dependency>
 
+        <!-- Kafka: publish domain events to the event backbone -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <!-- Actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

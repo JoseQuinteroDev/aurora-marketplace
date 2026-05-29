@@ -10,6 +10,10 @@ import com.aurora.backend.order.entity.Order;
 import com.aurora.backend.order.entity.OrderStatus;
 import com.aurora.backend.order.entity.OrderStatusHistory;
 import com.aurora.backend.order.repository.OrderRepository;
+import com.aurora.backend.messaging.AuroraTopics;
+import com.aurora.backend.messaging.DomainEventPublisher;
+import com.aurora.backend.messaging.event.PaymentConfirmedEvent;
+import com.aurora.backend.messaging.event.PaymentFailedEvent;
 import com.aurora.backend.payment.dto.PaymentResponse;
 import com.aurora.backend.payment.dto.PaymentSimulationRequest;
 import com.aurora.backend.payment.entity.Payment;
@@ -29,15 +33,20 @@ public class PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final AuditLogService auditLogService;
+    private final DomainEventPublisher eventPublisher;
+
+    private static final String CURRENCY = "USD";
 
     public PaymentService(
             OrderRepository orderRepository,
             PaymentRepository paymentRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            DomainEventPublisher eventPublisher
     ) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -97,6 +106,38 @@ public class PaymentService {
         }
 
         Payment savedPayment = paymentRepository.saveAndFlush(payment);
+
+        String customerName = user.getFirstName() + " " + user.getLastName();
+        if (Boolean.TRUE.equals(request.success())) {
+            eventPublisher.publish(
+                    AuroraTopics.PAYMENT_CONFIRMED,
+                    order.getOrderNumber(),
+                    PaymentConfirmedEvent.of(
+                            order.getId(),
+                            order.getOrderNumber(),
+                            user.getEmail(),
+                            customerName,
+                            savedPayment.getAmount(),
+                            CURRENCY,
+                            savedPayment.getMethod().name()
+                    )
+            );
+        } else {
+            eventPublisher.publish(
+                    AuroraTopics.PAYMENT_FAILED,
+                    order.getOrderNumber(),
+                    PaymentFailedEvent.of(
+                            order.getId(),
+                            order.getOrderNumber(),
+                            user.getEmail(),
+                            customerName,
+                            savedPayment.getAmount(),
+                            CURRENCY,
+                            normalizeMessage(request.message(), "Payment simulation failed.")
+                    )
+            );
+        }
+
         return PaymentResponse.from(savedPayment);
     }
 
