@@ -70,7 +70,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
 
             <div class="grid grid-cols-4 gap-3">
               @for (image of galleryUrls(item); track image) {
-                <button class="group overflow-hidden rounded-ui border border-aurora-line bg-white p-1 transition duration-200 hover:border-aurora-amber dark:border-white/10 dark:bg-white/10" type="button" (click)="selectedImage.set(image)" aria-label="Select product image">
+                <button class="group overflow-hidden rounded-ui border border-aurora-line bg-white p-1 transition duration-200 hover:border-aurora-amber dark:border-white/10 dark:bg-white/10" type="button" (click)="selectedImage.set(image)" [attr.aria-label]="'a11y.selectImage' | t">
                   <img loading="lazy" class="aspect-square w-full rounded-ui object-cover transition duration-300 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" [src]="image" [alt]="item.name" />
                 </button>
               }
@@ -89,7 +89,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                       {{ averageRating() }}
                     </span>
                     <span class="h-1 w-1 rounded-full bg-aurora-line dark:bg-white/20"></span>
-                    <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ activeVariantCount(item) }} variants</span>
+                    <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ activeVariantCount(item) }} {{ 'product.variantsLabel' | t }}</span>
                     <span class="aurora-badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                       <lucide-icon [img]="BadgeCheck" size="14" />
                       {{ 'product.inStock' | t }}
@@ -139,8 +139,8 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   @for (promise of promises; track promise.title) {
                     <div class="surface-panel p-4">
                       <lucide-icon class="text-aurora-ocean dark:text-blue-300" [img]="promise.icon" size="20" />
-                      <p class="mt-3 text-sm font-black text-aurora-ink dark:text-white">{{ promise.title }}</p>
-                      <p class="mt-1 text-xs leading-5 text-aurora-muted dark:text-stone-300">{{ promise.copy }}</p>
+                      <p class="mt-3 text-sm font-black text-aurora-ink dark:text-white">{{ promise.title | t }}</p>
+                      <p class="mt-1 text-xs leading-5 text-aurora-muted dark:text-stone-300">{{ promise.copy | t }}</p>
                     </div>
                   }
                 </div>
@@ -168,12 +168,12 @@ type ProductTab = 'description' | 'specs' | 'reviews';
           <div class="p-3 sm:p-5">
             @if (activeTab() === 'description') {
               <p class="max-w-3xl text-sm leading-7 text-aurora-muted dark:text-stone-300">
-                {{ item.description || item.shortDescription || 'A refined piece from the Aurora edit, chosen for quality, everyday usefulness and lasting design.' }}
+                {{ item.description || item.shortDescription || ('product.descriptionFallback' | t) }}
               </p>
             } @else if (activeTab() === 'specs') {
               <div class="grid gap-3 sm:grid-cols-3">
                 <div class="rounded-ui bg-stone-50 p-4 dark:bg-white/5">
-                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">Brand</p>
+                  <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">{{ 'product.specBrand' | t }}</p>
                   <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.brand.name }}</p>
                 </div>
                 <div class="rounded-ui bg-stone-50 p-4 dark:bg-white/5">
@@ -304,9 +304,9 @@ export class ProductDetailPageComponent implements OnInit {
   readonly stars = [1, 2, 3, 4, 5];
 
   readonly promises = [
-    { icon: Truck, title: 'Fast shipping', copy: 'Fast, tracked delivery on every order.' },
-    { icon: ShieldCheck, title: 'Secure checkout', copy: 'Your payment and data stay protected.' },
-    { icon: BadgeCheck, title: 'Quality pick', copy: 'Hand-picked for the Aurora edit.' }
+    { icon: Truck, title: 'product.promise.shipping', copy: 'product.promise.shippingCopy' },
+    { icon: ShieldCheck, title: 'product.promise.secure', copy: 'product.promise.secureCopy' },
+    { icon: BadgeCheck, title: 'product.promise.quality', copy: 'product.promise.qualityCopy' }
   ];
 
   constructor(

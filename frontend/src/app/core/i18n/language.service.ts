@@ -9,9 +9,14 @@ export class LanguageService {
   readonly language = this.languageSignal.asReadonly();
   readonly isSpanish = computed(() => this.languageSignal() === 'es');
 
+  constructor() {
+    this.applyDocumentLang(this.languageSignal());
+  }
+
   setLanguage(language: LanguageCode): void {
     this.languageSignal.set(language);
     localStorage.setItem(this.storageKey, language);
+    this.applyDocumentLang(language);
   }
 
   toggle(): void {
@@ -34,5 +39,11 @@ export class LanguageService {
   private loadLanguage(): LanguageCode {
     const stored = localStorage.getItem(this.storageKey);
     return stored === 'en' || stored === 'es' ? stored : 'es';
+  }
+
+  private applyDocumentLang(language: LanguageCode): void {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = language;
+    }
   }
 }

@@ -68,11 +68,11 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                     <div class="flex items-center justify-between gap-4 sm:block sm:text-right">
                       <p class="text-xl font-black text-aurora-ink dark:text-white">{{ item.lineTotal | currency }}</p>
                       <div class="mt-0 flex items-center gap-2 sm:mt-4">
-                        <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" [disabled]="actionId() === item.id || item.quantity <= 1" (click)="changeQuantity(item, item.quantity - 1)" aria-label="Decrease quantity">
+                        <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" [disabled]="actionId() === item.id || item.quantity <= 1" (click)="changeQuantity(item, item.quantity - 1)" [attr.aria-label]="'a11y.decreaseQty' | t">
                           <lucide-icon [img]="Minus" size="16" />
                         </button>
                         <span class="flex h-10 min-w-10 items-center justify-center rounded-ui border border-aurora-line bg-white px-3 text-sm font-black dark:border-white/10 dark:bg-white/10">{{ item.quantity }}</span>
-                        <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" [disabled]="actionId() === item.id" (click)="changeQuantity(item, item.quantity + 1)" aria-label="Increase quantity">
+                        <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" [disabled]="actionId() === item.id" (click)="changeQuantity(item, item.quantity + 1)" [attr.aria-label]="'a11y.increaseQty' | t">
                           <lucide-icon [img]="Plus" size="16" />
                         </button>
                         <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0 text-aurora-rose" type="button" [disabled]="actionId() === item.id" (click)="removeItem(item)" [attr.aria-label]="'cart.remove' | t">

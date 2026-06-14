@@ -19,7 +19,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
         <nav class="mt-10 grid gap-2">
           <a routerLink="/admin" class="flex cursor-pointer items-center gap-3 rounded-ui bg-white/10 px-3 py-3 text-sm font-semibold">
             <lucide-icon [img]="LayoutDashboard" size="18" />
-            Dashboard
+            {{ 'admin.nav.dashboard' | t }}
           </a>
           <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
             <lucide-icon [img]="Package" size="18" />
@@ -27,7 +27,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
           </span>
           <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
             <lucide-icon [img]="Boxes" size="18" />
-            Inventory
+            {{ 'admin.nav.inventory' | t }}
           </span>
           <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
             <lucide-icon [img]="ClipboardList" size="18" />
@@ -44,8 +44,8 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
         <header class="sticky top-0 z-30 border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
           <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div>
-              <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Admin workspace</p>
-              <p class="text-sm text-slate-300">Manage products, orders and customers.</p>
+              <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">{{ 'admin.workspace' | t }}</p>
+              <p class="text-sm text-slate-300">{{ 'admin.workspaceCopy' | t }}</p>
             </div>
             <div class="flex items-center gap-2 rounded-ui border border-white/10 bg-white/10 px-3 py-2 text-sm">
               <button class="cursor-pointer font-black text-amber-200" type="button" (click)="language.toggle()">{{ language.language().toUpperCase() }}</button>

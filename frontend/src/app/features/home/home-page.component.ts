@@ -16,6 +16,7 @@ import {
 } from 'lucide-angular';
 import { Product } from '../../core/models/product.model';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { LanguageService } from '../../core/i18n/language.service';
 import { CatalogService } from '../../services/catalog.service';
 import { ProductCardComponent } from '../../shared/product-card/product-card.component';
 import { SectionHeaderComponent } from '../../shared/section-header/section-header.component';
@@ -60,7 +61,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             @for (metric of heroMetrics; track metric.label) {
               <div class="surface-panel p-4">
                 <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ metric.value }}</p>
-                <p class="mt-1 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ metric.label }}</p>
+                <p class="mt-1 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ metric.label | t }}</p>
               </div>
             }
           </div>
@@ -78,12 +79,12 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
             <div class="absolute bottom-6 left-6 right-6 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
               <div class="rounded-ui border border-white/30 bg-white/90 p-4 shadow-premium backdrop-blur-xl dark:bg-aurora-night/80">
-                <p class="text-xs font-black uppercase tracking-[0.16em] text-aurora-gold dark:text-amber-300">Weekend capsule</p>
-                <p class="mt-2 text-xl font-black text-aurora-ink dark:text-white">Work-ready devices and calm everyday carry.</p>
+                <p class="text-xs font-black uppercase tracking-[0.16em] text-aurora-gold dark:text-amber-300">{{ 'home.hero.capsule' | t }}</p>
+                <p class="mt-2 text-xl font-black text-aurora-ink dark:text-white">{{ 'home.hero.capsuleCopy' | t }}</p>
               </div>
               <div class="hidden rounded-ui border border-white/30 bg-aurora-ink p-4 text-white shadow-premium sm:block">
                 <p class="text-3xl font-black">24h</p>
-                <p class="mt-1 text-sm text-stone-300">priority dispatch</p>
+                <p class="mt-1 text-sm text-stone-300">{{ 'home.hero.dispatchLabel' | t }}</p>
               </div>
             </div>
           </div>
@@ -94,8 +95,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <lucide-icon [img]="CheckCircle2" size="20" />
               </span>
               <div>
-                <p class="text-sm font-black text-aurora-ink dark:text-white">Stock-aware</p>
-                <p class="text-xs text-aurora-muted dark:text-stone-300">Ready for real carts</p>
+                <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'home.hero.inStock' | t }}</p>
+                <p class="text-xs text-aurora-muted dark:text-stone-300">{{ 'home.hero.inStockCopy' | t }}</p>
               </div>
             </div>
           </div>
@@ -104,7 +105,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     </section>
 
     <section class="page-shell py-14">
-      <app-section-header eyebrow="Shop by category" title="{{ 'home.categories' | t }}" description="Shop by what you need, from desk upgrades to travel-ready essentials.">
+      <app-section-header eyebrow="{{ 'home.categories.eyebrow' | t }}" title="{{ 'home.categories' | t }}" description="{{ 'home.categories.description' | t }}">
         <a routerLink="/catalog" class="ui-button ui-button-secondary">{{ 'home.openCatalog' | t }}</a>
       </app-section-header>
 
@@ -115,8 +116,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <img class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" [src]="category.image" [alt]="category.name" />
               <div class="absolute inset-0 bg-gradient-to-t from-aurora-night/70 via-aurora-night/10 to-transparent"></div>
               <div class="absolute bottom-4 left-4 right-4">
-                <p class="text-xl font-black text-white">{{ category.name }}</p>
-                <p class="mt-1 text-sm font-medium text-stone-200">{{ category.copy }}</p>
+                <p class="text-xl font-black text-white">{{ category.name | t }}</p>
+                <p class="mt-1 text-sm font-medium text-stone-200">{{ category.copy | t }}</p>
               </div>
             </div>
           </a>
@@ -126,7 +127,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
     <section class="border-y border-aurora-line/80 bg-white/70 py-14 dark:border-white/10 dark:bg-white/[0.03]">
       <div class="page-shell">
-        <app-section-header eyebrow="Featured products" title="{{ 'home.featured' | t }}" description="Our favorite pieces this week, hand-picked for you.">
+        <app-section-header eyebrow="{{ 'home.featured.eyebrow' | t }}" title="{{ 'home.featured' | t }}" description="{{ 'home.featured.description' | t }}">
           <a routerLink="/catalog" class="ui-button ui-button-primary">{{ 'home.openCatalog' | t }}</a>
         </app-section-header>
 
@@ -138,7 +139,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           </div>
         } @else if (error()) {
           <div class="mt-8">
-            <app-state-panel mode="error" title="We couldn’t load products" [message]="error()!" />
+            <app-state-panel mode="error" title="{{ 'common.error' | t }}" [message]="error()!" />
           </div>
         } @else if (featuredProducts().length === 0) {
           <div class="mt-8">
@@ -159,11 +160,11 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         <div class="relative overflow-hidden rounded-ui bg-aurora-night p-6 text-white shadow-premium sm:p-8">
           <img class="absolute inset-0 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80" alt="Curated travel and lifestyle products" />
           <div class="relative z-10 max-w-xl">
-            <p class="section-kicker">Limited offer</p>
-            <h2 class="mt-3 text-4xl font-black leading-tight">Build a sharper everyday kit.</h2>
-            <p class="mt-4 text-sm leading-6 text-stone-200">Bundle desk, audio and travel picks with seasonal pricing and clean checkout flow.</p>
+            <p class="section-kicker">{{ 'home.promo.eyebrow' | t }}</p>
+            <h2 class="mt-3 text-4xl font-black leading-tight">{{ 'home.promo.title' | t }}</h2>
+            <p class="mt-4 text-sm leading-6 text-stone-200">{{ 'home.promo.copy' | t }}</p>
             <a routerLink="/catalog" class="ui-button mt-7 bg-white text-aurora-night hover:bg-stone-100">
-              Browse offers
+              {{ 'home.promo.cta' | t }}
               <lucide-icon [img]="BadgePercent" size="18" />
             </a>
           </div>
@@ -177,8 +178,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   <lucide-icon [img]="benefit.icon" size="21" />
                 </span>
                 <div>
-                  <h3 class="font-black text-aurora-ink dark:text-white">{{ benefit.title }}</h3>
-                  <p class="mt-1 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ benefit.copy }}</p>
+                  <h3 class="font-black text-aurora-ink dark:text-white">{{ benefit.title | t }}</h3>
+                  <p class="mt-1 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ benefit.copy | t }}</p>
                 </div>
               </div>
             </div>
@@ -192,8 +193,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         @for (promise of promises; track promise.title) {
           <div class="soft-card p-6">
             <lucide-icon class="text-aurora-ocean dark:text-blue-300" [img]="promise.icon" size="24" />
-            <h3 class="mt-5 text-lg font-black text-aurora-ink dark:text-white">{{ promise.title }}</h3>
-            <p class="mt-2 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ promise.copy }}</p>
+            <h3 class="mt-5 text-lg font-black text-aurora-ink dark:text-white">{{ promise.title | t }}</h3>
+            <p class="mt-2 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ promise.copy | t }}</p>
           </div>
         }
       </div>
@@ -204,15 +205,15 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         <div class="grid items-center gap-0 lg:grid-cols-[0.9fr_1.1fr]">
           <img class="h-72 w-full object-cover lg:h-full" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1400&q=85" alt="Premium product assortment" />
           <div class="p-7 sm:p-10">
-            <p class="section-kicker">Aurora club</p>
-            <h2 class="mt-3 text-3xl font-black text-aurora-ink sm:text-4xl dark:text-white">Get first access to the next drop.</h2>
-            <p class="mt-4 max-w-xl text-sm leading-6 text-aurora-muted dark:text-stone-300">A free account keeps your favorites, cart and order history together in one place.</p>
+            <p class="section-kicker">{{ 'home.club.eyebrow' | t }}</p>
+            <h2 class="mt-3 text-3xl font-black text-aurora-ink sm:text-4xl dark:text-white">{{ 'home.club.title' | t }}</h2>
+            <p class="mt-4 max-w-xl text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'home.club.copy' | t }}</p>
             <div class="mt-7 flex flex-col gap-3 sm:flex-row">
               <a routerLink="/register" class="ui-button ui-button-primary">
-                Join Aurora
+                {{ 'home.club.join' | t }}
                 <lucide-icon [img]="ArrowRight" size="18" />
               </a>
-              <a routerLink="/login" class="ui-button ui-button-secondary">Sign in</a>
+              <a routerLink="/login" class="ui-button ui-button-secondary">{{ 'nav.signIn' | t }}</a>
             </div>
           </div>
         </div>
@@ -232,29 +233,32 @@ export class HomePageComponent implements OnInit {
 
   readonly skeletonItems = [1, 2, 3, 4];
   readonly heroMetrics = [
-    { value: '4.8', label: 'average rating' },
-    { value: '2k+', label: 'curated items' },
-    { value: '24h', label: 'priority dispatch' }
+    { value: '4.8', label: 'home.metric.rating' },
+    { value: '2k+', label: 'home.metric.items' },
+    { value: '24h', label: 'home.metric.dispatch' }
   ];
   readonly categories = [
-    { name: 'Work tech', copy: 'Laptops, displays and desk gear', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80' },
-    { name: 'Audio', copy: 'Immersive listening and portable sound', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80' },
-    { name: 'Home edit', copy: 'Connected essentials with quiet polish', image: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80' },
-    { name: 'Travel kit', copy: 'Carry smarter from gate to weekend', image: 'https://images.unsplash.com/photo-1553531384-cc64ac80f931?auto=format&fit=crop&w=900&q=80' }
+    { name: 'home.cat.tech', copy: 'home.cat.techCopy', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80' },
+    { name: 'home.cat.audio', copy: 'home.cat.audioCopy', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80' },
+    { name: 'home.cat.home', copy: 'home.cat.homeCopy', image: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80' },
+    { name: 'home.cat.travel', copy: 'home.cat.travelCopy', image: 'https://images.unsplash.com/photo-1553531384-cc64ac80f931?auto=format&fit=crop&w=900&q=80' }
   ];
   readonly benefits = [
-    { icon: Truck, title: 'Fast shipping', copy: 'Delivery promises are visible and easy to scan before checkout.' },
-    { icon: CreditCard, title: 'Secure payment', copy: 'Payment moments are designed to feel deliberate, focused and calm.' },
-    { icon: Headphones, title: 'Helpful support', copy: 'Support entry points stay close to the shopping journey.' },
-    { icon: RotateCcw, title: 'Easy returns', copy: 'Return confidence is presented before the final decision.' }
+    { icon: Truck, title: 'home.benefit.shipping', copy: 'home.benefit.shippingCopy' },
+    { icon: CreditCard, title: 'home.benefit.payment', copy: 'home.benefit.paymentCopy' },
+    { icon: Headphones, title: 'home.benefit.support', copy: 'home.benefit.supportCopy' },
+    { icon: RotateCcw, title: 'home.benefit.returns', copy: 'home.benefit.returnsCopy' }
   ];
   readonly promises = [
-    { icon: ShoppingBag, title: 'Effortless browsing', copy: 'A clean, fast experience that helps you decide with confidence.' },
-    { icon: ShieldCheck, title: 'Shop with confidence', copy: 'Secure accounts and protected checkout on every order.' },
-    { icon: Zap, title: 'Everything in one place', copy: 'Cart, wishlist, checkout and orders, beautifully connected.' }
+    { icon: ShoppingBag, title: 'home.promise.browse', copy: 'home.promise.browseCopy' },
+    { icon: ShieldCheck, title: 'home.promise.confidence', copy: 'home.promise.confidenceCopy' },
+    { icon: Zap, title: 'home.promise.together', copy: 'home.promise.togetherCopy' }
   ];
 
-  constructor(private readonly catalogService: CatalogService) {}
+  constructor(
+    private readonly catalogService: CatalogService,
+    private readonly language: LanguageService
+  ) {}
 
   ngOnInit(): void {
     this.catalogService.getProducts().subscribe({
@@ -266,7 +270,7 @@ export class HomePageComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('We couldn’t load products right now. Please try again in a moment.');
+        this.error.set(this.language.translate('home.loadError'));
         this.loading.set(false);
       }
     });

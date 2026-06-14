@@ -25,7 +25,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.firstName' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="controlInvalid('firstName')">
                   <lucide-icon class="text-stone-400" [img]="UserRound" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="firstName" autocomplete="given-name" placeholder="Ada" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="firstName" autocomplete="given-name" [placeholder]="'auth.placeholder.firstName' | t" />
                 </span>
                 @if (controlInvalid('firstName')) {
                   <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.firstNameRequired' | t }}</span>
@@ -36,7 +36,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.lastName' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="controlInvalid('lastName')">
                   <lucide-icon class="text-stone-400" [img]="UserRound" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="lastName" autocomplete="family-name" placeholder="Lovelace" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="lastName" autocomplete="family-name" [placeholder]="'auth.placeholder.lastName' | t" />
                 </span>
                 @if (controlInvalid('lastName')) {
                   <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.lastNameRequired' | t }}</span>
@@ -48,7 +48,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.email' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="controlInvalid('email')">
                 <lucide-icon class="text-stone-400" [img]="Mail" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" placeholder="you@aurora.dev" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" [placeholder]="'auth.placeholder.email' | t" />
               </span>
               @if (controlInvalid('email')) {
                 <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
@@ -59,7 +59,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.password' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="controlInvalid('password')">
                 <lucide-icon class="text-stone-400" [img]="LockKeyhole" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="password" type="password" autocomplete="new-password" placeholder="Minimum 8 characters" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="password" type="password" autocomplete="new-password" [placeholder]="'auth.placeholder.passwordNew' | t" />
               </span>
               @if (controlInvalid('password')) {
                 <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordLength' | t }}</span>
@@ -92,7 +92,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             @for (item of panelItems; track item) {
               <div class="flex items-center gap-3 rounded-ui border border-white/10 bg-white/10 p-3">
                 <lucide-icon class="text-emerald-300" [img]="CheckCircle2" size="18" />
-                <span class="text-sm font-semibold text-stone-100">{{ item }}</span>
+                <span class="text-sm font-semibold text-stone-100">{{ item | t }}</span>
               </div>
             }
           </div>
@@ -116,7 +116,7 @@ export class RegisterPageComponent {
   readonly LockKeyhole = LockKeyhole;
   readonly UserPlus = UserPlus;
   readonly UserRound = UserRound;
-  readonly panelItems = ['Saved products and wishlist', 'Cart ready for checkout', 'Order history prepared'];
+  readonly panelItems = ['auth.benefit.favorites', 'auth.benefit.checkout', 'auth.benefit.orders'];
 
   readonly form = this.formBuilder.nonNullable.group({
     firstName: ['', [Validators.required, Validators.maxLength(100)]],

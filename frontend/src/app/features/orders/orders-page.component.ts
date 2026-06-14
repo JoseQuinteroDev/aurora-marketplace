@@ -48,7 +48,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   <div>
                     <div class="flex flex-wrap items-center gap-3">
                       <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ order.orderNumber }}</h2>
-                      <span class="aurora-badge" [ngClass]="statusClass(order.status)">{{ order.status }}</span>
+                      <span class="aurora-badge" [ngClass]="statusClass(order.status)">{{ ('order.status.' + order.status) | t }}</span>
                     </div>
                     <p class="mt-2 text-sm text-aurora-muted dark:text-stone-300">{{ order.createdAt | date:'medium' }}</p>
                     <p class="mt-3 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ order.items.length }} {{ 'orders.items' | t }}</p>

@@ -51,7 +51,7 @@ import { WishlistService } from '../../services/wishlist.service';
           {{ product().name }}
         </a>
         <p class="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-aurora-muted dark:text-stone-300">
-          {{ product().shortDescription || 'A premium piece from the Aurora edit.' }}
+          {{ product().shortDescription || ('product.cardFallback' | t) }}
         </p>
         <div class="mt-5 flex items-end justify-between gap-3">
           <div>
@@ -59,10 +59,10 @@ import { WishlistService } from '../../services/wishlist.service';
             <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ product().basePrice | currency }}</p>
           </div>
           <div class="flex items-center gap-2">
-            <button class="ui-button h-10 w-10 p-0" [class.ui-button-primary]="wishlist.isWishlisted(product().id)" [class.ui-button-secondary]="!wishlist.isWishlisted(product().id)" type="button" aria-label="Save item" [disabled]="savingWishlist()" (click)="toggleWishlist()">
+            <button class="ui-button h-10 w-10 p-0" [class.ui-button-primary]="wishlist.isWishlisted(product().id)" [class.ui-button-secondary]="!wishlist.isWishlisted(product().id)" type="button" [attr.aria-label]="'a11y.saveItem' | t" [disabled]="savingWishlist()" (click)="toggleWishlist()">
               <lucide-icon [img]="Heart" size="17" />
             </button>
-            <button class="ui-button ui-button-primary h-10 w-10 p-0" type="button" aria-label="Add item to cart" [disabled]="addingCart() || !firstVariantId()" (click)="addToCart()">
+            <button class="ui-button ui-button-primary h-10 w-10 p-0" type="button" [attr.aria-label]="'a11y.addToCart' | t" [disabled]="addingCart() || !firstVariantId()" (click)="addToCart()">
               <lucide-icon [img]="ShoppingBag" size="17" />
             </button>
           </div>

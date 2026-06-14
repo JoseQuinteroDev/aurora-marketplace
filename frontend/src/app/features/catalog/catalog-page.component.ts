@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { LucideAngularModule, Grid3X3, Search, SlidersHorizontal, Sparkles, X } from 'lucide-angular';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { LanguageService } from '../../core/i18n/language.service';
 import { Brand, Category, Product } from '../../core/models/product.model';
 import { CatalogService } from '../../services/catalog.service';
 import { ProductCardComponent } from '../../shared/product-card/product-card.component';
@@ -29,11 +30,11 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <div class="absolute bottom-6 left-6 right-6 flex flex-wrap gap-3">
               <span class="aurora-badge border-white/20 bg-white/15 text-white">
                 <lucide-icon [img]="Sparkles" size="14" />
-                New drops
+                {{ 'catalog.newDrops' | t }}
               </span>
               <span class="aurora-badge border-white/20 bg-white/15 text-white">
                 <lucide-icon [img]="Grid3X3" size="14" />
-                {{ products().length }} products
+                {{ products().length }} {{ 'catalog.productsCount' | t }}
               </span>
             </div>
           </div>
@@ -43,7 +44,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       <div class="mt-8 flex flex-col gap-3 lg:hidden">
         <label class="field-shell">
           <lucide-icon class="text-stone-400" [img]="Search" size="17" />
-          <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" placeholder="Search the catalog" />
+          <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" [placeholder]="'catalog.searchPlaceholder' | t" />
         </label>
         <div class="grid grid-cols-2 gap-3">
           <button class="ui-button ui-button-primary" type="button" (click)="search()">{{ 'catalog.search' | t }}</button>
@@ -62,14 +63,14 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <lucide-icon [img]="SlidersHorizontal" size="18" />
                 {{ 'catalog.refine' | t }}
               </div>
-              <span class="text-xs font-bold text-aurora-muted dark:text-stone-400">{{ products().length }} items</span>
+              <span class="text-xs font-bold text-aurora-muted dark:text-stone-400">{{ products().length }} {{ 'catalog.itemsCount' | t }}</span>
             </div>
 
             <label class="mt-5 block">
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'catalog.search' | t }}</span>
               <span class="field-shell">
                 <lucide-icon class="text-stone-400" [img]="Search" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" placeholder="MacBook, audio, travel" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" [placeholder]="'catalog.searchHint' | t" />
               </span>
             </label>
             <button class="ui-button ui-button-primary mt-4 w-full" type="button" (click)="search()">{{ 'catalog.apply' | t }}</button>
@@ -80,7 +81,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 @for (category of categories(); track category.id) {
                   <button class="aurora-chip" type="button">{{ category.name }}</button>
                 } @empty {
-                  <span class="text-sm text-aurora-muted dark:text-stone-400">No categories available</span>
+                  <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noCategories' | t }}</span>
                 }
               </div>
             </div>
@@ -91,7 +92,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 @for (brand of brands(); track brand.id) {
                   <button class="aurora-chip" type="button">{{ brand.name }}</button>
                 } @empty {
-                  <span class="text-sm text-aurora-muted dark:text-stone-400">No brands available</span>
+                  <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noBrands' | t }}</span>
                 }
               </div>
             </div>
@@ -100,7 +101,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
         <div>
           <div class="mb-5 hidden items-center justify-between gap-4 lg:flex">
-            <app-section-header eyebrow="{{ 'catalog.results' | t }}" title="{{ 'catalog.grid' | t }}" description="Clear pricing and ratings to help you choose with confidence." />
+            <app-section-header eyebrow="{{ 'catalog.results' | t }}" title="{{ 'catalog.grid' | t }}" description="{{ 'catalog.gridDescription' | t }}" />
           </div>
 
           @if (loading()) {
@@ -132,7 +133,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <lucide-icon [img]="SlidersHorizontal" size="18" />
               {{ 'catalog.filters' | t }}
             </div>
-            <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" (click)="filtersOpen.set(false)" aria-label="Close filters">
+            <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" (click)="filtersOpen.set(false)" [attr.aria-label]="'a11y.closeFilters' | t">
               <lucide-icon [img]="X" size="18" />
             </button>
           </div>
@@ -143,7 +144,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               @for (category of categories(); track category.id) {
                 <button class="aurora-chip" type="button">{{ category.name }}</button>
               } @empty {
-                <span class="text-sm text-aurora-muted dark:text-stone-400">No categories available</span>
+                <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noCategories' | t }}</span>
               }
             </div>
           </div>
@@ -154,7 +155,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               @for (brand of brands(); track brand.id) {
                 <button class="aurora-chip" type="button">{{ brand.name }}</button>
               } @empty {
-                <span class="text-sm text-aurora-muted dark:text-stone-400">No brands available</span>
+                <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noBrands' | t }}</span>
               }
             </div>
           </div>
@@ -183,6 +184,7 @@ export class CatalogPageComponent implements OnInit {
 
   constructor(
     private readonly catalogService: CatalogService,
+    private readonly language: LanguageService,
     private readonly route: ActivatedRoute
   ) {}
 
@@ -214,11 +216,7 @@ export class CatalogPageComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set(
-          value
-            ? 'We couldn’t complete your search. Please try again in a moment.'
-            : 'We couldn’t load the catalog right now. Please try again in a moment.'
-        );
+        this.error.set(this.language.translate(value ? 'catalog.searchError' : 'catalog.loadError'));
         this.loading.set(false);
       }
     });

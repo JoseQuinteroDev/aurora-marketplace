@@ -40,7 +40,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
 
       <header class="sticky top-0 z-40 border-b border-white/60 bg-white/80 backdrop-blur-2xl dark:border-white/10 dark:bg-aurora-night/80">
         <div class="page-shell flex min-h-20 items-center gap-3 py-3">
-          <a routerLink="/" class="flex cursor-pointer items-center gap-3" aria-label="Aurora Marketplace home">
+          <a routerLink="/" class="flex cursor-pointer items-center gap-3" [attr.aria-label]="'a11y.home' | t">
             <span class="flex h-11 w-11 items-center justify-center rounded-ui bg-aurora-ink text-base font-black text-white shadow-lift dark:bg-white dark:text-aurora-night">A</span>
             <span class="hidden leading-none sm:block">
               <span class="block text-sm font-black uppercase tracking-[0.22em] text-aurora-ink dark:text-white">Aurora</span>
@@ -64,10 +64,10 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
           </label>
 
           <div class="flex items-center gap-2">
-            <button class="ui-button ui-button-secondary h-10 min-h-10 px-2 text-xs" type="button" (click)="language.toggle()" aria-label="Change language">
+            <button class="ui-button ui-button-secondary h-10 min-h-10 px-2 text-xs" type="button" (click)="language.toggle()" [attr.aria-label]="'a11y.changeLanguage' | t">
               {{ language.language().toUpperCase() }}
             </button>
-            <a routerLink="/catalog" class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0 md:hidden" aria-label="Open catalog">
+            <a routerLink="/catalog" class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0 md:hidden" [attr.aria-label]="'a11y.openMenu' | t">
               <lucide-icon [img]="Menu" size="18" />
             </a>
             <a routerLink="/wishlist" class="ui-button ui-button-secondary relative h-10 w-10 min-h-10 p-0" [attr.aria-label]="'nav.wishlist' | t">
@@ -112,7 +112,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
               <p class="section-kicker">{{ 'footer.membership' | t }}</p>
               <h2 class="mt-3 max-w-2xl text-3xl font-black">{{ 'footer.title' | t }}</h2>
               <div class="mt-6 flex flex-col gap-3 sm:flex-row">
-                <input class="ui-input border-white/10 bg-white/10 text-white placeholder:text-stone-400" [placeholder]="'footer.email' | t" aria-label="Newsletter email" />
+                <input class="ui-input border-white/10 bg-white/10 text-white placeholder:text-stone-400" [placeholder]="'footer.email' | t" [attr.aria-label]="'a11y.newsletterEmail' | t" />
                 <button class="ui-button bg-white text-aurora-night hover:bg-stone-100" type="button">{{ 'footer.notify' | t }}</button>
               </div>
             </div>
@@ -120,8 +120,8 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
               @for (item of trustItems; track item.title) {
                 <div class="rounded-ui border border-white/10 bg-white/[0.06] p-4">
                   <lucide-icon class="text-amber-300" [img]="item.icon" size="20" />
-                  <p class="mt-3 font-black">{{ item.title }}</p>
-                  <p class="mt-1 text-sm leading-5 text-stone-300">{{ item.copy }}</p>
+                  <p class="mt-3 font-black">{{ item.title | t }}</p>
+                  <p class="mt-1 text-sm leading-5 text-stone-300">{{ item.copy | t }}</p>
                 </div>
               }
             </div>
@@ -172,9 +172,9 @@ export class StorefrontLayoutComponent {
   readonly UserRound = UserRound;
 
   readonly trustItems = [
-    { icon: ShieldCheck, title: 'Secure checkout', copy: 'Your payment and personal data are protected at every step.' },
-    { icon: Truck, title: 'Always in stock', copy: 'Live availability so you only buy what is ready to ship.' },
-    { icon: PackageCheck, title: 'Order tracking', copy: 'Follow every order from checkout to your door.' }
+    { icon: ShieldCheck, title: 'footer.trust.secure', copy: 'footer.trust.secureCopy' },
+    { icon: Truck, title: 'footer.trust.stock', copy: 'footer.trust.stockCopy' },
+    { icon: PackageCheck, title: 'footer.trust.tracking', copy: 'footer.trust.trackingCopy' }
   ];
 
   constructor(

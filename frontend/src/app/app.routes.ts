@@ -21,17 +21,17 @@ export const routes: Routes = [
     path: '',
     component: StorefrontLayoutComponent,
     children: [
-      { path: '', component: HomePageComponent, title: 'Aurora Marketplace' },
-      { path: 'catalog', component: CatalogPageComponent, title: 'Catalog | Aurora Marketplace' },
-      { path: 'products/:slug', component: ProductDetailPageComponent, title: 'Product | Aurora Marketplace' },
-      { path: 'login', component: LoginPageComponent, title: 'Login | Aurora Marketplace' },
-      { path: 'register', component: RegisterPageComponent, title: 'Register | Aurora Marketplace' },
-      { path: 'cart', component: CartPageComponent, canActivate: [authGuard], title: 'Cart | Aurora Marketplace' },
-      { path: 'wishlist', component: WishlistPageComponent, canActivate: [authGuard], title: 'Wishlist | Aurora Marketplace' },
-      { path: 'checkout', component: CheckoutPageComponent, canActivate: [authGuard], title: 'Checkout | Aurora Marketplace' },
-      { path: 'account/orders', component: OrdersPageComponent, canActivate: [authGuard], title: 'Orders | Aurora Marketplace' },
-      { path: 'account/orders/:id', component: OrderDetailPageComponent, canActivate: [authGuard], title: 'Order | Aurora Marketplace' },
-      { path: 'orders/:id/payment', component: PaymentPageComponent, canActivate: [authGuard], title: 'Payment | Aurora Marketplace' }
+      { path: '', component: HomePageComponent, title: 'title.home' },
+      { path: 'catalog', component: CatalogPageComponent, title: 'title.catalog' },
+      { path: 'products/:slug', component: ProductDetailPageComponent, title: 'title.product' },
+      { path: 'login', component: LoginPageComponent, title: 'title.login' },
+      { path: 'register', component: RegisterPageComponent, title: 'title.register' },
+      { path: 'cart', component: CartPageComponent, canActivate: [authGuard], title: 'title.cart' },
+      { path: 'wishlist', component: WishlistPageComponent, canActivate: [authGuard], title: 'title.wishlist' },
+      { path: 'checkout', component: CheckoutPageComponent, canActivate: [authGuard], title: 'title.checkout' },
+      { path: 'account/orders', component: OrdersPageComponent, canActivate: [authGuard], title: 'title.orders' },
+      { path: 'account/orders/:id', component: OrderDetailPageComponent, canActivate: [authGuard], title: 'title.order' },
+      { path: 'orders/:id/payment', component: PaymentPageComponent, canActivate: [authGuard], title: 'title.payment' }
     ]
   },
   {
@@ -39,7 +39,7 @@ export const routes: Routes = [
     component: AdminShellComponent,
     canActivate: [adminGuard],
     children: [
-      { path: '', component: AdminDashboardPageComponent, title: 'Admin | Aurora Marketplace' }
+      { path: '', component: AdminDashboardPageComponent, title: 'title.admin' }
     ]
   },
   { path: '**', redirectTo: '' }

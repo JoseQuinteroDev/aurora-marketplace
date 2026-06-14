@@ -34,7 +34,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <p class="section-kicker">{{ 'orders.detail' | t }}</p>
               <div class="mt-3 flex flex-wrap items-center gap-3">
                 <h1 class="text-4xl font-black text-aurora-ink dark:text-white">{{ data.orderNumber }}</h1>
-                <span class="aurora-badge" [ngClass]="statusClass(data.status)">{{ data.status }}</span>
+                <span class="aurora-badge" [ngClass]="statusClass(data.status)">{{ ('order.status.' + data.status) | t }}</span>
               </div>
               <p class="mt-3 text-sm text-aurora-muted dark:text-stone-300">{{ data.createdAt | date:'medium' }}</p>
             </div>
@@ -68,7 +68,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   <div class="flex gap-3">
                     <span class="mt-1 h-3 w-3 shrink-0 rounded-full bg-aurora-amber"></span>
                     <div>
-                      <p class="font-black text-aurora-ink dark:text-white">{{ history.status }}</p>
+                      <p class="font-black text-aurora-ink dark:text-white">{{ ('order.status.' + history.status) | t }}</p>
                       <p class="text-sm text-aurora-muted dark:text-stone-400">{{ history.createdAt | date:'medium' }}</p>
                       @if (history.note) {
                         <p class="mt-1 text-sm text-aurora-muted dark:text-stone-300">{{ history.note }}</p>
@@ -76,7 +76,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                     </div>
                   </div>
                 } @empty {
-                  <p class="text-sm text-aurora-muted dark:text-stone-300">{{ data.status }}</p>
+                  <p class="text-sm text-aurora-muted dark:text-stone-300">{{ ('order.status.' + data.status) | t }}</p>
                 }
               </div>
             </div>
