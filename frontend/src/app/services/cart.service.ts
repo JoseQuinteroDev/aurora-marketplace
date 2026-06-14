@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, signal } from '@angular/core';
 import { map, tap } from 'rxjs';
 import { ApiResponse } from '../core/models/api-response.model';
 import { AddCartItemRequest, ApplyCouponRequest, Cart, UpdateCartItemRequest } from '../core/models/cart.model';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
@@ -11,7 +12,20 @@ export class CartService {
   readonly cart = this.cartSignal.asReadonly();
   readonly itemCount = computed(() => this.cartSignal()?.items.reduce((total, item) => total + item.quantity, 0) ?? 0);
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly auth: AuthService
+  ) {
+    // Keep the cart in sync with the session: load it on sign-in (so the badge
+    // is correct without a page refresh) and clear it on sign-out.
+    effect(() => {
+      if (this.auth.currentUser()) {
+        this.loadCart().subscribe({ error: () => undefined });
+      } else {
+        this.cartSignal.set(null);
+      }
+    });
+  }
 
   loadCart() {
     return this.http.get<ApiResponse<Cart>>('/api/cart').pipe(

@@ -17,7 +17,12 @@ export class AuthService {
   constructor(
     private readonly http: HttpClient,
     private readonly router: Router
-  ) {}
+  ) {
+    // Boot logged-out if a stale (expired) session is left in storage.
+    if (this.getToken() && this.isSessionExpired()) {
+      this.clearSession();
+    }
+  }
 
   /** True only when a token is present AND it has not passed its stored expiry. */
   isAuthenticated(): boolean {
@@ -46,14 +51,18 @@ export class AuthService {
    * navigating (used by the HTTP error interceptor, which redirects to /login itself).
    */
   logout(redirectTo: string | null = '/'): void {
-    localStorage.removeItem(this.tokenKey);
-    localStorage.removeItem(this.userKey);
-    localStorage.removeItem(this.expiryKey);
-    this.userSignal.set(null);
+    this.clearSession();
 
     if (redirectTo) {
       this.router.navigateByUrl(redirectTo);
     }
+  }
+
+  private clearSession(): void {
+    localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.userKey);
+    localStorage.removeItem(this.expiryKey);
+    this.userSignal.set(null);
   }
 
   getToken(): string | null {

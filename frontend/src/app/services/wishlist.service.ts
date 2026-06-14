@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, effect, signal } from '@angular/core';
 import { map, tap } from 'rxjs';
 import { ApiResponse } from '../core/models/api-response.model';
 import { WishlistItem } from '../core/models/wishlist.model';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class WishlistService {
@@ -11,7 +12,19 @@ export class WishlistService {
   readonly wishlist = this.wishlistSignal.asReadonly();
   readonly count = computed(() => this.wishlistSignal().length);
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly auth: AuthService
+  ) {
+    // Load favorites on sign-in and clear them on sign-out so the badge stays accurate.
+    effect(() => {
+      if (this.auth.currentUser()) {
+        this.loadWishlist().subscribe({ error: () => undefined });
+      } else {
+        this.wishlistSignal.set([]);
+      }
+    });
+  }
 
   loadWishlist() {
     return this.http.get<ApiResponse<WishlistItem[]>>('/api/wishlist').pipe(

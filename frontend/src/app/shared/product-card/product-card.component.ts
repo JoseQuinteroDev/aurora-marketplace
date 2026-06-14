@@ -1,11 +1,15 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 import { LucideAngularModule, ArrowUpRight, Heart, ShoppingBag, Star } from 'lucide-angular';
+import { LanguageService } from '../../core/i18n/language.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { cartErrorKey } from '../../core/util/cart-errors';
 import { Product } from '../../core/models/product.model';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { ToastService } from '../../services/toast.service';
 import { WishlistService } from '../../services/wishlist.service';
 
 @Component({
@@ -80,47 +84,63 @@ export class ProductCardComponent {
     private readonly auth: AuthService,
     private readonly cartService: CartService,
     readonly wishlist: WishlistService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toast: ToastService,
+    private readonly language: LanguageService
   ) {}
 
   addToCart(): void {
     const variantId = this.firstVariantId();
     if (!variantId) {
+      this.toast.error(this.language.translate('cart.toast.unavailable'));
       return;
     }
 
     if (!this.auth.isAuthenticated()) {
-      this.router.navigateByUrl('/login');
+      this.promptSignIn('cart.toast.signInRequired');
       return;
     }
 
     this.addingCart.set(true);
     this.cartService.addItem({ variantId, quantity: 1 }).subscribe({
-      next: () => this.addingCart.set(false),
-      error: () => this.addingCart.set(false)
+      next: () => {
+        this.addingCart.set(false);
+        this.toast.success(this.language.translate('cart.toast.added'));
+      },
+      error: (err) => {
+        this.addingCart.set(false);
+        this.toast.error(this.language.translate(cartErrorKey(err)));
+      }
     });
   }
 
   toggleWishlist(): void {
     if (!this.auth.isAuthenticated()) {
-      this.router.navigateByUrl('/login');
+      this.promptSignIn('wishlist.login');
       return;
     }
+
+    const wasWishlisted = this.wishlist.isWishlisted(this.product().id);
+    const request: Observable<unknown> = wasWishlisted
+      ? this.wishlist.remove(this.product().id)
+      : this.wishlist.add(this.product().id);
 
     this.savingWishlist.set(true);
-
-    if (this.wishlist.isWishlisted(this.product().id)) {
-      this.wishlist.remove(this.product().id).subscribe({
-        next: () => this.savingWishlist.set(false),
-        error: () => this.savingWishlist.set(false)
-      });
-      return;
-    }
-
-    this.wishlist.add(this.product().id).subscribe({
-      next: () => this.savingWishlist.set(false),
-      error: () => this.savingWishlist.set(false)
+    request.subscribe({
+      next: () => {
+        this.savingWishlist.set(false);
+        this.toast.success(this.language.translate(wasWishlisted ? 'wishlist.toast.removed' : 'wishlist.toast.added'));
+      },
+      error: () => {
+        this.savingWishlist.set(false);
+        this.toast.error(this.language.translate('wishlist.toast.error'));
+      }
     });
+  }
+
+  private promptSignIn(messageKey: string): void {
+    this.toast.info(this.language.translate(messageKey));
+    this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
   }
 
   firstVariantId(): string | null {

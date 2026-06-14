@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideAngularModule,
@@ -18,10 +18,11 @@ import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { WishlistService } from '../../services/wishlist.service';
+import { ToastHostComponent } from '../../shared/toast-host/toast-host.component';
 
 @Component({
   selector: 'app-storefront-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, TranslatePipe, ToastHostComponent],
   template: `
     <div class="min-h-screen text-aurora-ink dark:text-white">
       <div class="border-b border-white/10 bg-aurora-night text-white">
@@ -156,10 +157,12 @@ import { WishlistService } from '../../services/wishlist.service';
           </div>
         </div>
       </footer>
+
+      <app-toast-host />
     </div>
   `
 })
-export class StorefrontLayoutComponent implements OnInit {
+export class StorefrontLayoutComponent {
   readonly ArrowRight = ArrowRight;
   readonly Heart = Heart;
   readonly Menu = Menu;
@@ -187,14 +190,5 @@ export class StorefrontLayoutComponent implements OnInit {
     this.router.navigate(['/catalog'], {
       queryParams: value ? { q: value } : {}
     });
-  }
-
-  ngOnInit(): void {
-    if (!this.auth.isAuthenticated()) {
-      return;
-    }
-
-    this.cart.loadCart().subscribe({ error: () => undefined });
-    this.wishlist.loadWishlist().subscribe({ error: () => undefined });
   }
 }

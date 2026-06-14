@@ -4,10 +4,11 @@ import { LucideAngularModule, Boxes, ClipboardList, LayoutDashboard, LogOut, Pac
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
 import { AuthService } from '../../services/auth.service';
+import { ToastHostComponent } from '../../shared/toast-host/toast-host.component';
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [RouterOutlet, RouterLink, LucideAngularModule, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, LucideAngularModule, TranslatePipe, ToastHostComponent],
   template: `
     <div class="min-h-screen bg-slate-950 text-white">
       <aside class="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl lg:block">
@@ -55,6 +56,8 @@ import { AuthService } from '../../services/auth.service';
         </header>
         <router-outlet />
       </div>
+
+      <app-toast-host />
     </div>
   `
 })

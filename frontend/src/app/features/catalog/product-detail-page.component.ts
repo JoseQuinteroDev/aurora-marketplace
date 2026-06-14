@@ -2,6 +2,7 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 import {
   LucideAngularModule,
   ArrowLeft,
@@ -19,10 +20,12 @@ import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
 import { Product } from '../../core/models/product.model';
 import { Review } from '../../core/models/review.model';
+import { cartErrorKey } from '../../core/util/cart-errors';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { CatalogService } from '../../services/catalog.service';
 import { ReviewService } from '../../services/review.service';
+import { ToastService } from '../../services/toast.service';
 import { WishlistService } from '../../services/wishlist.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
 
@@ -314,6 +317,7 @@ export class ProductDetailPageComponent implements OnInit {
     private readonly catalogService: CatalogService,
     private readonly language: LanguageService,
     private readonly reviewService: ReviewService,
+    private readonly toast: ToastService,
     readonly wishlist: WishlistService
   ) {}
 
@@ -348,59 +352,77 @@ export class ProductDetailPageComponent implements OnInit {
   addToCart(product: Product): void {
     const variantId = this.selectedVariantId(product);
     if (!variantId) {
+      this.toast.error(this.language.translate('cart.toast.unavailable'));
       return;
     }
 
     if (!this.auth.isAuthenticated()) {
-      this.router.navigateByUrl('/login');
+      this.promptSignIn('cart.toast.signInRequired');
       return;
     }
 
     this.cartLoading.set(true);
     this.cartService.addItem({ variantId, quantity: 1 }).subscribe({
-      next: () => this.cartLoading.set(false),
-      error: () => this.cartLoading.set(false)
+      next: () => {
+        this.cartLoading.set(false);
+        this.toast.success(this.language.translate('cart.toast.added'));
+      },
+      error: (err) => {
+        this.cartLoading.set(false);
+        this.toast.error(this.language.translate(cartErrorKey(err)));
+      }
     });
   }
 
   buyNow(product: Product): void {
     const variantId = this.selectedVariantId(product);
     if (!variantId) {
+      this.toast.error(this.language.translate('cart.toast.unavailable'));
       return;
     }
 
     if (!this.auth.isAuthenticated()) {
-      this.router.navigateByUrl('/login');
+      this.promptSignIn('cart.toast.signInRequired');
       return;
     }
 
     this.cartLoading.set(true);
     this.cartService.addItem({ variantId, quantity: 1 }).subscribe({
       next: () => this.router.navigateByUrl('/checkout'),
-      error: () => this.cartLoading.set(false)
+      error: (err) => {
+        this.cartLoading.set(false);
+        this.toast.error(this.language.translate(cartErrorKey(err)));
+      }
     });
   }
 
   toggleWishlist(product: Product): void {
     if (!this.auth.isAuthenticated()) {
-      this.router.navigateByUrl('/login');
+      this.promptSignIn('wishlist.login');
       return;
     }
+
+    const wasWishlisted = this.wishlist.isWishlisted(product.id);
+    const request: Observable<unknown> = wasWishlisted
+      ? this.wishlist.remove(product.id)
+      : this.wishlist.add(product.id);
 
     this.wishlistLoading.set(true);
-
-    if (this.wishlist.isWishlisted(product.id)) {
-      this.wishlist.remove(product.id).subscribe({
-        next: () => this.wishlistLoading.set(false),
-        error: () => this.wishlistLoading.set(false)
-      });
-      return;
-    }
-
-    this.wishlist.add(product.id).subscribe({
-      next: () => this.wishlistLoading.set(false),
-      error: () => this.wishlistLoading.set(false)
+    request.subscribe({
+      next: () => {
+        this.wishlistLoading.set(false);
+        this.toast.success(this.language.translate(wasWishlisted ? 'wishlist.toast.removed' : 'wishlist.toast.added'));
+      },
+      error: () => {
+        this.wishlistLoading.set(false);
+        this.toast.error(this.language.translate('wishlist.toast.error'));
+      }
     });
+  }
+
+  private promptSignIn(messageKey: string): void {
+    this.toast.info(this.language.translate(messageKey));
+    this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
   }
 
   submitReview(product: Product): void {

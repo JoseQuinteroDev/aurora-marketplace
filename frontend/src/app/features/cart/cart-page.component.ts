@@ -5,7 +5,9 @@ import { LucideAngularModule, BadgePercent, Minus, Plus, ShoppingBag, Trash2 } f
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
 import { Cart, CartItem } from '../../core/models/cart.model';
+import { cartErrorKey } from '../../core/util/cart-errors';
 import { CartService } from '../../services/cart.service';
+import { ToastService } from '../../services/toast.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
 
 @Component({
@@ -141,6 +143,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 export class CartPageComponent implements OnInit {
   private readonly cartService = inject(CartService);
   private readonly language = inject(LanguageService);
+  private readonly toast = inject(ToastService);
 
   readonly cart = this.cartService.cart;
   readonly loading = signal(true);
@@ -172,23 +175,38 @@ export class CartPageComponent implements OnInit {
     this.actionId.set(item.id);
     this.cartService.updateItem(item.id, { quantity }).subscribe({
       next: () => this.actionId.set(null),
-      error: () => this.actionId.set(null)
+      error: (err) => {
+        this.actionId.set(null);
+        this.toast.error(this.language.translate(cartErrorKey(err)));
+      }
     });
   }
 
   removeItem(item: CartItem): void {
     this.actionId.set(item.id);
     this.cartService.removeItem(item.id).subscribe({
-      next: () => this.actionId.set(null),
-      error: () => this.actionId.set(null)
+      next: () => {
+        this.actionId.set(null);
+        this.toast.success(this.language.translate('cart.toast.removed'));
+      },
+      error: (err) => {
+        this.actionId.set(null);
+        this.toast.error(this.language.translate(cartErrorKey(err)));
+      }
     });
   }
 
   clearCart(): void {
     this.actionId.set('clear');
     this.cartService.clearCart().subscribe({
-      next: () => this.actionId.set(null),
-      error: () => this.actionId.set(null)
+      next: () => {
+        this.actionId.set(null);
+        this.toast.success(this.language.translate('cart.toast.cleared'));
+      },
+      error: (err) => {
+        this.actionId.set(null);
+        this.toast.error(this.language.translate(cartErrorKey(err)));
+      }
     });
   }
 
@@ -198,15 +216,22 @@ export class CartPageComponent implements OnInit {
       next: () => {
         this.couponCode.set('');
         this.actionId.set(null);
+        this.toast.success(this.language.translate('cart.toast.couponApplied'));
       },
-      error: () => this.actionId.set(null)
+      error: () => {
+        this.actionId.set(null);
+        this.toast.error(this.language.translate('cart.toast.couponError'));
+      }
     });
   }
 
   removeCoupon(): void {
     this.actionId.set('coupon');
     this.cartService.removeCoupon().subscribe({
-      next: () => this.actionId.set(null),
+      next: () => {
+        this.actionId.set(null);
+        this.toast.info(this.language.translate('cart.toast.couponRemoved'));
+      },
       error: () => this.actionId.set(null)
     });
   }
