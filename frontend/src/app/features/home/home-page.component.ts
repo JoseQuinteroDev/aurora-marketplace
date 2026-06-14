@@ -111,7 +111,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
       <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         @for (category of categories; track category.name) {
-          <a routerLink="/catalog" class="soft-card group cursor-pointer overflow-hidden">
+          <a [routerLink]="['/catalog']" [queryParams]="{ category: category.slug }" class="soft-card group cursor-pointer overflow-hidden">
             <div class="relative h-48 overflow-hidden">
               <img class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" [src]="category.image" [alt]="category.name" />
               <div class="absolute inset-0 bg-gradient-to-t from-aurora-night/70 via-aurora-night/10 to-transparent"></div>
@@ -238,10 +238,10 @@ export class HomePageComponent implements OnInit {
     { value: '24h', label: 'home.metric.dispatch' }
   ];
   readonly categories = [
-    { name: 'home.cat.tech', copy: 'home.cat.techCopy', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80' },
-    { name: 'home.cat.audio', copy: 'home.cat.audioCopy', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80' },
-    { name: 'home.cat.home', copy: 'home.cat.homeCopy', image: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80' },
-    { name: 'home.cat.travel', copy: 'home.cat.travelCopy', image: 'https://images.unsplash.com/photo-1553531384-cc64ac80f931?auto=format&fit=crop&w=900&q=80' }
+    { name: 'home.cat.tech', copy: 'home.cat.techCopy', slug: 'computing', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80' },
+    { name: 'home.cat.audio', copy: 'home.cat.audioCopy', slug: 'audio', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80' },
+    { name: 'home.cat.home', copy: 'home.cat.homeCopy', slug: 'smart-home', image: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=900&q=80' },
+    { name: 'home.cat.travel', copy: 'home.cat.travelCopy', slug: 'travel', image: 'https://images.unsplash.com/photo-1553531384-cc64ac80f931?auto=format&fit=crop&w=900&q=80' }
   ];
   readonly benefits = [
     { icon: Truck, title: 'home.benefit.shipping', copy: 'home.benefit.shippingCopy' },

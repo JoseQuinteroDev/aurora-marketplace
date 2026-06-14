@@ -1,5 +1,5 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, OnInit, computed, signal } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule, Grid3X3, Search, SlidersHorizontal, Sparkles, X } from 'lucide-angular';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
@@ -9,6 +9,8 @@ import { ProductCardComponent } from '../../shared/product-card/product-card.com
 import { SectionHeaderComponent } from '../../shared/section-header/section-header.component';
 import { SkeletonProductCardComponent } from '../../shared/skeleton-product-card/skeleton-product-card.component';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
+
+type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
 
 @Component({
   selector: 'app-catalog-page',
@@ -34,7 +36,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               </span>
               <span class="aurora-badge border-white/20 bg-white/15 text-white">
                 <lucide-icon [img]="Grid3X3" size="14" />
-                {{ products().length }} {{ 'catalog.productsCount' | t }}
+                {{ visibleProducts().length }} {{ 'catalog.productsCount' | t }}
               </span>
             </div>
           </div>
@@ -44,7 +46,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       <div class="mt-8 flex flex-col gap-3 lg:hidden">
         <label class="field-shell">
           <lucide-icon class="text-stone-400" [img]="Search" size="17" />
-          <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" [placeholder]="'catalog.searchPlaceholder' | t" />
+          <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" (keyup.enter)="search()" [placeholder]="'catalog.searchPlaceholder' | t" />
         </label>
         <div class="grid grid-cols-2 gap-3">
           <button class="ui-button ui-button-primary" type="button" (click)="search()">{{ 'catalog.search' | t }}</button>
@@ -63,14 +65,18 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <lucide-icon [img]="SlidersHorizontal" size="18" />
                 {{ 'catalog.refine' | t }}
               </div>
-              <span class="text-xs font-bold text-aurora-muted dark:text-stone-400">{{ products().length }} {{ 'catalog.itemsCount' | t }}</span>
+              @if (selectedCategory() || selectedBrand()) {
+                <button class="cursor-pointer text-xs font-bold text-aurora-gold underline dark:text-amber-300" type="button" (click)="clearFilters()">{{ 'catalog.clearFilters' | t }}</button>
+              } @else {
+                <span class="text-xs font-bold text-aurora-muted dark:text-stone-400">{{ visibleProducts().length }} {{ 'catalog.itemsCount' | t }}</span>
+              }
             </div>
 
             <label class="mt-5 block">
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'catalog.search' | t }}</span>
               <span class="field-shell">
                 <lucide-icon class="text-stone-400" [img]="Search" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" [placeholder]="'catalog.searchHint' | t" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" (keyup.enter)="search()" [placeholder]="'catalog.searchHint' | t" />
               </span>
             </label>
             <button class="ui-button ui-button-primary mt-4 w-full" type="button" (click)="search()">{{ 'catalog.apply' | t }}</button>
@@ -79,7 +85,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 @for (category of categories(); track category.id) {
-                  <button class="aurora-chip" type="button">{{ category.name }}</button>
+                  <button class="aurora-chip" type="button" [class.ring-2]="selectedCategory() === category.slug" [class.ring-aurora-amber]="selectedCategory() === category.slug" [class.ring-offset-1]="selectedCategory() === category.slug" (click)="toggleCategory(category.slug)">{{ category.name }}</button>
                 } @empty {
                   <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noCategories' | t }}</span>
                 }
@@ -90,7 +96,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 @for (brand of brands(); track brand.id) {
-                  <button class="aurora-chip" type="button">{{ brand.name }}</button>
+                  <button class="aurora-chip" type="button" [class.ring-2]="selectedBrand() === brand.slug" [class.ring-aurora-amber]="selectedBrand() === brand.slug" [class.ring-offset-1]="selectedBrand() === brand.slug" (click)="toggleBrand(brand.slug)">{{ brand.name }}</button>
                 } @empty {
                   <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noBrands' | t }}</span>
                 }
@@ -100,8 +106,16 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         </aside>
 
         <div>
-          <div class="mb-5 hidden items-center justify-between gap-4 lg:flex">
+          <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <app-section-header eyebrow="{{ 'catalog.results' | t }}" title="{{ 'catalog.grid' | t }}" description="{{ 'catalog.gridDescription' | t }}" />
+            <label class="flex items-center gap-2 self-start sm:self-auto">
+              <span class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">{{ 'catalog.sortBy' | t }}</span>
+              <select class="ui-input h-11 cursor-pointer py-0 pr-8 text-sm font-semibold" [value]="sortBy()" (change)="setSort($any($event.target).value)">
+                @for (option of sortOptions; track option.value) {
+                  <option [value]="option.value">{{ option.label | t }}</option>
+                }
+              </select>
+            </label>
           </div>
 
           @if (loading()) {
@@ -112,11 +126,11 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             </div>
           } @else if (error()) {
             <app-state-panel mode="error" title="{{ 'catalog.error' | t }}" [message]="error()!" />
-          } @else if (products().length === 0) {
+          } @else if (visibleProducts().length === 0) {
             <app-state-panel title="{{ 'catalog.empty' | t }}" message="{{ 'catalog.emptyMessage' | t }}" />
           } @else {
             <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              @for (product of products(); track product.id) {
+              @for (product of visibleProducts(); track product.id) {
                 <app-product-card [product]="product" />
               }
             </div>
@@ -142,7 +156,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (category of categories(); track category.id) {
-                <button class="aurora-chip" type="button">{{ category.name }}</button>
+                <button class="aurora-chip" type="button" [class.ring-2]="selectedCategory() === category.slug" [class.ring-aurora-amber]="selectedCategory() === category.slug" (click)="toggleCategory(category.slug)">{{ category.name }}</button>
               } @empty {
                 <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noCategories' | t }}</span>
               }
@@ -153,14 +167,17 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (brand of brands(); track brand.id) {
-                <button class="aurora-chip" type="button">{{ brand.name }}</button>
+                <button class="aurora-chip" type="button" [class.ring-2]="selectedBrand() === brand.slug" [class.ring-aurora-amber]="selectedBrand() === brand.slug" (click)="toggleBrand(brand.slug)">{{ brand.name }}</button>
               } @empty {
                 <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noBrands' | t }}</span>
               }
             </div>
           </div>
 
-          <button class="ui-button ui-button-primary mt-6 w-full" type="button" (click)="filtersOpen.set(false)">{{ 'catalog.filters' | t }}</button>
+          <div class="mt-6 grid grid-cols-2 gap-2">
+            <button class="ui-button ui-button-secondary" type="button" (click)="clearFilters()">{{ 'catalog.clearFilters' | t }}</button>
+            <button class="ui-button ui-button-primary" type="button" (click)="filtersOpen.set(false)">{{ 'catalog.apply' | t }}</button>
+          </div>
         </div>
       </div>
     }
@@ -174,6 +191,19 @@ export class CatalogPageComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly query = signal('');
   readonly filtersOpen = signal(false);
+  readonly selectedCategory = signal<string | null>(null);
+  readonly selectedBrand = signal<string | null>(null);
+  readonly sortBy = signal<SortKey>('featured');
+
+  /** Client-side facet filtering + sorting over the loaded product list. */
+  readonly visibleProducts = computed(() => {
+    const category = this.selectedCategory();
+    const brand = this.selectedBrand();
+    const filtered = this.products().filter(
+      (product) => (!category || product.category.slug === category) && (!brand || product.brand.slug === brand)
+    );
+    return this.sortProducts(filtered, this.sortBy());
+  });
 
   readonly Grid3X3 = Grid3X3;
   readonly Search = Search;
@@ -181,11 +211,20 @@ export class CatalogPageComponent implements OnInit {
   readonly Sparkles = Sparkles;
   readonly X = X;
   readonly skeletonItems = [1, 2, 3, 4, 5, 6];
+  readonly sortOptions: { value: SortKey; label: string }[] = [
+    { value: 'featured', label: 'catalog.sort.featured' },
+    { value: 'price-asc', label: 'catalog.sort.priceAsc' },
+    { value: 'price-desc', label: 'catalog.sort.priceDesc' },
+    { value: 'name', label: 'catalog.sort.name' }
+  ];
+
+  private loadedQuery: string | null = null;
 
   constructor(
     private readonly catalogService: CatalogService,
     private readonly language: LanguageService,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly router: Router
   ) {}
 
   ngOnInit(): void {
@@ -193,19 +232,55 @@ export class CatalogPageComponent implements OnInit {
     this.catalogService.getCategories().subscribe({ next: (c) => this.categories.set(c), error: () => undefined });
     this.catalogService.getBrands().subscribe({ next: (b) => this.brands.set(b), error: () => undefined });
 
-    // React to the global search box (?q=...) as well as in-page searches.
+    // The URL is the source of truth for search + facets, so global search,
+    // home category deep-links and in-page filters all stay in sync.
     this.route.queryParamMap.subscribe((params) => {
-      this.query.set(params.get('q') ?? '');
-      this.loadProducts();
+      const query = params.get('q') ?? '';
+      this.query.set(query);
+      this.selectedCategory.set(params.get('category'));
+      this.selectedBrand.set(params.get('brand'));
+      const sort = params.get('sort');
+      this.sortBy.set(this.isSortKey(sort) ? sort : 'featured');
+
+      // Only the text query hits the backend; facets and sort are client-side.
+      if (query !== this.loadedQuery) {
+        this.loadProducts(query);
+      }
     });
   }
 
   search(): void {
-    this.loadProducts();
+    this.updateParams({ q: this.query().trim() || null });
   }
 
-  private loadProducts(): void {
-    const value = this.query().trim();
+  toggleCategory(slug: string): void {
+    this.updateParams({ category: this.selectedCategory() === slug ? null : slug });
+  }
+
+  toggleBrand(slug: string): void {
+    this.updateParams({ brand: this.selectedBrand() === slug ? null : slug });
+  }
+
+  setSort(value: string): void {
+    this.updateParams({ sort: value === 'featured' ? null : value });
+  }
+
+  clearFilters(): void {
+    this.updateParams({ category: null, brand: null });
+    this.filtersOpen.set(false);
+  }
+
+  private updateParams(patch: Record<string, string | null>): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: patch,
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  private loadProducts(query: string): void {
+    const value = query.trim();
+    this.loadedQuery = query;
     this.loading.set(true);
     this.error.set(null);
 
@@ -220,5 +295,24 @@ export class CatalogPageComponent implements OnInit {
         this.loading.set(false);
       }
     });
+  }
+
+  private sortProducts(products: Product[], sort: SortKey): Product[] {
+    const sorted = [...products];
+
+    switch (sort) {
+      case 'price-asc':
+        return sorted.sort((a, b) => a.basePrice - b.basePrice);
+      case 'price-desc':
+        return sorted.sort((a, b) => b.basePrice - a.basePrice);
+      case 'name':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      default:
+        return sorted.sort((a, b) => Number(b.featured) - Number(a.featured));
+    }
+  }
+
+  private isSortKey(value: string | null): value is SortKey {
+    return value === 'featured' || value === 'price-asc' || value === 'price-desc' || value === 'name';
   }
 }
