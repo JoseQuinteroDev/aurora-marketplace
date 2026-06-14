@@ -51,7 +51,9 @@ import { WishlistService } from '../../services/wishlist.service';
             <a routerLink="/" routerLinkActive="bg-stone-100 dark:bg-white/10" [routerLinkActiveOptions]="{ exact: true }" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.home' | t }}</a>
             <a routerLink="/catalog" routerLinkActive="bg-stone-100 dark:bg-white/10" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.catalog' | t }}</a>
             <a routerLink="/account/orders" routerLinkActive="bg-stone-100 dark:bg-white/10" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.orders' | t }}</a>
-            <a routerLink="/admin" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.admin' | t }}</a>
+            @if (auth.isAdmin()) {
+              <a routerLink="/admin" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.admin' | t }}</a>
+            }
           </nav>
 
           <label class="ml-auto hidden h-12 min-w-0 flex-1 max-w-xl items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm transition duration-200 focus-within:border-aurora-amber focus-within:ring-2 focus-within:ring-aurora-amber/20 lg:flex dark:border-white/10 dark:bg-white/10">

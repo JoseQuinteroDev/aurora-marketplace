@@ -1,9 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LucideAngularModule, ArrowRight, CheckCircle2, LockKeyhole, Mail, UserPlus, UserRound } from 'lucide-angular';
 import { LanguageService } from '../../core/i18n/language.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { safeInternalUrl } from '../../core/util/safe-internal-url';
 import { AuthService } from '../../services/auth.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
 
@@ -127,7 +128,8 @@ export class RegisterPageComponent {
   constructor(
     private readonly authService: AuthService,
     private readonly language: LanguageService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly route: ActivatedRoute
   ) {}
 
   controlInvalid(controlName: 'firstName' | 'lastName' | 'email' | 'password'): boolean {
@@ -144,7 +146,10 @@ export class RegisterPageComponent {
     this.loading.set(true);
     this.error.set(null);
     this.authService.register(this.form.getRawValue()).subscribe({
-      next: () => this.router.navigateByUrl('/'),
+      next: () => {
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+        this.router.navigateByUrl(safeInternalUrl(returnUrl));
+      },
       error: () => {
         this.error.set(this.language.translate('auth.register.error'));
         this.loading.set(false);

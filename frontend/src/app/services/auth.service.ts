@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { ApiResponse } from '../core/models/api-response.model';
 import { AuthPayload, AuthUser, LoginRequest, RegisterRequest } from '../core/models/auth.model';
@@ -8,13 +9,25 @@ import { AuthPayload, AuthUser, LoginRequest, RegisterRequest } from '../core/mo
 export class AuthService {
   private readonly tokenKey = 'aurora_access_token';
   private readonly userKey = 'aurora_user';
+  private readonly expiryKey = 'aurora_token_expires_at';
   private readonly userSignal = signal<AuthUser | null>(this.loadUser());
 
   readonly currentUser = this.userSignal.asReadonly();
-  readonly isAuthenticated = computed(() => Boolean(this.getToken()));
-  readonly isAdmin = computed(() => this.userSignal()?.role === 'ADMIN');
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly router: Router
+  ) {}
+
+  /** True only when a token is present AND it has not passed its stored expiry. */
+  isAuthenticated(): boolean {
+    return Boolean(this.getToken()) && !this.isSessionExpired();
+  }
+
+  /** Reactive in templates (reads userSignal); also requires a live, non-expired session. */
+  isAdmin(): boolean {
+    return this.isAuthenticated() && this.userSignal()?.role === 'ADMIN';
+  }
 
   login(request: LoginRequest) {
     return this.http.post<ApiResponse<AuthPayload>>('/api/auth/login', request).pipe(
@@ -28,10 +41,19 @@ export class AuthService {
     );
   }
 
-  logout(): void {
+  /**
+   * Clears the session. By default navigates home; pass `null` to clear without
+   * navigating (used by the HTTP error interceptor, which redirects to /login itself).
+   */
+  logout(redirectTo: string | null = '/'): void {
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.userKey);
+    localStorage.removeItem(this.expiryKey);
     this.userSignal.set(null);
+
+    if (redirectTo) {
+      this.router.navigateByUrl(redirectTo);
+    }
   }
 
   getToken(): string | null {
@@ -41,7 +63,19 @@ export class AuthService {
   private persistSession(payload: AuthPayload): void {
     localStorage.setItem(this.tokenKey, payload.accessToken);
     localStorage.setItem(this.userKey, JSON.stringify(payload.user));
+    localStorage.setItem(this.expiryKey, String(Date.now() + payload.expiresInMinutes * 60_000));
     this.userSignal.set(payload.user);
+  }
+
+  private isSessionExpired(): boolean {
+    const raw = localStorage.getItem(this.expiryKey);
+
+    if (!raw) {
+      return false; // Legacy session without a stored expiry — treat as valid.
+    }
+
+    const expiresAt = Number(raw);
+    return Number.isFinite(expiresAt) && Date.now() >= expiresAt;
   }
 
   private loadUser(): AuthUser | null {
