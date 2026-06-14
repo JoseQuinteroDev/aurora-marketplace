@@ -13,7 +13,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       <div class="max-w-7xl">
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Aurora admin</p>
         <h1 class="mt-3 text-3xl font-black tracking-normal text-white sm:text-4xl">Dashboard summary</h1>
-        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Connected to the admin dashboard summary API and ready for richer operational screens.</p>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">An overview of your store’s products, orders and revenue.</p>
 
         @if (loading()) {
           <div class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -58,7 +58,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <div class="rounded-ui border border-white/10 bg-white/[0.06] p-6">
               <h2 class="text-lg font-bold text-white">Paid revenue</h2>
               <p class="mt-5 text-4xl font-black text-emerald-300">{{ data.totalRevenuePaid | currency }}</p>
-              <p class="mt-3 text-sm leading-6 text-slate-300">Revenue is based on orders with PAID status from the backend MVP.</p>
+              <p class="mt-3 text-sm leading-6 text-slate-300">Revenue from orders marked as paid.</p>
             </div>
           </div>
         }
@@ -87,7 +87,7 @@ export class AdminDashboardPageComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Sign in as ADMIN and ensure the backend is running on port 8080.');
+        this.error.set('We couldn’t load the dashboard. Please make sure you’re signed in as an administrator and try again.');
         this.loading.set(false);
       }
     });

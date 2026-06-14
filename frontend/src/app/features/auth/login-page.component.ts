@@ -95,7 +95,7 @@ export class LoginPageComponent {
   readonly LockKeyhole = LockKeyhole;
   readonly ShieldCheck = ShieldCheck;
   readonly Sparkles = Sparkles;
-  readonly panelItems = ['Role-aware access', 'Saved carts and wishlist', 'Admin shell when available'];
+  readonly panelItems = ['Saved favorites and wishlist', 'Faster, secure checkout', 'Track all your orders'];
 
   readonly form = this.formBuilder.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],

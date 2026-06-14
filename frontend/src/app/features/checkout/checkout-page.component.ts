@@ -169,7 +169,7 @@ export class CheckoutPageComponent implements OnInit {
     addressLine: ['', [Validators.required, Validators.maxLength(255)]],
     city: ['', [Validators.required, Validators.maxLength(120)]],
     postalCode: ['', [Validators.required, Validators.maxLength(40)]],
-    country: ['España', [Validators.required, Validators.maxLength(120)]],
+    country: ['', [Validators.required, Validators.maxLength(120)]],
     phone: ['', [Validators.required, Validators.maxLength(40)]]
   });
 

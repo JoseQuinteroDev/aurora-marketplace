@@ -3,6 +3,9 @@
 .vscode/
 *.iml
 
+# Local tooling (e.g. cloudflared binary for temporary tunnels)
+.tools/
+
 # Backups
 *.bak
 

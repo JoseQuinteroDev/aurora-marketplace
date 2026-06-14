@@ -80,7 +80,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 @for (category of categories(); track category.id) {
                   <button class="aurora-chip" type="button">{{ category.name }}</button>
                 } @empty {
-                  <span class="text-sm text-aurora-muted dark:text-stone-400">No categories loaded</span>
+                  <span class="text-sm text-aurora-muted dark:text-stone-400">No categories available</span>
                 }
               </div>
             </div>
@@ -91,7 +91,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 @for (brand of brands(); track brand.id) {
                   <button class="aurora-chip" type="button">{{ brand.name }}</button>
                 } @empty {
-                  <span class="text-sm text-aurora-muted dark:text-stone-400">No brands loaded</span>
+                  <span class="text-sm text-aurora-muted dark:text-stone-400">No brands available</span>
                 }
               </div>
             </div>
@@ -100,7 +100,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
         <div>
           <div class="mb-5 hidden items-center justify-between gap-4 lg:flex">
-            <app-section-header eyebrow="{{ 'catalog.results' | t }}" title="{{ 'catalog.grid' | t }}" description="Built for fast scanning with clear pricing, rating and category cues." />
+            <app-section-header eyebrow="{{ 'catalog.results' | t }}" title="{{ 'catalog.grid' | t }}" description="Clear pricing and ratings to help you choose with confidence." />
           </div>
 
           @if (loading()) {
@@ -143,7 +143,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               @for (category of categories(); track category.id) {
                 <button class="aurora-chip" type="button">{{ category.name }}</button>
               } @empty {
-                <span class="text-sm text-aurora-muted dark:text-stone-400">No categories loaded</span>
+                <span class="text-sm text-aurora-muted dark:text-stone-400">No categories available</span>
               }
             </div>
           </div>
@@ -154,7 +154,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               @for (brand of brands(); track brand.id) {
                 <button class="aurora-chip" type="button">{{ brand.name }}</button>
               } @empty {
-                <span class="text-sm text-aurora-muted dark:text-stone-400">No brands loaded</span>
+                <span class="text-sm text-aurora-muted dark:text-stone-400">No brands available</span>
               }
             </div>
           </div>
@@ -216,8 +216,8 @@ export class CatalogPageComponent implements OnInit {
       error: () => {
         this.error.set(
           value
-            ? 'Search failed. Check that the backend is running.'
-            : 'Start the backend on port 8080 to load the catalog.'
+            ? 'We couldn’t complete your search. Please try again in a moment.'
+            : 'We couldn’t load the catalog right now. Please try again in a moment.'
         );
         this.loading.set(false);
       }

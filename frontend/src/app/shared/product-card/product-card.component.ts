@@ -24,7 +24,7 @@ import { WishlistService } from '../../services/wishlist.service';
           <div class="absolute inset-0 bg-gradient-to-t from-aurora-night/35 via-transparent to-transparent opacity-70"></div>
           <div class="absolute left-3 top-3 flex flex-wrap gap-2">
             @if (product().featured) {
-              <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">Featured</span>
+              <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">{{ 'product.featured' | t }}</span>
             }
             <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">{{ product().category.name }}</span>
           </div>
@@ -47,7 +47,7 @@ import { WishlistService } from '../../services/wishlist.service';
           {{ product().name }}
         </a>
         <p class="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-aurora-muted dark:text-stone-300">
-          {{ product().shortDescription || 'Premium marketplace item ready for Aurora checkout.' }}
+          {{ product().shortDescription || 'A premium piece from the Aurora edit.' }}
         </p>
         <div class="mt-5 flex items-end justify-between gap-3">
           <div>

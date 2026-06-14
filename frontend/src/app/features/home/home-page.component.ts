@@ -104,7 +104,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     </section>
 
     <section class="page-shell py-14">
-      <app-section-header eyebrow="Featured paths" title="{{ 'home.categories' | t }}" description="Visual entry points for focused browsing, from desk upgrades to travel-ready essentials.">
+      <app-section-header eyebrow="Shop by category" title="{{ 'home.categories' | t }}" description="Shop by what you need, from desk upgrades to travel-ready essentials.">
         <a routerLink="/catalog" class="ui-button ui-button-secondary">{{ 'home.openCatalog' | t }}</a>
       </app-section-header>
 
@@ -126,7 +126,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
     <section class="border-y border-aurora-line/80 bg-white/70 py-14 dark:border-white/10 dark:bg-white/[0.03]">
       <div class="page-shell">
-        <app-section-header eyebrow="Featured products" title="{{ 'home.featured' | t }}" description="A polished product rail that already handles loading, empty and service-error states.">
+        <app-section-header eyebrow="Featured products" title="{{ 'home.featured' | t }}" description="Our favorite pieces this week, hand-picked for you.">
           <a routerLink="/catalog" class="ui-button ui-button-primary">{{ 'home.openCatalog' | t }}</a>
         </app-section-header>
 
@@ -138,7 +138,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           </div>
         } @else if (error()) {
           <div class="mt-8">
-            <app-state-panel mode="error" title="Products are offline" [message]="error()!" />
+            <app-state-panel mode="error" title="We couldn’t load products" [message]="error()!" />
           </div>
         } @else if (featuredProducts().length === 0) {
           <div class="mt-8">
@@ -206,7 +206,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <div class="p-7 sm:p-10">
             <p class="section-kicker">Aurora club</p>
             <h2 class="mt-3 text-3xl font-black text-aurora-ink sm:text-4xl dark:text-white">Get first access to the next drop.</h2>
-            <p class="mt-4 max-w-xl text-sm leading-6 text-aurora-muted dark:text-stone-300">A premium account keeps favorites, carts and future order history ready across the marketplace.</p>
+            <p class="mt-4 max-w-xl text-sm leading-6 text-aurora-muted dark:text-stone-300">A free account keeps your favorites, cart and order history together in one place.</p>
             <div class="mt-7 flex flex-col gap-3 sm:flex-row">
               <a routerLink="/register" class="ui-button ui-button-primary">
                 Join Aurora
@@ -249,9 +249,9 @@ export class HomePageComponent implements OnInit {
     { icon: RotateCcw, title: 'Easy returns', copy: 'Return confidence is presented before the final decision.' }
   ];
   readonly promises = [
-    { icon: ShoppingBag, title: 'Premium product browsing', copy: 'Cards, galleries, filters and CTAs share one polished design language.' },
-    { icon: ShieldCheck, title: 'Trust-first flows', copy: 'Visuals reinforce secure accounts, protected routes and backend-owned commerce truth.' },
-    { icon: Zap, title: 'Ready to extend', copy: 'The shell is prepared for cart, wishlist, checkout and order screens without redesign.' }
+    { icon: ShoppingBag, title: 'Effortless browsing', copy: 'A clean, fast experience that helps you decide with confidence.' },
+    { icon: ShieldCheck, title: 'Shop with confidence', copy: 'Secure accounts and protected checkout on every order.' },
+    { icon: Zap, title: 'Everything in one place', copy: 'Cart, wishlist, checkout and orders, beautifully connected.' }
   ];
 
   constructor(private readonly catalogService: CatalogService) {}
@@ -266,7 +266,7 @@ export class HomePageComponent implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.error.set('Start the backend on port 8080 to load products from /api/products.');
+        this.error.set('We couldn’t load products right now. Please try again in a moment.');
         this.loading.set(false);
       }
     });

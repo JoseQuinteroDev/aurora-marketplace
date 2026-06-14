@@ -44,7 +44,7 @@ import { AuthService } from '../../services/auth.service';
           <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div>
               <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Admin workspace</p>
-              <p class="text-sm text-slate-300">Operational command center</p>
+              <p class="text-sm text-slate-300">Manage products, orders and customers.</p>
             </div>
             <div class="flex items-center gap-2 rounded-ui border border-white/10 bg-white/10 px-3 py-2 text-sm">
               <button class="cursor-pointer font-black text-amber-200" type="button" (click)="language.toggle()">{{ language.language().toUpperCase() }}</button>

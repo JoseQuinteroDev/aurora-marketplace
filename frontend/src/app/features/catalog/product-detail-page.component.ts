@@ -59,7 +59,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
               <img class="aspect-square w-full rounded-ui object-cover" [src]="selectedImage() || imageUrl(item)" [alt]="item.name" />
               <div class="absolute left-6 top-6 flex flex-wrap gap-2">
                 @if (item.featured) {
-                  <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">Featured</span>
+                  <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">{{ 'product.featured' | t }}</span>
                 }
                 <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">{{ item.category.name }}</span>
               </div>
@@ -165,7 +165,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
           <div class="p-3 sm:p-5">
             @if (activeTab() === 'description') {
               <p class="max-w-3xl text-sm leading-7 text-aurora-muted dark:text-stone-300">
-                {{ item.description || item.shortDescription || 'A refined Aurora marketplace product with clean detail structure, visual hierarchy and purchase CTAs ready for cart integration.' }}
+                {{ item.description || item.shortDescription || 'A refined piece from the Aurora edit, chosen for quality, everyday usefulness and lasting design.' }}
               </p>
             } @else if (activeTab() === 'specs') {
               <div class="grid gap-3 sm:grid-cols-3">
@@ -301,9 +301,9 @@ export class ProductDetailPageComponent implements OnInit {
   readonly stars = [1, 2, 3, 4, 5];
 
   readonly promises = [
-    { icon: Truck, title: 'Fast shipping', copy: 'Clear delivery expectation.' },
-    { icon: ShieldCheck, title: 'Secure checkout', copy: 'Protected account flow.' },
-    { icon: BadgeCheck, title: 'Quality pick', copy: 'Curated catalog signal.' }
+    { icon: Truck, title: 'Fast shipping', copy: 'Fast, tracked delivery on every order.' },
+    { icon: ShieldCheck, title: 'Secure checkout', copy: 'Your payment and data stay protected.' },
+    { icon: BadgeCheck, title: 'Quality pick', copy: 'Hand-picked for the Aurora edit.' }
   ];
 
   constructor(

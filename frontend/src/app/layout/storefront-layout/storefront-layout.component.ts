@@ -149,7 +149,7 @@ import { WishlistService } from '../../services/wishlist.service';
             </div>
             <div>
               <p class="font-bold">{{ 'footer.operations' | t }}</p>
-              <p class="mt-4 text-sm leading-6 text-stone-300">Inventory, audit logs, batch jobs and simulated payments are ready for the next frontend layer.</p>
+              <p class="mt-4 text-sm leading-6 text-stone-300">{{ 'footer.help' | t }}</p>
             </div>
           </div>
         </div>
@@ -167,9 +167,9 @@ export class StorefrontLayoutComponent implements OnInit {
   readonly UserRound = UserRound;
 
   readonly trustItems = [
-    { icon: ShieldCheck, title: 'Protected flows', copy: 'JWT-ready access, clean states and role-aware routing.' },
-    { icon: Truck, title: 'Inventory aware', copy: 'Stock and product truth stay owned by the backend.' },
-    { icon: PackageCheck, title: 'Order ready', copy: 'Cart, checkout and simulated payments are API-aligned.' }
+    { icon: ShieldCheck, title: 'Secure checkout', copy: 'Your payment and personal data are protected at every step.' },
+    { icon: Truck, title: 'Always in stock', copy: 'Live availability so you only buy what is ready to ship.' },
+    { icon: PackageCheck, title: 'Order tracking', copy: 'Follow every order from checkout to your door.' }
   ];
 
   constructor(
