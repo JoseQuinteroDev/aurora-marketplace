@@ -346,7 +346,12 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'title.orders': 'Pedidos',
     'title.order': 'Pedido',
     'title.payment': 'Pago',
-    'title.admin': 'Admin'
+    'title.admin': 'Admin',
+    'title.notFound': 'Página no encontrada',
+
+    'notFound.title': 'Página no encontrada',
+    'notFound.message': 'La página que buscas no existe o se movió. Vuelve al inicio o explora el catálogo.',
+    'notFound.home': 'Volver al inicio'
   },
   en: {
     'nav.home': 'Home',
@@ -693,6 +698,11 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'title.orders': 'Orders',
     'title.order': 'Order',
     'title.payment': 'Payment',
-    'title.admin': 'Admin'
+    'title.admin': 'Admin',
+    'title.notFound': 'Page not found',
+
+    'notFound.title': 'Page not found',
+    'notFound.message': 'The page you’re looking for doesn’t exist or moved. Head back home or browse the catalog.',
+    'notFound.home': 'Back to home'
   }
 };

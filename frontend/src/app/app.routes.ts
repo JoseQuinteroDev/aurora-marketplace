@@ -15,8 +15,17 @@ import { WishlistPageComponent } from './features/wishlist/wishlist-page.compone
 import { PaymentPageComponent } from './features/payment/payment-page.component';
 import { OrdersPageComponent } from './features/orders/orders-page.component';
 import { OrderDetailPageComponent } from './features/orders/order-detail-page.component';
+import { NotFoundPageComponent } from './features/not-found/not-found-page.component';
 
 export const routes: Routes = [
+  {
+    path: 'admin',
+    component: AdminShellComponent,
+    canActivate: [adminGuard],
+    children: [
+      { path: '', component: AdminDashboardPageComponent, title: 'title.admin' }
+    ]
+  },
   {
     path: '',
     component: StorefrontLayoutComponent,
@@ -31,16 +40,8 @@ export const routes: Routes = [
       { path: 'checkout', component: CheckoutPageComponent, canActivate: [authGuard], title: 'title.checkout' },
       { path: 'account/orders', component: OrdersPageComponent, canActivate: [authGuard], title: 'title.orders' },
       { path: 'account/orders/:id', component: OrderDetailPageComponent, canActivate: [authGuard], title: 'title.order' },
-      { path: 'orders/:id/payment', component: PaymentPageComponent, canActivate: [authGuard], title: 'title.payment' }
+      { path: 'orders/:id/payment', component: PaymentPageComponent, canActivate: [authGuard], title: 'title.payment' },
+      { path: '**', component: NotFoundPageComponent, title: 'title.notFound' }
     ]
-  },
-  {
-    path: 'admin',
-    component: AdminShellComponent,
-    canActivate: [adminGuard],
-    children: [
-      { path: '', component: AdminDashboardPageComponent, title: 'title.admin' }
-    ]
-  },
-  { path: '**', redirectTo: '' }
+  }
 ];
