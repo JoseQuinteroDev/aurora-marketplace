@@ -50,7 +50,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
         </label>
         <div class="grid grid-cols-2 gap-3">
           <button class="ui-button ui-button-primary" type="button" (click)="search()">{{ 'catalog.search' | t }}</button>
-          <button class="ui-button ui-button-secondary" type="button" (click)="filtersOpen.set(true)">
+          <button class="ui-button ui-button-secondary" type="button" (click)="openFilters()">
             <lucide-icon [img]="SlidersHorizontal" size="17" />
             {{ 'catalog.filters' | t }}
           </button>
@@ -140,14 +140,14 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
     </section>
 
     @if (filtersOpen()) {
-      <div class="fixed inset-0 z-50 bg-aurora-night/55 p-3 backdrop-blur-sm lg:hidden" (click)="filtersOpen.set(false)">
-        <div class="absolute inset-x-3 bottom-3 rounded-ui border border-white/70 bg-white p-5 shadow-premium dark:border-white/10 dark:bg-aurora-night" (click)="$event.stopPropagation()">
+      <div class="fixed inset-0 z-50 bg-aurora-night/55 p-3 backdrop-blur-sm lg:hidden" (click)="closeFilters()" (keydown)="onFilterKeydown($event)">
+        <div class="absolute inset-x-3 bottom-3 rounded-ui border border-white/70 bg-white p-5 shadow-premium dark:border-white/10 dark:bg-aurora-night" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" data-filter-dialog [attr.aria-label]="'catalog.filters' | t">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-black text-aurora-ink dark:text-white">
               <lucide-icon [img]="SlidersHorizontal" size="18" />
               {{ 'catalog.filters' | t }}
             </div>
-            <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" (click)="filtersOpen.set(false)" [attr.aria-label]="'a11y.closeFilters' | t">
+            <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" (click)="closeFilters()" [attr.aria-label]="'a11y.closeFilters' | t">
               <lucide-icon [img]="X" size="18" />
             </button>
           </div>
@@ -176,7 +176,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
 
           <div class="mt-6 grid grid-cols-2 gap-2">
             <button class="ui-button ui-button-secondary" type="button" (click)="clearFilters()">{{ 'catalog.clearFilters' | t }}</button>
-            <button class="ui-button ui-button-primary" type="button" (click)="filtersOpen.set(false)">{{ 'catalog.apply' | t }}</button>
+            <button class="ui-button ui-button-primary" type="button" (click)="closeFilters()">{{ 'catalog.apply' | t }}</button>
           </div>
         </div>
       </div>
@@ -219,6 +219,7 @@ export class CatalogPageComponent implements OnInit {
   ];
 
   private loadedQuery: string | null = null;
+  private filterReturnFocus: HTMLElement | null = null;
 
   constructor(
     private readonly catalogService: CatalogService,
@@ -268,6 +269,62 @@ export class CatalogPageComponent implements OnInit {
   clearFilters(): void {
     this.updateParams({ category: null, brand: null });
     this.filtersOpen.set(false);
+  }
+
+  // --- Mobile filter dialog: focus management (no CDK) ---
+  openFilters(): void {
+    if (typeof document !== 'undefined') {
+      this.filterReturnFocus = document.activeElement as HTMLElement | null;
+    }
+    this.filtersOpen.set(true);
+    // Wait for the dialog to render, then move focus inside it.
+    setTimeout(() => this.panelFocusables()[0]?.focus(), 0);
+  }
+
+  closeFilters(): void {
+    this.filtersOpen.set(false);
+    this.filterReturnFocus?.focus?.();
+    this.filterReturnFocus = null;
+  }
+
+  onFilterKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeFilters();
+      return;
+    }
+    if (event.key !== 'Tab') {
+      return;
+    }
+    const focusables = this.panelFocusables();
+    if (focusables.length === 0) {
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private panelFocusables(): HTMLElement[] {
+    if (typeof document === 'undefined') {
+      return [];
+    }
+    const panel = document.querySelector('[data-filter-dialog]');
+    if (!panel) {
+      return [];
+    }
+    return Array.from(
+      panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    );
   }
 
   private updateParams(patch: Record<string, string | null>): void {

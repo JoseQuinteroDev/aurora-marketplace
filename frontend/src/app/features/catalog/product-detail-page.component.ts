@@ -21,7 +21,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { Product } from '../../core/models/product.model';
 import { Review } from '../../core/models/review.model';
 import { cartErrorKey } from '../../core/util/cart-errors';
-import { productGallery, productImage } from '../../core/util/product-media';
+import { firstActiveVariantId, productGallery, productImage, productImageAlt } from '../../core/util/product-media';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { CatalogService } from '../../services/catalog.service';
@@ -60,7 +60,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
         <div class="mt-8 grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
           <div class="space-y-4">
             <div class="premium-shell relative overflow-hidden p-3">
-              <img class="aspect-square w-full rounded-ui object-cover" [src]="selectedImage() || imageUrl(item)" [alt]="item.name" />
+              <img class="aspect-square w-full rounded-ui object-cover" [src]="selectedImage() || imageUrl(item)" [alt]="imageAlt(item)" />
               <div class="absolute left-6 top-6 flex flex-wrap gap-2">
                 @if (item.featured) {
                   <span class="aurora-badge border-white/60 bg-white/90 text-aurora-ink">{{ 'product.featured' | t }}</span>
@@ -347,7 +347,7 @@ export class ProductDetailPageComponent implements OnInit {
       next: (product) => {
         this.product.set(product);
         this.selectedImage.set(this.imageUrl(product));
-        this.selectedVariant.set(product.variants.find((variant) => variant.active)?.id ?? product.variants[0]?.id ?? null);
+        this.selectedVariant.set(firstActiveVariantId(product));
         this.loading.set(false);
         this.loadReviews(product.id);
       },
@@ -464,7 +464,7 @@ export class ProductDetailPageComponent implements OnInit {
   }
 
   selectedVariantId(product: Product): string | null {
-    return this.selectedVariant() ?? product.variants.find((variant) => variant.active)?.id ?? product.variants[0]?.id ?? null;
+    return this.selectedVariant() ?? firstActiveVariantId(product);
   }
 
   averageRating(): string {
@@ -478,6 +478,10 @@ export class ProductDetailPageComponent implements OnInit {
 
   imageUrl(product: Product): string {
     return productImage(product);
+  }
+
+  imageAlt(product: Product): string {
+    return productImageAlt(product);
   }
 
   galleryUrls(product: Product): string[] {

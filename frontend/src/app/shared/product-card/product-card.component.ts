@@ -6,7 +6,7 @@ import { LucideAngularModule, ArrowUpRight, Heart, ShoppingBag } from 'lucide-an
 import { LanguageService } from '../../core/i18n/language.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { cartErrorKey } from '../../core/util/cart-errors';
-import { productImage } from '../../core/util/product-media';
+import { firstActiveVariantId, productImage, productImageAlt } from '../../core/util/product-media';
 import { Product } from '../../core/models/product.model';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
@@ -24,7 +24,7 @@ import { WishlistService } from '../../services/wishlist.service';
               loading="lazy"
               class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
             [src]="imageUrl()"
-            [alt]="product().name"
+            [alt]="imageAlt()"
           />
           <div class="absolute inset-0 bg-gradient-to-t from-aurora-night/35 via-transparent to-transparent opacity-70"></div>
           <div class="absolute left-3 top-3 flex flex-wrap gap-2">
@@ -138,10 +138,14 @@ export class ProductCardComponent {
   }
 
   firstVariantId(): string | null {
-    return this.product().variants.find((variant) => variant.active)?.id ?? this.product().variants[0]?.id ?? null;
+    return firstActiveVariantId(this.product());
   }
 
   imageUrl(): string {
     return productImage(this.product());
+  }
+
+  imageAlt(): string {
+    return productImageAlt(this.product());
   }
 }

@@ -28,6 +28,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
   imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, TranslatePipe, ToastHostComponent],
   template: `
     <div class="min-h-screen text-aurora-ink dark:text-white">
+      <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-ui focus:bg-aurora-ink focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white focus:shadow-lift dark:focus:bg-white dark:focus:text-aurora-night">{{ 'a11y.skipToContent' | t }}</a>
       <div class="border-b border-white/10 bg-aurora-night text-white">
         <div class="page-shell flex min-h-10 items-center justify-center gap-3 text-center text-xs font-bold sm:justify-between">
           <span class="inline-flex items-center gap-2">
@@ -107,8 +108,8 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
         </div>
       </header>
 
-      <main>
-        <router-outlet />
+      <main id="main-content" tabindex="-1" class="outline-none">
+        <router-outlet (activate)="focusMain()" />
       </main>
 
       <footer class="mt-20 border-t border-aurora-line bg-aurora-night text-white dark:border-white/10">
@@ -199,5 +200,24 @@ export class StorefrontLayoutComponent {
     this.router.navigate(['/catalog'], {
       queryParams: value ? { q: value } : {}
     });
+  }
+
+  /** Move focus to the page content on navigation so keyboard / screen-reader users
+   *  start at the new page instead of the stale header. preventScroll lets the
+   *  router's own scroll restoration handle position. */
+  private routeActivated = false;
+
+  focusMain(): void {
+    // Don't steal focus on first paint — leave it at the top so the skip link is
+    // the first tab stop. On later SPA navigations, move focus to the page content
+    // so keyboard / screen-reader users start at the new page, not the stale header.
+    if (!this.routeActivated) {
+      this.routeActivated = true;
+      return;
+    }
+    if (typeof document === 'undefined') {
+      return;
+    }
+    document.getElementById('main-content')?.focus({ preventScroll: true });
   }
 }

@@ -314,6 +314,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'admin.workspaceCopy': 'Gestiona productos, pedidos y clientes.',
 
     'a11y.home': 'Inicio de Aurora Marketplace',
+    'a11y.skipToContent': 'Saltar al contenido',
     'a11y.changeLanguage': 'Cambiar idioma',
     'a11y.toggleTheme': 'Cambiar entre tema claro y oscuro',
     'a11y.openMenu': 'Abrir catálogo',
@@ -660,6 +661,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'admin.workspaceCopy': 'Manage products, orders and customers.',
 
     'a11y.home': 'Aurora Marketplace home',
+    'a11y.skipToContent': 'Skip to content',
     'a11y.changeLanguage': 'Change language',
     'a11y.toggleTheme': 'Toggle light or dark theme',
     'a11y.openMenu': 'Open catalog',

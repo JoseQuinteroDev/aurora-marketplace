@@ -34,3 +34,8 @@ export function productGallery(product: Product): string[] {
 export function productImageAlt(product: Product): string {
   return product.images.find((image) => image.mainImage)?.altText || product.images[0]?.altText || product.name;
 }
+
+/** The variant a buyer acts on by default: first active variant, else the first one. */
+export function firstActiveVariantId(product: Product): string | null {
+  return product.variants.find((variant) => variant.active)?.id ?? product.variants[0]?.id ?? null;
+}
