@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.aurora.backend.catalog.brand.entity.Brand;
 import com.aurora.backend.catalog.brand.service.BrandService;
@@ -25,6 +26,8 @@ import com.aurora.backend.catalog.product.repository.ProductVariantRepository;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.common.exception.NotFoundException;
 import com.aurora.backend.inventory.service.InventoryService;
+import com.aurora.backend.review.repository.ProductRatingStats;
+import com.aurora.backend.review.repository.ReviewRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -38,32 +41,38 @@ public class ProductService {
     private final CategoryService categoryService;
     private final BrandService brandService;
     private final InventoryService inventoryService;
+    private final ReviewRepository reviewRepository;
 
     public ProductService(
             ProductRepository productRepository,
             ProductVariantRepository productVariantRepository,
             CategoryService categoryService,
             BrandService brandService,
-            InventoryService inventoryService
+            InventoryService inventoryService,
+            ReviewRepository reviewRepository
     ) {
         this.productRepository = productRepository;
         this.productVariantRepository = productVariantRepository;
         this.categoryService = categoryService;
         this.brandService = brandService;
         this.inventoryService = inventoryService;
+        this.reviewRepository = reviewRepository;
     }
 
     @Transactional(readOnly = true)
     public List<ProductResponse> listActiveProducts() {
-        return productRepository.findByActiveTrueOrderByCreatedAtDesc().stream()
-                .map(ProductResponse::from)
-                .toList();
+        return mapWithRatings(productRepository.findByActiveTrueOrderByCreatedAtDesc());
     }
 
     @Transactional(readOnly = true)
     public ProductResponse getActiveProductBySlug(String slug) {
         return productRepository.findBySlugAndActiveTrue(SlugUtils.from(slug))
-                .map(ProductResponse::from)
+                .map(product -> {
+                    List<ProductRatingStats> stats = reviewRepository.findRatingStatsByProductIds(List.of(product.getId()));
+                    return stats.isEmpty()
+                            ? ProductResponse.from(product, null, 0L)
+                            : ProductResponse.from(product, stats.get(0).getAverageRating(), stats.get(0).getReviewCount());
+                })
                 .orElseThrow(() -> new NotFoundException("Product", slug));
     }
 
@@ -73,8 +82,28 @@ public class ProductService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "SEARCH_QUERY_REQUIRED", "Search query is required.");
         }
 
-        return productRepository.searchActive(query.trim()).stream()
-                .map(ProductResponse::from)
+        return mapWithRatings(productRepository.searchActive(query.trim()));
+    }
+
+    /** Maps products to responses, attaching review aggregates fetched in a single
+     *  grouped query (no per-product N+1). */
+    private List<ProductResponse> mapWithRatings(List<Product> products) {
+        if (products.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, ProductRatingStats> statsByProduct = reviewRepository
+                .findRatingStatsByProductIds(products.stream().map(Product::getId).toList())
+                .stream()
+                .collect(Collectors.toMap(ProductRatingStats::getProductId, stats -> stats));
+
+        return products.stream()
+                .map(product -> {
+                    ProductRatingStats stats = statsByProduct.get(product.getId());
+                    return stats == null
+                            ? ProductResponse.from(product, null, 0L)
+                            : ProductResponse.from(product, stats.getAverageRating(), stats.getReviewCount());
+                })
                 .toList();
     }
 

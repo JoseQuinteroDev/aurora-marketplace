@@ -1,8 +1,8 @@
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe } from '@angular/common';
 import { Component, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
-import { LucideAngularModule, ArrowUpRight, Heart, ShoppingBag } from 'lucide-angular';
+import { LucideAngularModule, ArrowUpRight, Heart, ShoppingBag, Star } from 'lucide-angular';
 import { LanguageService } from '../../core/i18n/language.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { cartErrorKey } from '../../core/util/cart-errors';
@@ -15,7 +15,7 @@ import { WishlistService } from '../../services/wishlist.service';
 
 @Component({
   selector: 'app-product-card',
-  imports: [CurrencyPipe, RouterLink, LucideAngularModule, TranslatePipe],
+  imports: [CurrencyPipe, DecimalPipe, RouterLink, LucideAngularModule, TranslatePipe],
   template: `
     <article class="soft-card group overflow-hidden">
       <a [routerLink]="['/products', product().slug]" class="relative block cursor-pointer">
@@ -39,9 +39,18 @@ import { WishlistService } from '../../services/wishlist.service';
         </div>
       </a>
       <div class="p-4 sm:p-5">
-        <p class="text-xs font-black uppercase tracking-[0.14em] text-aurora-gold dark:text-amber-300">
-          {{ product().brand.name }}
-        </p>
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-xs font-black uppercase tracking-[0.14em] text-aurora-gold dark:text-amber-300">
+            {{ product().brand.name }}
+          </p>
+          @if (product().reviewCount) {
+            <div class="flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-300" [attr.aria-label]="(product().averageRating | number: '1.1-1') + ' / 5'">
+              <lucide-icon [img]="Star" size="14" />
+              {{ product().averageRating | number: '1.1-1' }}
+              <span class="font-semibold text-aurora-muted dark:text-stone-400">({{ product().reviewCount }})</span>
+            </div>
+          }
+        </div>
         <a [routerLink]="['/products', product().slug]" class="mt-2 line-clamp-2 block cursor-pointer text-lg font-black leading-6 text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white dark:hover:text-amber-300">
           {{ product().name }}
         </a>
@@ -73,6 +82,7 @@ export class ProductCardComponent {
   readonly ArrowUpRight = ArrowUpRight;
   readonly Heart = Heart;
   readonly ShoppingBag = ShoppingBag;
+  readonly Star = Star;
 
   constructor(
     private readonly auth: AuthService,

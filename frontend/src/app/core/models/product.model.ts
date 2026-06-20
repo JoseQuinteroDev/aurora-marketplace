@@ -43,4 +43,7 @@ export interface Product {
   brand: Brand;
   variants: ProductVariant[];
   images: ProductImage[];
+  /** Real review aggregates from the backend; reviewCount is 0 when there are none. */
+  averageRating?: number;
+  reviewCount?: number;
 }

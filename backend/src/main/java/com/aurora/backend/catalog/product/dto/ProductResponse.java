@@ -20,10 +20,17 @@ public record ProductResponse(
         CategoryResponse category,
         BrandResponse brand,
         List<ProductVariantResponse> variants,
-        List<ProductImageResponse> images
+        List<ProductImageResponse> images,
+        Double averageRating,
+        long reviewCount
 ) {
 
+    /** No rating context (write responses / admin) — count 0, average null. */
     public static ProductResponse from(Product product) {
+        return from(product, null, 0L);
+    }
+
+    public static ProductResponse from(Product product, Double averageRating, long reviewCount) {
         return new ProductResponse(
                 product.getId(),
                 product.getName(),
@@ -40,7 +47,9 @@ public record ProductResponse(
                         .toList(),
                 product.getImages().stream()
                         .map(ProductImageResponse::from)
-                        .toList()
+                        .toList(),
+                averageRating,
+                reviewCount
         );
     }
 }
