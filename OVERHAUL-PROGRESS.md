@@ -1,10 +1,8 @@
 # Aurora Marketplace — Saneamiento del Frontend (registro de progreso)
 
-> Última actualización: 2026-06-20 (sesión nocturna autónoma).
-> El trabajo de esta sesión vive en la rama **`feat/professional-overhaul`** (empujada a GitHub).
-> **No se pudo mergear a `main` automáticamente** (el guardrail del entorno bloquea el push directo a la rama por defecto). Para integrarlo: abre el PR en
-> `https://github.com/JoseQuinteroDev/aurora-marketplace/pull/new/feat/professional-overhaul`
-> y mergéalo (ff). Cada commit es atómico y la rama compila verde en cada paso.
+> Última actualización: 2026-06-20.
+> ✅ **Todo integrado a `main`** (fast-forward) y empujado a GitHub. Cada commit es atómico y compila verde.
+> Se hicieron **4 rondas de revisión** (la 4ª sobre el código nuevo de la sesión: ratings full-stack + harness de tests → backend y harness limpios, solo 2 fixes triviales de pluralización).
 
 Plan por fases para sanear el frontend Angular.
 
