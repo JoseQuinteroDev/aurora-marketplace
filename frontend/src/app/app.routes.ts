@@ -4,26 +4,20 @@ import { authGuard } from './guards/auth.guard';
 import { StorefrontLayoutComponent } from './layout/storefront-layout/storefront-layout.component';
 import { AdminShellComponent } from './layout/admin-shell/admin-shell.component';
 import { HomePageComponent } from './features/home/home-page.component';
-import { LoginPageComponent } from './features/auth/login-page.component';
-import { RegisterPageComponent } from './features/auth/register-page.component';
-import { CatalogPageComponent } from './features/catalog/catalog-page.component';
-import { ProductDetailPageComponent } from './features/catalog/product-detail-page.component';
-import { AdminDashboardPageComponent } from './features/admin/admin-dashboard-page.component';
-import { CartPageComponent } from './features/cart/cart-page.component';
-import { CheckoutPageComponent } from './features/checkout/checkout-page.component';
-import { WishlistPageComponent } from './features/wishlist/wishlist-page.component';
-import { PaymentPageComponent } from './features/payment/payment-page.component';
-import { OrdersPageComponent } from './features/orders/orders-page.component';
-import { OrderDetailPageComponent } from './features/orders/order-detail-page.component';
-import { NotFoundPageComponent } from './features/not-found/not-found-page.component';
 
+// Layout shells and the landing page load eagerly (needed for first paint);
+// every other route is lazy-loaded so it ships as its own chunk.
 export const routes: Routes = [
   {
     path: 'admin',
     component: AdminShellComponent,
     canActivate: [adminGuard],
     children: [
-      { path: '', component: AdminDashboardPageComponent, title: 'title.admin' }
+      {
+        path: '',
+        loadComponent: () => import('./features/admin/admin-dashboard-page.component').then((m) => m.AdminDashboardPageComponent),
+        title: 'title.admin'
+      }
     ]
   },
   {
@@ -31,17 +25,67 @@ export const routes: Routes = [
     component: StorefrontLayoutComponent,
     children: [
       { path: '', component: HomePageComponent, title: 'title.home' },
-      { path: 'catalog', component: CatalogPageComponent, title: 'title.catalog' },
-      { path: 'products/:slug', component: ProductDetailPageComponent, title: 'title.product' },
-      { path: 'login', component: LoginPageComponent, title: 'title.login' },
-      { path: 'register', component: RegisterPageComponent, title: 'title.register' },
-      { path: 'cart', component: CartPageComponent, canActivate: [authGuard], title: 'title.cart' },
-      { path: 'wishlist', component: WishlistPageComponent, canActivate: [authGuard], title: 'title.wishlist' },
-      { path: 'checkout', component: CheckoutPageComponent, canActivate: [authGuard], title: 'title.checkout' },
-      { path: 'account/orders', component: OrdersPageComponent, canActivate: [authGuard], title: 'title.orders' },
-      { path: 'account/orders/:id', component: OrderDetailPageComponent, canActivate: [authGuard], title: 'title.order' },
-      { path: 'orders/:id/payment', component: PaymentPageComponent, canActivate: [authGuard], title: 'title.payment' },
-      { path: '**', component: NotFoundPageComponent, title: 'title.notFound' }
+      {
+        path: 'catalog',
+        loadComponent: () => import('./features/catalog/catalog-page.component').then((m) => m.CatalogPageComponent),
+        title: 'title.catalog'
+      },
+      {
+        path: 'products/:slug',
+        loadComponent: () => import('./features/catalog/product-detail-page.component').then((m) => m.ProductDetailPageComponent),
+        title: 'title.product'
+      },
+      {
+        path: 'login',
+        loadComponent: () => import('./features/auth/login-page.component').then((m) => m.LoginPageComponent),
+        title: 'title.login'
+      },
+      {
+        path: 'register',
+        loadComponent: () => import('./features/auth/register-page.component').then((m) => m.RegisterPageComponent),
+        title: 'title.register'
+      },
+      {
+        path: 'cart',
+        loadComponent: () => import('./features/cart/cart-page.component').then((m) => m.CartPageComponent),
+        canActivate: [authGuard],
+        title: 'title.cart'
+      },
+      {
+        path: 'wishlist',
+        loadComponent: () => import('./features/wishlist/wishlist-page.component').then((m) => m.WishlistPageComponent),
+        canActivate: [authGuard],
+        title: 'title.wishlist'
+      },
+      {
+        path: 'checkout',
+        loadComponent: () => import('./features/checkout/checkout-page.component').then((m) => m.CheckoutPageComponent),
+        canActivate: [authGuard],
+        title: 'title.checkout'
+      },
+      {
+        path: 'account/orders',
+        loadComponent: () => import('./features/orders/orders-page.component').then((m) => m.OrdersPageComponent),
+        canActivate: [authGuard],
+        title: 'title.orders'
+      },
+      {
+        path: 'account/orders/:id',
+        loadComponent: () => import('./features/orders/order-detail-page.component').then((m) => m.OrderDetailPageComponent),
+        canActivate: [authGuard],
+        title: 'title.order'
+      },
+      {
+        path: 'orders/:id/payment',
+        loadComponent: () => import('./features/payment/payment-page.component').then((m) => m.PaymentPageComponent),
+        canActivate: [authGuard],
+        title: 'title.payment'
+      },
+      {
+        path: '**',
+        loadComponent: () => import('./features/not-found/not-found-page.component').then((m) => m.NotFoundPageComponent),
+        title: 'title.notFound'
+      }
     ]
   }
 ];
