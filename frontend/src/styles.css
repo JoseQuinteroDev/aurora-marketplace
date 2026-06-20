@@ -156,3 +156,61 @@ textarea {
     scroll-behavior: auto;
   }
 }
+
+/* ---- Editorial hero ---- */
+.hero-editorial {
+  position: relative;
+  background:
+    radial-gradient(120% 85% at 88% -15%, rgba(201, 135, 23, 0.14), transparent 60%),
+    radial-gradient(90% 70% at -5% 0%, rgba(15, 159, 110, 0.08), transparent 55%),
+    linear-gradient(180deg, var(--aurora-surface), var(--aurora-bg));
+}
+
+/* Subtle film grain for paper-like atmosphere (purely decorative). */
+.hero-editorial::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.dark .hero-editorial::before {
+  opacity: 0.28;
+}
+
+/* A hairline amber rule used as an editorial accent. */
+.hero-rule {
+  height: 1px;
+  width: 2.75rem;
+  background: linear-gradient(90deg, #b7791f, transparent);
+}
+
+.dark .hero-rule {
+  background: linear-gradient(90deg, #f5b942, transparent);
+}
+
+@keyframes heroReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-reveal {
+  opacity: 0;
+  animation: heroReveal 720ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-reveal {
+    animation: none;
+    opacity: 1;
+  }
+}

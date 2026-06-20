@@ -35,71 +35,54 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     StatePanelComponent
   ],
   template: `
-    <section class="relative overflow-hidden bg-aurora-radial dark:bg-aurora-dark-radial">
-      <div class="page-shell grid min-h-[720px] items-center gap-10 py-10 lg:grid-cols-[0.96fr_1.04fr] lg:py-16">
-        <div class="relative z-10 max-w-3xl animate-fadeUp">
-          <div class="inline-flex items-center gap-2 rounded-ui border border-white/70 bg-white/80 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-aurora-gold shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-amber-300">
-            <lucide-icon [img]="Sparkles" size="14" />
-            {{ 'home.badge' | t }}
-          </div>
-          <h1 class="mt-5 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-tight text-aurora-ink sm:text-6xl lg:text-7xl dark:text-white">
-            {{ 'home.title' | t }}
-          </h1>
-          <p class="mt-6 max-w-2xl text-base leading-8 text-aurora-muted sm:text-lg dark:text-stone-300">
-            {{ 'home.subtitle' | t }}
-          </p>
+    <section class="hero-editorial overflow-hidden">
+      <div class="page-shell relative z-10 py-16 lg:py-24">
+        <div class="hero-reveal flex items-center gap-3 text-xs font-black uppercase tracking-[0.22em] text-aurora-gold dark:text-amber-300" style="animation-delay: 60ms">
+          <span class="hero-rule"></span>
+          <lucide-icon [img]="Sparkles" size="14" />
+          {{ 'home.badge' | t }}
+        </div>
 
-          <div class="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a routerLink="/catalog" class="ui-button ui-button-primary">
-              {{ 'home.cta' | t }}
-              <lucide-icon [img]="ArrowRight" size="18" />
-            </a>
-            <a routerLink="/register" class="ui-button ui-button-secondary">{{ 'home.account' | t }}</a>
+        <h1 class="hero-reveal mt-6 max-w-[15ch] text-[clamp(2.75rem,8.5vw,7rem)] font-semibold leading-[0.9] tracking-tight text-aurora-ink dark:text-white" style="animation-delay: 140ms">
+          {{ 'home.title' | t }}
+        </h1>
+
+        <div class="mt-12 grid items-end gap-10 lg:grid-cols-[1fr_0.82fr]">
+          <div class="hero-reveal max-w-xl" style="animation-delay: 240ms">
+            <p class="text-base leading-8 text-aurora-muted sm:text-lg dark:text-stone-300">{{ 'home.subtitle' | t }}</p>
+            <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+              <a routerLink="/catalog" class="ui-button ui-button-primary">
+                {{ 'home.cta' | t }}
+                <lucide-icon [img]="ArrowRight" size="18" />
+              </a>
+              <a routerLink="/register" class="ui-button ui-button-secondary">{{ 'home.account' | t }}</a>
+            </div>
           </div>
 
-          <div class="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
-            @for (metric of heroMetrics; track metric.labelKey) {
-              <div class="surface-panel p-4">
-                <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ metric.valueKey | t }}</p>
-                <p class="mt-1 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ metric.labelKey | t }}</p>
-              </div>
-            }
+          <div class="hero-reveal relative" style="animation-delay: 340ms">
+            <div class="overflow-hidden rounded-soft border border-aurora-line/70 shadow-premium dark:border-white/10">
+              <img
+                class="h-[340px] w-full object-cover sm:h-[440px]"
+                src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=85"
+                alt="Escritorio con portátil y auriculares"
+              />
+            </div>
+            <div class="absolute -left-3 bottom-5 flex items-center gap-2 rounded-ui border border-aurora-line bg-aurora-paper px-3 py-2 shadow-lift dark:border-white/10 dark:bg-aurora-night">
+              <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-aurora-emerald dark:bg-emerald-500/15">
+                <lucide-icon [img]="CheckCircle2" size="15" />
+              </span>
+              <span class="text-xs font-bold text-aurora-ink dark:text-white">{{ 'home.hero.inStock' | t }}</span>
+            </div>
           </div>
         </div>
 
-        <div class="relative min-h-[520px]">
-          <div class="absolute inset-x-8 top-4 h-72 rounded-ui bg-aurora-amber/20 blur-3xl dark:bg-amber-400/10"></div>
-          <div class="premium-shell relative overflow-hidden p-3">
-            <img
-              class="h-[560px] w-full rounded-ui object-cover"
-              src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1400&q=85"
-              alt="Desk with a laptop and headphones"
-            />
-            <div class="absolute inset-3 rounded-ui bg-gradient-to-t from-aurora-night/55 via-transparent to-transparent"></div>
-
-            <div class="absolute bottom-6 left-6 right-6 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div class="rounded-ui border border-white/30 bg-white/90 p-4 shadow-premium backdrop-blur-xl dark:bg-aurora-night/80">
-                <p class="text-xs font-black uppercase tracking-[0.16em] text-aurora-gold dark:text-amber-300">{{ 'home.hero.capsule' | t }}</p>
-                <p class="mt-2 text-xl font-black text-aurora-ink dark:text-white">{{ 'home.hero.capsuleCopy' | t }}</p>
-              </div>
-              <div class="hidden rounded-ui border border-white/30 bg-aurora-ink p-4 text-white shadow-premium sm:block">
-                <p class="text-3xl font-black">24h</p>
-                <p class="mt-1 text-sm text-stone-300">{{ 'home.hero.dispatchLabel' | t }}</p>
-              </div>
+        <div class="hero-reveal mt-14 flex flex-wrap items-center gap-x-10 gap-y-4 border-t border-aurora-line/70 pt-6 dark:border-white/10" style="animation-delay: 440ms">
+          @for (metric of heroMetrics; track metric.labelKey) {
+            <div class="flex items-baseline gap-2">
+              <span class="font-display text-2xl font-semibold text-aurora-ink dark:text-white">{{ metric.valueKey | t }}</span>
+              <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ metric.labelKey | t }}</span>
             </div>
-          </div>
-
-          <div class="absolute -right-2 top-10 hidden animate-float rounded-ui border border-white/70 bg-white/90 p-4 shadow-glow backdrop-blur-xl lg:block dark:border-white/10 dark:bg-white/10">
-            <div class="flex items-center gap-3">
-              <span class="flex h-10 w-10 items-center justify-center rounded-ui bg-emerald-50 text-aurora-emerald dark:bg-emerald-500/15">
-                <lucide-icon [img]="CheckCircle2" size="20" />
-              </span>
-              <div>
-                <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'home.hero.inStock' | t }}</p>
-                <p class="text-xs text-aurora-muted dark:text-stone-300">{{ 'home.hero.inStockCopy' | t }}</p>
-              </div>
-            </div>
-          </div>
+          }
         </div>
       </div>
     </section>

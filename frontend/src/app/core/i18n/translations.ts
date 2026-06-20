@@ -203,11 +203,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'common.cancel': 'Cancelar',
     'common.close': 'Cerrar',
 
-    'home.hero.capsule': 'Devolución sencilla',
-    'home.hero.capsuleCopy': '30 días para devolver, sin coste.',
-    'home.hero.dispatchLabel': 'para enviar tu pedido',
     'home.hero.inStock': 'Stock en tiempo real',
-    'home.hero.inStockCopy': 'Disponible y listo para enviar',
     'home.metric.shippingValue': '24-48h',
     'home.metric.shippingLabel': 'envío con seguimiento',
     'home.metric.returnsValue': '30 días',
@@ -560,11 +556,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'common.cancel': 'Cancel',
     'common.close': 'Close',
 
-    'home.hero.capsule': 'Easy returns',
-    'home.hero.capsuleCopy': '30 days to return it, free.',
-    'home.hero.dispatchLabel': 'to dispatch your order',
     'home.hero.inStock': 'Live stock',
-    'home.hero.inStockCopy': 'Available and ready to ship',
     'home.metric.shippingValue': '24-48h',
     'home.metric.shippingLabel': 'tracked shipping',
     'home.metric.returnsValue': '30 days',
