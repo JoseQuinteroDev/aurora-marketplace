@@ -25,6 +25,12 @@ Plan por fases para sanear el frontend Angular.
 | `d3db823` | **6c · Placeholder de marca** | Imágenes de producto sin foto ya no caen a Unsplash aleatorio: SVG de marca (monograma Aurora) inline. Lógica de imagen/galería centralizada en `core/util/product-media.ts`. |
 | `e4276dd` | **7 · Accesibilidad + limpieza** | Skip-link (primer tab stop), foco al contenido en cambios de ruta SPA, restauración de scroll, **focus-trap** en el modal de filtros móvil (foco entra, Tab hace wrap, Escape cierra, foco se restaura), alt-text real desde `ProductImage.altText`. Dedup: `firstActiveVariantId()` compartido. |
 | `5287e64` | **Pulido** | Página **404 con estilo** (en el chrome del storefront, EN/ES, claro/oscuro) en vez de redirigir en silencio; rutas reordenadas (admin con prioridad). Favicon de marca (SVG). Presupuesto de bundle a 700kB → **build sin warnings**. |
+| `4a51de2` | **Bugfix (review)** | El detalle de producto leía el slug una sola vez (`snapshot`); navegar producto→producto dejaba el anterior en pantalla. Ahora se suscribe a `paramMap` y resetea el estado por producto. |
+| `8bb52f0` | **Review #1** | aria-labels en los 3 inputs de búsqueda; paridad de dark mode en payment (el color éxito/fallo se perdía en oscuro); 8 h1 de páginas de `font-black`→`font-semibold` (coherencia); badge "ADMIN" vía i18n. |
+| `9c7d2e9` | **Review #2** | Sign-out del admin accesible en móvil (antes solo en el sidebar oculto `<lg`); modal de filtros móvil con `max-height`+scroll (no se salía de pantalla); **estado de error en reseñas** (un fallo ya no se muestra como "sin reseñas"); eliminado código muerto (campos de icono sin uso, `design-tokens.ts`). Revisión de seguridad: sin hallazgos. |
+| `daa9326` | **Rendimiento** | **Lazy-loading** de todas las rutas de feature (code-splitting). Bundle inicial **579kB → 429kB** (~111kB transfer), de nuevo bajo el presupuesto original de 500kB. |
+
+Dos rondas de revisión adversarial (8 agentes en total: a11y, i18n, bugs, diseño, responsive, cobertura de estados, seguridad, código muerto); **todos los hallazgos corregidos y verificados**.
 
 Verificación de la sesión: build de producción verde en cada commit + **Playwright** en vivo (44 productos / 0 fugas i18n; toggle de tema; skip-link primer tab stop; focus-trap completo; 404; recorrido autenticado registro→carrito→checkout→pedidos→wishlist en claro y oscuro).
 
