@@ -84,7 +84,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       </div>
 
       <div class="relative hidden min-h-[700px] overflow-hidden rounded-ui bg-aurora-night shadow-premium lg:block">
-        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1400&q=85" alt="Premium online marketplace account experience" />
+        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1400&q=85" alt="Crear una cuenta en Aurora" />
         <div class="absolute inset-0 bg-gradient-to-t from-aurora-night via-aurora-night/40 to-transparent"></div>
         <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
           <h2 class="max-w-md text-4xl font-black leading-tight">{{ 'auth.register.title' | t }}</h2>

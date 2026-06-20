@@ -14,7 +14,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
   template: `
     <section class="page-shell grid min-h-[760px] items-center gap-10 py-10 lg:grid-cols-[0.96fr_1.04fr]">
       <div class="relative hidden min-h-[660px] overflow-hidden rounded-ui bg-aurora-night shadow-premium lg:block">
-        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=85" alt="Premium commerce checkout workspace" />
+        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=85" alt="Compra online en Aurora" />
         <div class="absolute inset-0 bg-gradient-to-t from-aurora-night via-aurora-night/40 to-transparent"></div>
         <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
           <div class="inline-flex items-center gap-2 rounded-ui border border-white/15 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-amber-200">

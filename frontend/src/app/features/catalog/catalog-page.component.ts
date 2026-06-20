@@ -27,7 +27,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
             </p>
           </div>
           <div class="relative min-h-64 overflow-hidden bg-aurora-night">
-            <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1400&q=85" alt="Premium sneaker and product catalog display" />
+            <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1400&q=85" alt="Catálogo de productos de Aurora" />
             <div class="absolute inset-0 bg-gradient-to-l from-aurora-night/30 to-aurora-night/80"></div>
             <div class="absolute bottom-6 left-6 right-6 flex flex-wrap gap-3">
               <span class="aurora-badge border-white/20 bg-white/15 text-white">

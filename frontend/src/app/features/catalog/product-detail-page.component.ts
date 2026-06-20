@@ -84,10 +84,18 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   <p class="section-kicker">{{ item.brand.name }} / {{ item.category.name }}</p>
                   <h1 class="mt-3 text-4xl font-black leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ item.name }}</h1>
                   <div class="mt-4 flex flex-wrap items-center gap-3">
-                    <span class="inline-flex items-center gap-1.5 text-sm font-black text-amber-700 dark:text-amber-300">
-                      <lucide-icon [img]="Star" size="16" />
-                      {{ averageRating() }}
-                    </span>
+                    @if (reviews().length > 0) {
+                      <span class="inline-flex items-center gap-1.5 text-sm font-black text-amber-700 dark:text-amber-300">
+                        <lucide-icon [img]="Star" size="16" />
+                        {{ averageRating() }}
+                        <span class="font-semibold text-aurora-muted dark:text-stone-300">· {{ reviews().length }} {{ 'product.reviewsCountLabel' | t }}</span>
+                      </span>
+                    } @else {
+                      <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-aurora-muted transition-colors hover:text-aurora-gold dark:text-stone-300" (click)="activeTab.set('reviews')">
+                        <lucide-icon [img]="Star" size="16" />
+                        {{ 'product.beFirstReview' | t }}
+                      </button>
+                    }
                     <span class="h-1 w-1 rounded-full bg-aurora-line dark:bg-white/20"></span>
                     <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ activeVariantCount(item) }} {{ 'product.variantsLabel' | t }}</span>
                     <span class="aurora-badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
@@ -460,7 +468,7 @@ export class ProductDetailPageComponent implements OnInit {
 
   averageRating(): string {
     if (this.reviews().length === 0) {
-      return '4.8';
+      return '0.0';
     }
 
     const total = this.reviews().reduce((sum, review) => sum + review.rating, 0);

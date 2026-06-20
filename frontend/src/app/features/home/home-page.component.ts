@@ -58,10 +58,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           </div>
 
           <div class="mt-10 grid max-w-2xl gap-3 sm:grid-cols-3">
-            @for (metric of heroMetrics; track metric.label) {
+            @for (metric of heroMetrics; track metric.labelKey) {
               <div class="surface-panel p-4">
-                <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ metric.value }}</p>
-                <p class="mt-1 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ metric.label | t }}</p>
+                <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ metric.valueKey | t }}</p>
+                <p class="mt-1 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ metric.labelKey | t }}</p>
               </div>
             }
           </div>
@@ -73,7 +73,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <img
               class="h-[560px] w-full rounded-ui object-cover"
               src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1400&q=85"
-              alt="Premium desk with laptop, headphones and curated commerce products"
+              alt="Desk with a laptop and headphones"
             />
             <div class="absolute inset-3 rounded-ui bg-gradient-to-t from-aurora-night/55 via-transparent to-transparent"></div>
 
@@ -158,7 +158,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     <section class="page-shell py-14">
       <div class="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div class="relative overflow-hidden rounded-ui bg-aurora-night p-6 text-white shadow-premium sm:p-8">
-          <img class="absolute inset-0 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80" alt="Curated travel and lifestyle products" />
+          <img class="absolute inset-0 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80" alt="Travel and lifestyle products" />
           <div class="relative z-10 max-w-xl">
             <p class="section-kicker">{{ 'home.promo.eyebrow' | t }}</p>
             <h2 class="mt-3 text-4xl font-black leading-tight">{{ 'home.promo.title' | t }}</h2>
@@ -203,7 +203,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     <section class="page-shell py-14">
       <div class="overflow-hidden rounded-ui border border-aurora-line bg-white shadow-premium dark:border-white/10 dark:bg-white/[0.07]">
         <div class="grid items-center gap-0 lg:grid-cols-[0.9fr_1.1fr]">
-          <img class="h-72 w-full object-cover lg:h-full" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1400&q=85" alt="Premium product assortment" />
+          <img class="h-72 w-full object-cover lg:h-full" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1400&q=85" alt="Surtido de productos de tecnología y estilo de vida" />
           <div class="p-7 sm:p-10">
             <p class="section-kicker">{{ 'home.club.eyebrow' | t }}</p>
             <h2 class="mt-3 text-3xl font-black text-aurora-ink sm:text-4xl dark:text-white">{{ 'home.club.title' | t }}</h2>
@@ -233,9 +233,9 @@ export class HomePageComponent implements OnInit {
 
   readonly skeletonItems = [1, 2, 3, 4];
   readonly heroMetrics = [
-    { value: '4.8', label: 'home.metric.rating' },
-    { value: '2k+', label: 'home.metric.items' },
-    { value: '24h', label: 'home.metric.dispatch' }
+    { valueKey: 'home.metric.shippingValue', labelKey: 'home.metric.shippingLabel' },
+    { valueKey: 'home.metric.returnsValue', labelKey: 'home.metric.returnsLabel' },
+    { valueKey: 'home.metric.secureValue', labelKey: 'home.metric.secureLabel' }
   ];
   readonly categories = [
     { name: 'home.cat.tech', copy: 'home.cat.techCopy', slug: 'computing', image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=900&q=80' },
