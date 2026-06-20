@@ -8,13 +8,14 @@ import { Product } from '../models/product.model';
 const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" role="img" aria-label="Aurora">
   <defs>
     <linearGradient id="auroraPlaceholder" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F7F4EF"/>
-      <stop offset="1" stop-color="#ECE3D4"/>
+      <stop offset="0" stop-color="#1F1D17"/>
+      <stop offset="1" stop-color="#100F0C"/>
     </linearGradient>
   </defs>
   <rect width="400" height="300" fill="url(#auroraPlaceholder)"/>
-  <text x="200" y="172" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="120" font-weight="600" fill="#12100D" fill-opacity="0.12">A</text>
-  <text x="200" y="222" text-anchor="middle" font-family="'DM Sans', Arial, sans-serif" font-size="13" letter-spacing="5" fill="#625D55" fill-opacity="0.75">AURORA</text>
+  <path d="M200 96 L236 196 M200 96 L164 196 M178 168 H222" stroke="#F4F1EA" stroke-width="2.2" stroke-linecap="round" fill="none" stroke-opacity="0.16"/>
+  <circle cx="200" cy="96" r="4.5" fill="#3E7C63" fill-opacity="0.8"/>
+  <text x="200" y="236" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="6" fill="#F4F1EA" fill-opacity="0.4">AURORA</text>
 </svg>`;
 
 export const PRODUCT_IMAGE_PLACEHOLDER = `data:image/svg+xml,${encodeURIComponent(PLACEHOLDER_SVG)}`;

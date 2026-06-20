@@ -42,7 +42,7 @@ export class ThemeService {
 
   private readInitial(): ThemeMode {
     if (typeof window === 'undefined') {
-      return 'light';
+      return 'dark';
     }
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -50,8 +50,9 @@ export class ThemeService {
         return stored;
       }
     } catch {
-      // ignore and fall back to the OS preference
+      // ignore and use the brand default
     }
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    // Aurora's quiet-luxury identity is dark-first (a nocturnal showroom).
+    return 'dark';
   }
 }

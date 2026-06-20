@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,400..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,20 +6,20 @@
 
 :root {
   color-scheme: light;
-  --aurora-bg: #f7f4ef;
-  --aurora-surface: #fffaf3;
-  --aurora-ink: #12100d;
-  --aurora-muted: #625d55;
-  --aurora-line: #e7e0d6;
+  --aurora-bg: #f4f1ea;
+  --aurora-surface: #fbf9f4;
+  --aurora-ink: #16140f;
+  --aurora-muted: #5a564c;
+  --aurora-line: rgba(20, 19, 15, 0.1);
 }
 
 .dark {
   color-scheme: dark;
-  --aurora-bg: #0c0a09;
-  --aurora-surface: #12100d;
-  --aurora-ink: #fffaf3;
-  --aurora-muted: #c8beb0;
-  --aurora-line: rgba(255, 255, 255, 0.12);
+  --aurora-bg: #0e0d0b;
+  --aurora-surface: #16140f;
+  --aurora-ink: #f4f1ea;
+  --aurora-muted: #8a857b;
+  --aurora-line: rgba(244, 241, 234, 0.12);
 }
 
 html {
@@ -29,14 +29,12 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    radial-gradient(circle at 8% 2%, rgba(201, 135, 23, 0.18), transparent 32rem),
-    radial-gradient(circle at 92% 0%, rgba(29, 78, 216, 0.10), transparent 38rem),
-    radial-gradient(circle at 55% 12%, rgba(15, 159, 110, 0.09), transparent 34rem),
-    var(--aurora-bg);
+  background: var(--aurora-bg);
   color: var(--aurora-ink);
-  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.01em;
   text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -44,7 +42,7 @@ body {
 }
 
 ::selection {
-  background: rgba(201, 135, 23, 0.25);
+  background: rgba(42, 90, 71, 0.3);
   color: var(--aurora-ink);
 }
 
@@ -62,13 +60,13 @@ textarea {
 }
 
 @layer base {
-  /* Two-tier type: Fraunces (display serif) for headings, DM Sans for body/UI. */
+  /* Two-tier type: Cormorant Garamond (display serif) for headings, Hanken Grotesk for body/UI. */
   h1,
   h2,
   h3 {
     @apply font-display;
-    font-optical-sizing: auto;
-    letter-spacing: -0.015em;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -77,77 +75,76 @@ textarea {
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
-  .glass-panel {
-    @apply border border-white/70 bg-white/80 shadow-premium backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.08];
-  }
-
-  .soft-card {
-    @apply rounded-ui border border-aurora-line/80 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-aurora-amber/35 hover:shadow-lift dark:border-white/10 dark:bg-white/[0.07] dark:hover:border-white/20 motion-reduce:hover:translate-y-0 motion-reduce:transition-none;
+  /* Flat, hairline panels — quiet luxury favours edges over shadows/blur. */
+  .glass-panel,
+  .premium-shell {
+    @apply rounded-soft border border-aurora-line bg-aurora-pearl dark:border-white/10 dark:bg-white/[0.035];
   }
 
   .surface-panel {
-    @apply rounded-ui border border-aurora-line/80 bg-white/90 shadow-innerline backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.07];
+    @apply rounded-soft border border-aurora-line bg-aurora-pearl dark:border-white/10 dark:bg-white/[0.035];
   }
 
-  .premium-shell {
-    @apply rounded-ui border border-white/70 bg-white/80 shadow-premium backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.08];
+  .soft-card {
+    @apply rounded-ui border border-aurora-line bg-aurora-pearl transition-colors duration-200 hover:border-aurora-pine/40 dark:border-white/10 dark:bg-white/[0.035] dark:hover:border-aurora-pinebright/40;
   }
 
   .aurora-chip {
-    @apply inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-ui border border-aurora-line bg-white/80 px-3 text-xs font-bold text-aurora-charcoal transition duration-200 hover:border-aurora-amber/40 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aurora-amber focus-visible:ring-offset-2 dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15;
+    @apply inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-ui border border-aurora-line bg-transparent px-3 text-xs font-semibold tracking-wide text-aurora-ink transition-colors duration-200 hover:border-aurora-pine/50 hover:bg-aurora-pine/[0.06] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-aurora-pinebright focus-visible:ring-offset-2 focus-visible:ring-offset-aurora-mist dark:text-white dark:focus-visible:ring-offset-aurora-night;
   }
 
   .aurora-badge {
-    @apply inline-flex items-center gap-1.5 rounded-ui border border-aurora-line/80 bg-white/80 px-2.5 py-1 text-xs font-bold text-aurora-charcoal shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white;
+    @apply inline-flex items-center gap-1.5 rounded-ui border border-aurora-line bg-aurora-pearl/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-aurora-muted dark:border-white/10 dark:bg-white/[0.05] dark:text-aurora-mist;
   }
 
   .ui-button {
-    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-ui px-4 text-sm font-bold transition duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aurora-amber focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-ui px-5 text-[13px] font-semibold tracking-[0.02em] transition-colors duration-200 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-aurora-pinebright focus-visible:ring-offset-2 focus-visible:ring-offset-aurora-mist disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-aurora-night;
   }
 
+  /* Primary CTA = the single pine accent, in both themes. */
   .ui-button-primary {
-    @apply bg-aurora-ink text-white shadow-lift hover:-translate-y-0.5 hover:bg-stone-800 dark:bg-white dark:text-aurora-night dark:hover:bg-stone-100 motion-reduce:hover:translate-y-0;
+    @apply border border-aurora-pinebright/40 bg-aurora-pine text-aurora-mist hover:bg-aurora-pinedeep;
   }
 
   .ui-button-secondary {
-    @apply border border-aurora-line bg-white/90 text-aurora-ink hover:-translate-y-0.5 hover:border-aurora-amber/40 hover:bg-white hover:shadow-sm dark:border-white/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 motion-reduce:hover:translate-y-0;
+    @apply border border-aurora-line bg-transparent text-aurora-ink hover:border-aurora-pine/40 hover:bg-aurora-pine/[0.05] dark:border-white/15 dark:text-white dark:hover:border-aurora-pinebright/40 dark:hover:bg-white/[0.05];
   }
 
   .ui-button-accent {
-    @apply bg-aurora-emerald text-white shadow-lift hover:-translate-y-0.5 hover:bg-emerald-700 motion-reduce:hover:translate-y-0;
+    @apply border border-aurora-pine bg-aurora-pinedeep text-aurora-mist hover:bg-aurora-pine;
   }
 
   .ui-input {
-    @apply h-11 w-full rounded-ui border border-aurora-line bg-white px-3 text-sm text-aurora-ink outline-none transition duration-200 placeholder:text-stone-400 focus:border-aurora-amber focus:ring-2 focus:ring-aurora-amber/20 dark:border-white/10 dark:bg-white/10 dark:text-white dark:placeholder:text-stone-400;
+    @apply h-11 w-full rounded-ui border border-aurora-line bg-aurora-pearl px-3 text-sm text-aurora-ink outline-none transition-colors duration-200 placeholder:text-aurora-muted focus:border-aurora-pine focus:ring-1 focus:ring-aurora-pine/30 dark:border-white/10 dark:bg-white/[0.05] dark:text-white;
   }
 
   .field-shell {
-    @apply mt-2 flex items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 shadow-sm transition duration-200 focus-within:border-aurora-amber focus-within:ring-2 focus-within:ring-aurora-amber/20 dark:border-white/10 dark:bg-white/10;
+    @apply mt-2 flex items-center gap-2 rounded-ui border border-aurora-line bg-aurora-pearl px-3 transition-colors duration-200 focus-within:border-aurora-pine focus-within:ring-1 focus-within:ring-aurora-pine/30 dark:border-white/10 dark:bg-white/[0.05];
   }
 
   .field-shell-invalid {
-    @apply border-aurora-rose/70 bg-rose-50/70 focus-within:border-aurora-rose focus-within:ring-aurora-rose/20 dark:border-rose-400/60 dark:bg-rose-500/10;
+    @apply border-aurora-rose/70 bg-aurora-rose/[0.07] focus-within:border-aurora-rose focus-within:ring-aurora-rose/25 dark:border-aurora-rose/60;
   }
 
   .section-kicker {
-    @apply text-xs font-black uppercase tracking-[0.18em] text-aurora-gold dark:text-amber-300;
+    @apply text-[11px] font-semibold uppercase tracking-[0.26em] text-aurora-pinebright;
   }
 
   .state-surface {
-    @apply rounded-ui border border-dashed border-aurora-line bg-white/75 p-6 text-center text-sm text-aurora-muted shadow-innerline backdrop-blur dark:border-white/15 dark:bg-white/5 dark:text-stone-300;
+    @apply rounded-soft border border-dashed border-aurora-line bg-aurora-pearl/60 p-6 text-center text-sm text-aurora-muted dark:border-white/10 dark:bg-white/[0.03] dark:text-aurora-mist/70;
   }
 
   .skeleton-line {
-    @apply relative overflow-hidden rounded bg-stone-200 dark:bg-white/10;
+    @apply relative overflow-hidden rounded bg-black/[0.06] dark:bg-white/[0.07];
   }
 
   .skeleton-line::after {
     content: "";
-    @apply absolute inset-y-0 left-0 w-1/2 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/55 to-transparent dark:via-white/10 motion-reduce:animate-none;
+    @apply absolute inset-y-0 left-0 w-1/2 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-black/[0.05] to-transparent dark:via-white/[0.06] motion-reduce:animate-none;
   }
 
   .premium-link {
-    @apply cursor-pointer font-bold text-aurora-ocean transition-colors duration-200 hover:text-aurora-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aurora-amber focus-visible:ring-offset-2 dark:text-blue-300 dark:hover:text-amber-300;
+    @apply cursor-pointer font-semibold text-aurora-pinebright underline-offset-4 transition-colors duration-200 hover:text-aurora-pine hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-aurora-pinebright focus-visible:ring-offset-2 dark:hover:text-aurora-mist;
   }
 }
 
@@ -161,8 +158,7 @@ textarea {
 .hero-editorial {
   position: relative;
   background:
-    radial-gradient(120% 85% at 88% -15%, rgba(201, 135, 23, 0.14), transparent 60%),
-    radial-gradient(90% 70% at -5% 0%, rgba(15, 159, 110, 0.08), transparent 55%),
+    radial-gradient(120% 90% at 88% -20%, rgba(42, 90, 71, 0.12), transparent 60%),
     linear-gradient(180deg, var(--aurora-surface), var(--aurora-bg));
 }
 
@@ -172,24 +168,24 @@ textarea {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.4;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 .dark .hero-editorial::before {
-  opacity: 0.28;
+  opacity: 0.22;
 }
 
-/* A hairline amber rule used as an editorial accent. */
+/* Hairline pine rule used as an editorial accent. */
 .hero-rule {
   height: 1px;
   width: 2.75rem;
-  background: linear-gradient(90deg, #b7791f, transparent);
+  background: linear-gradient(90deg, #2a5a47, transparent);
 }
 
 .dark .hero-rule {
-  background: linear-gradient(90deg, #f5b942, transparent);
+  background: linear-gradient(90deg, #3e7c63, transparent);
 }
 
 @keyframes heroReveal {

@@ -6,39 +6,45 @@ module.exports = {
     extend: {
       colors: {
         aurora: {
-          ink: '#12100D',
-          night: '#0C0A09',
-          charcoal: '#1F2933',
-          mist: '#F7F4EF',
-          pearl: '#FEFCF8',
-          paper: '#FFFFFF',
-          line: '#E7E0D6',
-          muted: '#625D55',
-          ocean: '#1D4ED8',
-          emerald: '#0F9F6E',
-          amber: '#C98717',
-          gold: '#B7791F',
-          iris: '#5B5BD6',
-          rose: '#D94663'
+          // Quiet-luxury: near-black ink, warm bone, single pine accent.
+          ink: '#0E0D0B',
+          night: '#0E0D0B',
+          charcoal: '#1A1813',
+          mist: '#F4F1EA',
+          pearl: '#FBF9F4',
+          paper: '#FBF9F4',
+          line: '#E4DECF',
+          muted: '#8A857B',
+          // Accent family — every legacy accent name repainted to pine so existing
+          // templates turn green without per-file edits.
+          pine: '#2A5A47',
+          pinedeep: '#1F3D32',
+          pinebright: '#3E7C63',
+          amber: '#2A5A47',
+          gold: '#3E7C63',
+          emerald: '#2A5A47',
+          ocean: '#3E7C63',
+          iris: '#3E7C63',
+          rose: '#C9756F'
         }
       },
       boxShadow: {
-        premium: '0 24px 80px rgba(18, 16, 13, 0.13)',
-        lift: '0 18px 42px rgba(18, 16, 13, 0.12)',
-        glow: '0 0 0 1px rgba(255,255,255,0.55), 0 24px 70px rgba(185, 115, 31, 0.18)',
-        innerline: 'inset 0 1px 0 rgba(255,255,255,0.65)'
+        premium: '0 18px 50px rgba(0, 0, 0, 0.38)',
+        lift: '0 10px 28px rgba(0, 0, 0, 0.22)',
+        glow: '0 0 0 1px rgba(62, 124, 99, 0.38)',
+        innerline: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)'
       },
       borderRadius: {
-        ui: '8px',
-        soft: '14px'
+        ui: '3px',
+        soft: '6px'
       },
       fontFamily: {
-        sans: ['"DM Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
-        display: ['"Fraunces"', '"DM Sans"', 'ui-serif', 'Georgia', 'serif']
+        sans: ['"Hanken Grotesk"', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['"Cormorant Garamond"', 'Georgia', 'ui-serif', 'serif']
       },
       backgroundImage: {
-        'aurora-radial': 'radial-gradient(circle at 20% 15%, rgba(201, 135, 23, 0.16), transparent 30rem), radial-gradient(circle at 85% 0%, rgba(29, 78, 216, 0.12), transparent 34rem), linear-gradient(135deg, #FEFCF8 0%, #F7F4EF 52%, #EEF6F1 100%)',
-        'aurora-dark-radial': 'radial-gradient(circle at 20% 15%, rgba(201, 135, 23, 0.18), transparent 30rem), radial-gradient(circle at 85% 0%, rgba(91, 91, 214, 0.18), transparent 34rem), linear-gradient(135deg, #0C0A09 0%, #12100D 48%, #0B1512 100%)'
+        'aurora-radial': 'linear-gradient(180deg, #FBF9F4 0%, #F4F1EA 100%)',
+        'aurora-dark-radial': 'linear-gradient(180deg, #16140F 0%, #0E0D0B 100%)'
       },
       keyframes: {
         float: {
