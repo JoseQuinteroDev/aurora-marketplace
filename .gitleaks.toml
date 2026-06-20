@@ -1,0 +1,26 @@
+# Gitleaks configuration for Aurora Marketplace.
+#
+# Extends the full default ruleset (no detection is disabled) and adds a narrow,
+# documented allowlist for known TEST FIXTURES that are not real credentials.
+#
+# Why this exists: the push-triggered secret-scan only diffs new commits, but the
+# weekly *scheduled* scan walks the full history and would otherwise trip the hard
+# gate on the HMAC keys hard-coded in the JWT unit tests. Those keys are test-only
+# (used to prove signature verification), never real secrets. Allowlisting the
+# specific strings keeps the gate meaningful for everything else.
+#
+# Real production secrets are still caught: only the exact strings below are
+# exempt, and the default rules remain fully active.
+
+title = "Aurora Marketplace gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known test-only HMAC keys in the JWT unit tests (not real credentials)"
+regexes = [
+  # backend/src/test/java/com/aurora/backend/security/jwt/JwtServiceTest.java
+  '''test-secret-key-that-is-long-enough-1234567890''',
+  '''a-completely-different-secret-key-0987654321''',
+]

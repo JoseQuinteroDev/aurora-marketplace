@@ -64,6 +64,10 @@ every commit.
   A05). Scans the **full history** (`fetch-depth: 0`).
 - **Gate:** **fails the workflow run.** A leaked secret is the one finding worth
   stopping for — once pushed, assume it is compromised and rotate it.
+- **Config:** [`.gitleaks.toml`](../../.gitleaks.toml) extends the full default
+  ruleset and adds a *narrow* allowlist for the known test-only HMAC keys in the
+  JWT unit tests (not real credentials). This keeps the full-history scheduled
+  scan green without weakening detection — only those exact strings are exempt.
 - **Caveat (honest):** failing the *run* only blocks a *merge* once **branch
   protection** marks this job a required status check. Until that is configured on
   `main` (see *Hardening backlog*), a red `secret-scan` is loud but not yet
