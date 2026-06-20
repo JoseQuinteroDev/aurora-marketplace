@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -29,6 +30,8 @@ public class JwtService {
         Instant expiration = now.plus(Duration.ofMinutes(properties.expirationMinutes()));
 
         return Jwts.builder()
+                // Unique token id (jti) so a specific token can be revoked server-side.
+                .id(UUID.randomUUID().toString())
                 .subject(user.getEmail())
                 .claim("userId", user.getId().toString())
                 .claim("role", user.getRole().name())
@@ -40,6 +43,16 @@ public class JwtService {
 
     public String extractSubject(String token) {
         return extractClaims(token).getSubject();
+    }
+
+    /** The token's unique id (jti) — used for server-side revocation. */
+    public String extractJti(String token) {
+        return extractClaims(token).getId();
+    }
+
+    /** The token's expiry instant — stored with a revocation so the denylist can self-prune. */
+    public Instant extractExpiration(String token) {
+        return extractClaims(token).getExpiration().toInstant();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {

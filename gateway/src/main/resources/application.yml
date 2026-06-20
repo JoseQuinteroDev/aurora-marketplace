@@ -114,8 +114,11 @@ resilience4j:
 management:
   endpoints:
     web:
+      # The gateway runs no Spring Security in front of its own actuator, so keep
+      # the public surface minimal: drop 'gateway' (it discloses the full route
+      # topology — downstream URIs, predicates, filters) and 'metrics'.
       exposure:
-        include: health,info,gateway,prometheus,metrics
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: always

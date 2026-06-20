@@ -8,6 +8,7 @@ Use `Authorization: Bearer <token>` for protected endpoints.
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/logout` — revokes the caller's current access token (auth required)
 
 ## Public Catalog
 

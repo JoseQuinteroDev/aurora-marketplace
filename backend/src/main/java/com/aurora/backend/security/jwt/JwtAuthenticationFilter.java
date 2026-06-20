@@ -1,5 +1,7 @@
 package com.aurora.backend.security.jwt;
 
+import com.aurora.backend.security.token.TokenDenylistService;
+
 import java.io.IOException;
 
 import io.jsonwebtoken.JwtException;
@@ -8,6 +10,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,14 +25,21 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenDenylistService tokenDenylist;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserDetailsService userDetailsService,
+            TokenDenylistService tokenDenylist
+    ) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.tokenDenylist = tokenDenylist;
     }
 
     @Override
@@ -49,6 +60,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             authenticateRequest(request, token);
         } catch (JwtException | IllegalArgumentException exception) {
+            // Rejected token (expired / malformed / forged): a security signal worth
+            // recording, but never echo the token itself.
+            log.warn("Rejected JWT on {} {}: {}", request.getMethod(), request.getRequestURI(),
+                    exception.getClass().getSimpleName());
             SecurityContextHolder.clearContext();
         }
 
@@ -65,6 +80,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
         if (!jwtService.isTokenValid(token, userDetails)) {
+            return;
+        }
+
+        // Server-side revocation: a logged-out (or otherwise revoked) token is rejected
+        // even though its signature and expiry still check out.
+        if (tokenDenylist.isRevoked(jwtService.extractJti(token))) {
+            log.warn("Rejected revoked JWT on {} {}", request.getMethod(), request.getRequestURI());
             return;
         }
 

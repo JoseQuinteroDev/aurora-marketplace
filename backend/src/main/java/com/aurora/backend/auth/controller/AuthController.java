@@ -5,12 +5,17 @@ import com.aurora.backend.auth.dto.LoginRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
 import com.aurora.backend.auth.service.AuthService;
 import com.aurora.backend.common.api.ApiResponse;
+import com.aurora.backend.security.CurrentUserService;
+import com.aurora.backend.user.entity.User;
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -19,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final CurrentUserService currentUserService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, CurrentUserService currentUserService) {
         this.authService = authService;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping("/register")
@@ -35,5 +42,15 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success("Login successful.", authService.login(request));
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            Authentication authentication
+    ) {
+        User actor = currentUserService.getCurrentUser(authentication);
+        authService.logout(authorizationHeader, actor);
+        return ApiResponse.success("Logout successful.");
     }
 }

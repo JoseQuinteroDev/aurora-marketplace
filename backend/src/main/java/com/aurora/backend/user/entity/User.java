@@ -1,5 +1,6 @@
 package com.aurora.backend.user.entity;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -41,6 +42,12 @@ public class User {
 
     @Column(nullable = false)
     private boolean enabled;
+
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -105,6 +112,39 @@ public class User {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /** True while a temporary login lock is still in effect. */
+    public boolean isLoginLocked(Instant now) {
+        return lockedUntil != null && lockedUntil.isAfter(now);
+    }
+
+    /**
+     * Records a failed login. Once {@code maxAttempts} consecutive failures are
+     * reached, locks the account for {@code lockDuration}. Returns {@code true}
+     * only when this failure triggered a fresh lock, so the caller can audit it.
+     */
+    public boolean recordFailedLogin(int maxAttempts, Duration lockDuration, Instant now) {
+        failedLoginAttempts += 1;
+        if (failedLoginAttempts >= maxAttempts && !isLoginLocked(now)) {
+            lockedUntil = now.plus(lockDuration);
+            return true;
+        }
+        return false;
+    }
+
+    /** Clears failure tracking after a successful authentication. */
+    public void resetFailedLogins() {
+        failedLoginAttempts = 0;
+        lockedUntil = null;
+    }
+
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public Instant getLockedUntil() {
+        return lockedUntil;
     }
 
     public Instant getCreatedAt() {

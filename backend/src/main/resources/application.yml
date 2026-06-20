@@ -78,6 +78,12 @@ app:
       # Development default only. Override APP_SECURITY_JWT_SECRET in production.
       secret: ${APP_SECURITY_JWT_SECRET:aurora-marketplace-development-secret-change-me-before-production-1234567890}
       expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:60}
+    login:
+      # Per-account brute-force lockout (OWASP A07): after this many consecutive
+      # failed logins, the account is locked for lock-duration-minutes. Enforced
+      # in the core (not just the gateway), so it holds regardless of ingress.
+      max-failed-attempts: ${APP_SECURITY_LOGIN_MAX_FAILED_ATTEMPTS:5}
+      lock-duration-minutes: ${APP_SECURITY_LOGIN_LOCK_DURATION_MINUTES:15}
 
   events:
     # When true, domain events are recorded to the transactional outbox and then

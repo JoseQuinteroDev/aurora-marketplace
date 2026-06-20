@@ -80,6 +80,15 @@ that is the point of an AppSec program.
 - **Observability** — Prometheus metrics and `traceId`/`spanId` correlation in
   logs across all three services.
 - **Schema discipline** — Flyway migrations with `ddl-auto: validate`.
+- **Per-account login lockout** — consecutive failures lock an account for a
+  cool-down window, enforced in the core (`LoginAttemptService`), so it holds even
+  when the bypassable gateway limiter is sidestepped.
+- **Token revocation & server-side logout** — `POST /api/auth/logout` revokes the
+  current token via a `jti` denylist that the auth filter checks on each request.
+- **Startup secret guard** — the app refuses to boot under the `prod` profile with
+  a placeholder JWT secret (`JwtSecretValidator`).
+- **Security-event logging** — authentication outcomes, JWT rejections, 401/403
+  denials and unexpected 500s are logged; lockouts/logouts are audited.
 
 ### Partial ⚠️
 
@@ -87,27 +96,19 @@ that is the point of an AppSec program.
   environment before production.
 - **Secrets management** — externalized via environment variables, but the local
   compose stack ships development defaults inline (see `.env.example`).
-- **Token lifecycle** — short-lived access tokens only; no refresh/rotation and
-  no server-side revocation (a stolen token is valid until it expires).
+- **Token lifecycle** — short-lived access tokens with server-side revocation
+  (logout) now in place; refresh-token rotation is still pending.
 
 ### Gaps ❌ (tracked)
 
-- **Default JWT secret has no fail-fast** — committed dev-default secrets in
-  `application.yml` and `docker-compose.yml` are long enough to pass the
-  `@Size(min=32)` check, so a deploy that forgets to override
-  `APP_SECURITY_JWT_SECRET` would run on a publicly-known signing key (admin-token
-  forgery risk). Highest-priority fix — see [`owasp-top-10.md`](owasp-top-10.md) A02.
-- **Gateway actuator is unauthenticated** — the gateway ships no Spring Security,
-  so `/actuator/gateway/routes` (route topology) and metrics are open on `:8088`.
-  See [`owasp-top-10.md`](owasp-top-10.md) A05.
 - **HTTP security headers** — no HSTS / CSP / `X-Content-Type-Options` /
   `X-Frame-Options` set by the app (expected at the gateway/edge; the
   [DAST workflow](../../.github/workflows/dast.yml) flags these automatically).
 - **Transport encryption in the stack** — Postgres, Redis, Kafka and SMTP run
   plaintext in compose; TLS is delegated to the deployment environment.
-- **Auth anti-automation & token lifecycle** — no per-account lockout, no
-  server-side token revocation, and rate limiting only at the (bypassable)
-  gateway. See [`owasp-top-10.md`](owasp-top-10.md) A07.
+- **Token lifecycle (remaining)** — revocation/logout and per-account lockout now
+  ship; refresh-token rotation, breached-password/MFA, and `HttpOnly`-cookie token
+  storage are still open. See [`owasp-top-10.md`](owasp-top-10.md) A07.
 - **Account-recovery & verification flows** — email verification and password
   reset are not yet implemented.
 - **Supply-chain hardening** — base-image digest pinning, GitHub Actions SHA

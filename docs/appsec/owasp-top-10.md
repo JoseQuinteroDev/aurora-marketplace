@@ -15,6 +15,12 @@ the [controls catalog](security-controls.md).
 > current state — green where a control demonstrably holds in code, amber where
 > it is partial, red where it is an open gap. Gaps are tracked, not hidden.
 
+> **Remediation pass (2026-06-20).** Several HIGH findings below have since been
+> fixed in code — JWT-secret fail-fast, gateway-actuator lock-down, per-account
+> lockout, token revocation / server-side logout, and security logging. Those
+> items are marked **✅ Remediated** inline. A category's status stays ⚠️ where
+> other, lower-severity gaps remain.
+
 **Status legend:** ✅ Mitigated · ⚠️ Partial / context-dependent · ❌ Open gap (tracked)
 
 | # | Category | Status |
@@ -117,7 +123,11 @@ sensitive data exposed in transit or at rest.
   `@Size(min=32)` gate**, so a deployment that forgets to set
   `APP_SECURITY_JWT_SECRET` silently runs on a **publicly known HMAC key** — and
   anyone with the repo can then forge a valid admin JWT. The length check gives
-  false assurance. There is no fail-fast on the placeholder value.
+  false assurance.
+  **✅ Remediated:** `security/jwt/JwtSecretValidator` now refuses to start under
+  the `prod` profile when the secret is blank or a known placeholder, and warns
+  loudly in every other environment. Providing a real secret (ideally from a
+  secret manager) is still required.
 - **No TLS on any data-in-transit channel.** JDBC has no `sslmode`, Kafka uses
   `PLAINTEXT`, Redis is unauthenticated, SMTP disables AUTH/STARTTLS — confidentiality
   in transit is wholly deferred to the deployment, with nothing in-repo enforcing it.
@@ -242,13 +252,12 @@ permissive CORS, default credentials.
 - Spring Batch auto-run disabled; no Spring default in-memory user.
 
 **Residual / gaps**
-- **⛔ HIGH — the gateway has no Spring Security at all.** Its actuator surface is
-  fully unauthenticated on `:8088`, including `/actuator/gateway/routes` (which
-  **discloses the internal routing topology** — downstream URIs, predicates,
-  filters) plus `metrics`/`prometheus` — `gateway/pom.xml` (no security starter),
-  `gateway/application.yml:114-118`.
-- **⛔ HIGH — committed default secrets** (JWT, DB, MinIO) used silently if env
-  vars are unset (see A02).
+- **✅ Remediated (HIGH) — gateway actuator exposure trimmed.** The gateway no
+  longer exposes the `gateway` (route-topology) or `metrics` endpoints; only
+  `health,info,prometheus` remain on `:8088` (`gateway/application.yml`). Putting
+  reactive Spring Security in front of the rest is the further hardening step.
+- **✅ Remediated (HIGH) — default JWT secret fail-fast** under the `prod` profile
+  (`JwtSecretValidator`); see A02. DB/MinIO compose defaults remain a deploy-time concern.
 - **No HTTP security headers** anywhere (HSTS, CSP, `X-Content-Type-Options`,
   `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`) — the storefront is
   served without clickjacking/MIME-sniffing/transport-pinning protections (medium).
@@ -323,33 +332,29 @@ poor session/token lifecycle.
   prevent duplicate-account aliasing.
 - Registration enforces password length (`@Size(min=8,max=72)`); IP-based rate
   limiting at the gateway slows brute force.
+- **✅ Remediated — per-account lockout, enforced core-side.** `LoginAttemptService`
+  counts consecutive failures and locks the account for a cool-down window
+  (5 attempts / 15 min by default, configurable). Because it lives in the core
+  service (not the gateway), it holds even when the gateway is bypassed — closing
+  both the "no lockout" and "rate-limit bypassable" gaps. Lockouts are audited
+  (`ACCOUNT_LOCKED`); the accounting commits in its own `REQUIRES_NEW` transaction
+  so a failed login still records (`V7__add_user_login_lockout.sql`, `User`).
+- **✅ Remediated — token revocation + server-side logout.** Tokens now carry a
+  `jti`; `POST /api/auth/logout` revokes the current token via a denylist
+  (`TokenDenylistService` / `token_denylist`) that the auth filter checks on every
+  request, so a logged-out or stolen token stops working before it expires.
 
 **Residual / gaps**
-- **⛔ HIGH — no per-account lockout/throttle.** Brute-force/password-spray against
-  a single account is unthrottled at the app layer (`users` has no
-  failed-attempt/lock columns).
-- **⛔ HIGH — the only rate limit is at the gateway, and it's bypassable.** The
-  core (`:8080`) is directly reachable with **no** rate limiting on
-  `/api/auth/login` — and the frontend dev proxy *defaults to the core*
-  (`frontend/proxy.conf.js`). An attacker hitting the core bypasses all
-  anti-automation.
-- **⛔ HIGH — no token revocation / server-side logout.** JWTs are valid until
-  natural expiry (60 min); logout only clears `localStorage`. A stolen token (or a
-  disabled/role-changed account) stays valid until expiry.
 - No refresh-token rotation (medium); no credential-stuffing/breached-password/MFA
-  defense (medium); token in `localStorage` (medium); no email verification or
-  password reset (low); length-only password policy accepts weak-but-long
-  passwords (low).
+  defense (medium); token in `localStorage` rather than an `HttpOnly` cookie
+  (medium); no email verification or password reset (low); length-only password
+  policy accepts weak-but-long passwords (low).
 
-**Remediation**
-- Per-account failure accounting + temporary lockout/backoff (DB columns or Redis),
-  with an audit event on lockout.
-- **Enforce auth-endpoint rate limiting at the core itself** (Bucket4j/Resilience4j
-  on `/api/auth/**`) so protection holds regardless of ingress; network-isolate the
-  core behind the gateway in deployed environments.
-- Short access-token TTL + rotating refresh token with a server-side denylist
-  (`jti` claim) and a real `/api/auth/logout`; breached-password check (HIBP
-  k-anonymity); optional TOTP MFA for admins.
+**Remediation (remaining)**
+- Add rotating refresh tokens (short access-token TTL + reuse detection) on top of
+  the now-shipped `jti` revocation denylist.
+- Breached-password check (HIBP k-anonymity) at registration/change; optional TOTP
+  MFA for admins; move the token to an `HttpOnly`/`Secure`/`SameSite` cookie.
 
 ---
 
@@ -408,14 +413,16 @@ deserialization, broken event integrity, unverified pipeline artifacts.
   all three services (Micrometer Tracing + Brave); Prometheus metrics on all three.
 - notification-service logs delivery, duplicate skips and DLT routing; the outbox
   relay logs exhausted events at ERROR.
+- **✅ Remediated — security-event logging.** Authentication outcomes (login
+  success/failure, registration), JWT validation failures, and 401/403 authorization
+  denials are now logged (`AuthService`, `JwtAuthenticationFilter`, `SecurityConfig`);
+  unexpected 500s are logged with their stack trace (`GlobalExceptionHandler`); and
+  account lockouts/logouts are written to the audit log (`ACCOUNT_LOCKED`, `LOGOUT`).
+  All carry the `traceId`/`spanId` from the MDC pattern.
 
 **Residual / gaps**
-- **⛔ HIGH — no authentication-event logging at all.** Login success/failure and
-  registration are never logged or audited (`AuthService` catches and rethrows with
-  no log), so credential-stuffing/brute-force bursts are **invisible**.
-- **⛔ HIGH — unexpected 500s are swallowed without logging.** `GlobalExceptionHandler.
-  handleUnexpectedException` builds a response but never logs the exception (no
-  logger in the class) — server faults / exploitation attempts leave no trace.
+- *(✅ Remediated — the two HIGH items here, "no auth-event logging" and "500s
+  swallowed without logging", are fixed; see the control above.)*
 - Privileged **admin CRUD is not audited** (catalog/coupon/inventory/role changes)
   — "who changed this price/stock?" is unanswerable (medium).
 - **Authorization denials (401/403) are not logged** — probing of `/api/admin/**`
@@ -472,15 +479,17 @@ deserialization, broken event integrity, unverified pipeline artifacts.
 
 ## Summary & priority backlog
 
-| Risk | Status | Top remediation |
+| Risk | Status | Note |
 |---|---|---|
-| A02 Crypto / A05 Misconfig | ⚠️ | **Fail-fast on the default JWT secret** (admin-token forgery risk) — **P1** |
-| A05 Misconfig | ⚠️ | **Lock down the gateway actuator** (route topology disclosure) + security headers — **P1** |
-| A07 AuthN | ⚠️ | Account lockout + core-side auth rate limit + token revocation — **P1** |
+| A02/A05 default secret | ✅ Remediated | Fail-fast under `prod` (`JwtSecretValidator`); still set a real secret in deploys |
+| A05 gateway actuator | ✅ Remediated | `gateway`/`metrics` endpoints no longer publicly exposed |
+| A07 lockout + revocation | ✅ Remediated | Per-account lockout (core-side) + token revocation + `/api/auth/logout` shipped |
+| A09 auth/500 logging | ✅ Remediated | Auth events, 500s, authz denials, JWT failures logged; lockout/logout audited |
 | A01 Access Control | ⚠️ | IDOR ownership integration tests on every resource — **P1** |
-| A09 Logging | ⚠️ | Log auth events + 500s + authz denials; ship alerting rules — **P2** |
+| A05 Misconfig | ⚠️ | HTTP security headers + per-env CORS — **P2** |
 | A04 Insecure Design | ⚠️ | Locking/`@Version` + coupon unique constraint + checkout idempotency key — **P2** |
 | A08 Integrity | ⚠️ | SHA-pin Actions + image signing/provenance — **P2** |
+| A07 AuthN (remaining) | ⚠️ | Refresh-token rotation, breached-password/MFA, cookie storage — **P3** |
 | A02 Crypto | ⚠️ | TLS in transit + secret manager — **P3 (infra)** |
 | A03 / A06 / A10 | ✅ | Maintain; add regression tests; pin image digests / SHA |
 

@@ -1,5 +1,6 @@
 package com.aurora.backend.security.jwt;
 
+import com.aurora.backend.security.token.TokenDenylistService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,8 +34,9 @@ class JwtAuthenticationFilterTest {
 
     private final JwtService jwtService = mock(JwtService.class);
     private final UserDetailsService userDetailsService = mock(UserDetailsService.class);
+    private final TokenDenylistService tokenDenylist = mock(TokenDenylistService.class);
     private final JwtAuthenticationFilter filter =
-            new JwtAuthenticationFilter(jwtService, userDetailsService);
+            new JwtAuthenticationFilter(jwtService, userDetailsService, tokenDenylist);
 
     private final HttpServletRequest request = mock(HttpServletRequest.class);
     private final HttpServletResponse response = mock(HttpServletResponse.class);
