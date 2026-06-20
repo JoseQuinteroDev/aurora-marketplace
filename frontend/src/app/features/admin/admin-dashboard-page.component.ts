@@ -15,7 +15,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       <div class="max-w-7xl">
         <p class="text-xs font-bold uppercase tracking-[0.18em] text-aurora-pinebright">{{ 'admin.eyebrow' | t }}</p>
         <h1 class="mt-3 text-3xl font-black tracking-normal text-white sm:text-4xl">{{ 'admin.title' | t }}</h1>
-        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">{{ 'admin.subtitle' | t }}</p>
+        <p class="mt-3 max-w-2xl text-sm leading-6 text-aurora-mist/70">{{ 'admin.subtitle' | t }}</p>
 
         @if (loading()) {
           <div class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -32,7 +32,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             @for (metric of metrics(data); track metric.label) {
               <div class="rounded-ui border border-white/10 bg-white/[0.06] p-5">
                 <div class="flex items-center justify-between gap-4">
-                  <p class="text-sm font-semibold text-slate-300">{{ metric.label | t }}</p>
+                  <p class="text-sm font-semibold text-aurora-mist/70">{{ metric.label | t }}</p>
                   <span class="flex h-10 w-10 items-center justify-center rounded-ui bg-white/10 text-aurora-pinebright">
                     <lucide-icon [img]="metric.icon" size="19" />
                   </span>
@@ -48,11 +48,11 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <div class="mt-5 grid gap-3">
                 @for (status of orderStatusRows(data); track status.name) {
                   <div class="flex items-center justify-between rounded-ui bg-white/[0.08] px-4 py-3 text-sm">
-                    <span class="font-semibold text-slate-300">{{ ('order.status.' + status.name) | t }}</span>
+                    <span class="font-semibold text-aurora-mist/70">{{ ('order.status.' + status.name) | t }}</span>
                     <span class="font-black text-white">{{ status.count }}</span>
                   </div>
                 } @empty {
-                  <p class="text-sm text-slate-400">{{ 'admin.noOrders' | t }}</p>
+                  <p class="text-sm text-aurora-muted">{{ 'admin.noOrders' | t }}</p>
                 }
               </div>
             </div>
@@ -60,7 +60,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <div class="rounded-ui border border-white/10 bg-white/[0.06] p-6">
               <h2 class="text-lg font-bold text-white">{{ 'admin.paidRevenue' | t }}</h2>
               <p class="mt-5 text-4xl font-black text-aurora-pinebright">{{ data.totalRevenuePaid | currency }}</p>
-              <p class="mt-3 text-sm leading-6 text-slate-300">{{ 'admin.paidRevenueCopy' | t }}</p>
+              <p class="mt-3 text-sm leading-6 text-aurora-mist/70">{{ 'admin.paidRevenueCopy' | t }}</p>
             </div>
           </div>
         }

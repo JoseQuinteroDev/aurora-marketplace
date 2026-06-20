@@ -10,10 +10,10 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
   selector: 'app-admin-shell',
   imports: [RouterOutlet, RouterLink, LucideAngularModule, TranslatePipe, ToastHostComponent],
   template: `
-    <div class="min-h-screen bg-slate-950 text-white">
+    <div class="min-h-screen bg-aurora-ink text-white">
       <aside class="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl lg:block">
         <a routerLink="/" class="flex cursor-pointer items-center gap-3">
-          <span class="flex h-10 w-10 items-center justify-center rounded-ui bg-white text-sm font-black text-slate-950">A</span>
+          <span class="flex h-10 w-10 items-center justify-center rounded-ui bg-white text-sm font-black text-aurora-ink">A</span>
           <span class="font-black uppercase tracking-[0.22em]">Aurora</span>
         </a>
         <nav class="mt-10 grid gap-2">
@@ -21,15 +21,15 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
             <lucide-icon [img]="LayoutDashboard" size="18" />
             {{ 'admin.nav.dashboard' | t }}
           </a>
-          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
+          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted">
             <lucide-icon [img]="Package" size="18" />
             {{ 'nav.catalog' | t }}
           </span>
-          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
+          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted">
             <lucide-icon [img]="Boxes" size="18" />
             {{ 'admin.nav.inventory' | t }}
           </span>
-          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-slate-400">
+          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted">
             <lucide-icon [img]="ClipboardList" size="18" />
             {{ 'nav.orders' | t }}
           </span>
@@ -41,11 +41,11 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
       </aside>
 
       <div class="lg:pl-72">
-        <header class="sticky top-0 z-30 border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
+        <header class="sticky top-0 z-30 border-b border-white/10 bg-aurora-ink/90 backdrop-blur-xl">
           <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div>
               <p class="text-xs font-bold uppercase tracking-[0.18em] text-aurora-pinebright">{{ 'admin.workspace' | t }}</p>
-              <p class="text-sm text-slate-300">{{ 'admin.workspaceCopy' | t }}</p>
+              <p class="text-sm text-aurora-mist/70">{{ 'admin.workspaceCopy' | t }}</p>
             </div>
             <div class="flex items-center gap-2">
               <button class="ui-button border border-white/10 bg-white/10 text-white hover:bg-white/15 h-10 min-h-10 px-3 lg:hidden" type="button" (click)="auth.logout()">
