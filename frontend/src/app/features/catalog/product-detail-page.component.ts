@@ -21,6 +21,7 @@ import { LanguageService } from '../../core/i18n/language.service';
 import { Product } from '../../core/models/product.model';
 import { Review } from '../../core/models/review.model';
 import { cartErrorKey } from '../../core/util/cart-errors';
+import { productGallery, productImage } from '../../core/util/product-media';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { CatalogService } from '../../services/catalog.service';
@@ -476,25 +477,11 @@ export class ProductDetailPageComponent implements OnInit {
   }
 
   imageUrl(product: Product): string {
-    return (
-      product.images.find((image) => image.mainImage)?.url ||
-      product.images[0]?.url ||
-      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1200&q=85'
-    );
+    return productImage(product);
   }
 
   galleryUrls(product: Product): string[] {
-    const urls = product.images.map((image) => image.url).filter(Boolean);
-    if (urls.length > 0) {
-      return urls.slice(0, 4);
-    }
-
-    return [
-      this.imageUrl(product),
-      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80',
-      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80'
-    ];
+    return productGallery(product);
   }
 
   activeVariantCount(product: Product): number {

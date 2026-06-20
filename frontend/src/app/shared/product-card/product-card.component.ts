@@ -6,6 +6,7 @@ import { LucideAngularModule, ArrowUpRight, Heart, ShoppingBag } from 'lucide-an
 import { LanguageService } from '../../core/i18n/language.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { cartErrorKey } from '../../core/util/cart-errors';
+import { productImage } from '../../core/util/product-media';
 import { Product } from '../../core/models/product.model';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
@@ -141,10 +142,6 @@ export class ProductCardComponent {
   }
 
   imageUrl(): string {
-    return (
-      this.product().images.find((image) => image.mainImage)?.url ||
-      this.product().images[0]?.url ||
-      'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=80'
-    );
+    return productImage(this.product());
   }
 }
