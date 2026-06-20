@@ -36,7 +36,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       <div class="mx-auto w-full max-w-md">
         <div class="surface-panel p-6 sm:p-8">
           <p class="section-kicker">{{ 'nav.signIn' | t }}</p>
-          <h1 class="mt-3 text-4xl font-black text-aurora-ink dark:text-white">{{ 'auth.login.title' | t }}</h1>
+          <h1 class="mt-3 text-4xl font-semibold text-aurora-ink dark:text-white">{{ 'auth.login.title' | t }}</h1>
           <p class="mt-3 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'auth.login.subtitle' | t }}</p>
 
           <form class="mt-8 space-y-4" [formGroup]="form" (ngSubmit)="submit()">

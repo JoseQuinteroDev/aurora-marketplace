@@ -312,6 +312,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'admin.nav.inventory': 'Inventario',
     'admin.workspace': 'Espacio de administración',
     'admin.workspaceCopy': 'Gestiona productos, pedidos y clientes.',
+    'admin.roleBadge': 'ADMIN',
 
     'a11y.home': 'Inicio de Aurora Marketplace',
     'a11y.skipToContent': 'Saltar al contenido',
@@ -664,6 +665,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'admin.nav.inventory': 'Inventory',
     'admin.workspace': 'Admin workspace',
     'admin.workspaceCopy': 'Manage products, orders and customers.',
+    'admin.roleBadge': 'ADMIN',
 
     'a11y.home': 'Aurora Marketplace home',
     'a11y.skipToContent': 'Skip to content',

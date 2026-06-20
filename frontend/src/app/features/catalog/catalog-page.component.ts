@@ -21,7 +21,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
         <div class="grid gap-0 lg:grid-cols-[0.85fr_1.15fr]">
           <div class="p-6 sm:p-8 lg:p-10">
             <p class="section-kicker">{{ 'nav.catalog' | t }}</p>
-            <h1 class="mt-3 max-w-2xl text-4xl font-black leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ 'catalog.title' | t }}</h1>
+            <h1 class="mt-3 max-w-2xl text-4xl font-semibold leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ 'catalog.title' | t }}</h1>
             <p class="mt-4 max-w-xl text-sm leading-6 text-aurora-muted dark:text-stone-300">
               {{ 'catalog.subtitle' | t }}
             </p>
@@ -46,7 +46,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
       <div class="mt-8 flex flex-col gap-3 lg:hidden">
         <label class="field-shell">
           <lucide-icon class="text-stone-400" [img]="Search" size="17" />
-          <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" (keyup.enter)="search()" [placeholder]="'catalog.searchPlaceholder' | t" />
+          <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" [value]="query()" (input)="query.set($any($event.target).value)" (keyup.enter)="search()" [placeholder]="'catalog.searchPlaceholder' | t" [attr.aria-label]="'catalog.searchPlaceholder' | t" />
         </label>
         <div class="grid grid-cols-2 gap-3">
           <button class="ui-button ui-button-primary" type="button" (click)="search()">{{ 'catalog.search' | t }}</button>

@@ -63,7 +63,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
 
           <label class="ml-auto hidden h-12 min-w-0 flex-1 max-w-xl items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm transition duration-200 focus-within:border-aurora-amber focus-within:ring-2 focus-within:ring-aurora-amber/20 lg:flex dark:border-white/10 dark:bg-white/10">
             <lucide-icon [img]="Search" size="18" />
-            <input #deskSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.search' | t" (keyup.enter)="submitSearch(deskSearch.value)" />
+            <input #deskSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.search' | t" [attr.aria-label]="'nav.search' | t" (keyup.enter)="submitSearch(deskSearch.value)" />
             <span class="rounded-ui bg-stone-100 px-2 py-1 text-[11px] font-black text-aurora-muted dark:bg-white/10 dark:text-stone-300">/</span>
           </label>
 
@@ -103,7 +103,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
         <div class="page-shell pb-3 lg:hidden">
           <label class="flex h-11 items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm dark:border-white/10 dark:bg-white/10">
             <lucide-icon [img]="Search" size="17" />
-            <input #mobSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.mobileSearch' | t" (keyup.enter)="submitSearch(mobSearch.value)" />
+            <input #mobSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.mobileSearch' | t" [attr.aria-label]="'nav.mobileSearch' | t" (keyup.enter)="submitSearch(mobSearch.value)" />
           </label>
         </div>
       </header>

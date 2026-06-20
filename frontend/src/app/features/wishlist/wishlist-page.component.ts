@@ -15,7 +15,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     <section class="page-shell py-10 sm:py-12">
       <div class="premium-shell overflow-hidden p-6 sm:p-8">
         <p class="section-kicker">{{ 'nav.wishlist' | t }}</p>
-        <h1 class="mt-3 text-4xl font-black leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ 'wishlist.title' | t }}</h1>
+        <h1 class="mt-3 text-4xl font-semibold leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ 'wishlist.title' | t }}</h1>
         <p class="mt-4 max-w-2xl text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'wishlist.subtitle' | t }}</p>
       </div>
 

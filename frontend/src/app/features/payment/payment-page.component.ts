@@ -1,4 +1,4 @@
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, NgClass } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LucideAngularModule, CheckCircle2, CreditCard, ShieldCheck, XCircle } from 'lucide-angular';
@@ -12,12 +12,12 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
 @Component({
   selector: 'app-payment-page',
-  imports: [CurrencyPipe, RouterLink, LucideAngularModule, TranslatePipe, StatePanelComponent],
+  imports: [CurrencyPipe, NgClass, RouterLink, LucideAngularModule, TranslatePipe, StatePanelComponent],
   template: `
     <section class="page-shell py-10 sm:py-12">
       <div class="premium-shell p-6 sm:p-8">
         <p class="section-kicker">{{ 'payment.title' | t }}</p>
-        <h1 class="mt-3 text-4xl font-black leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ 'payment.title' | t }}</h1>
+        <h1 class="mt-3 text-4xl font-semibold leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ 'payment.title' | t }}</h1>
         <p class="mt-4 max-w-2xl text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'payment.subtitle' | t }}</p>
       </div>
 
@@ -51,7 +51,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             </div>
 
             @if (payment(); as result) {
-              <div class="mt-6 rounded-ui border p-5 dark:border-white/10 dark:bg-white/5" [class.border-emerald-200]="result.paymentStatus === 'PAID'" [class.bg-emerald-50]="result.paymentStatus === 'PAID'" [class.border-rose-200]="result.paymentStatus === 'FAILED'" [class.bg-rose-50]="result.paymentStatus === 'FAILED'">
+              <div class="mt-6 rounded-ui border p-5" [ngClass]="result.paymentStatus === 'PAID' ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-400/40 dark:bg-emerald-500/10' : 'border-rose-200 bg-rose-50 dark:border-rose-400/40 dark:bg-rose-500/10'">
                 <div class="flex items-center gap-3">
                   @if (result.paymentStatus === 'PAID') {
                     <lucide-icon class="text-emerald-600" [img]="CheckCircle2" size="24" />

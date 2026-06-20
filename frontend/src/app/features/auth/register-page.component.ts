@@ -16,7 +16,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       <div class="mx-auto w-full max-w-xl">
         <div class="surface-panel p-6 sm:p-8">
           <p class="section-kicker">{{ 'auth.create' | t }}</p>
-          <h1 class="mt-3 text-4xl font-black text-aurora-ink dark:text-white">{{ 'auth.register.title' | t }}</h1>
+          <h1 class="mt-3 text-4xl font-semibold text-aurora-ink dark:text-white">{{ 'auth.register.title' | t }}</h1>
           <p class="mt-3 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'auth.register.subtitle' | t }}</p>
 
           <form class="mt-8 grid gap-4" [formGroup]="form" (ngSubmit)="submit()">
