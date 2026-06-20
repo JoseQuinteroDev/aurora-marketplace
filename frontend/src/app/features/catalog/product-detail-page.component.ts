@@ -331,17 +331,31 @@ export class ProductDetailPageComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    const slug = this.route.snapshot.paramMap.get('slug');
+    if (this.auth.isAuthenticated()) {
+      this.wishlist.loadWishlist().subscribe({ error: () => undefined });
+    }
 
+    // Subscribe (not snapshot) so navigating product -> product (back/forward,
+    // links from cart/wishlist/orders) reloads and resets the view instead of
+    // keeping the previous product, which Angular's route reuse would otherwise show.
+    this.route.paramMap.subscribe((params) => this.loadProduct(params.get('slug')));
+  }
+
+  private loadProduct(slug: string | null): void {
     if (!slug) {
       this.error.set(this.language.translate('product.unavailable'));
       this.loading.set(false);
       return;
     }
 
-    if (this.auth.isAuthenticated()) {
-      this.wishlist.loadWishlist().subscribe({ error: () => undefined });
-    }
+    // Reset per-product view state before fetching the new one.
+    this.product.set(null);
+    this.reviews.set([]);
+    this.selectedImage.set(null);
+    this.selectedVariant.set(null);
+    this.activeTab.set('description');
+    this.error.set(null);
+    this.loading.set(true);
 
     this.catalogService.getProduct(slug).subscribe({
       next: (product) => {
