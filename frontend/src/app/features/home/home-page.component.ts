@@ -37,7 +37,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
   template: `
     <section class="hero-editorial overflow-hidden">
       <div class="page-shell relative z-10 py-16 lg:py-24">
-        <div class="hero-reveal flex items-center gap-3 text-xs font-black uppercase tracking-[0.22em] text-aurora-gold dark:text-amber-300" style="animation-delay: 60ms">
+        <div class="hero-reveal flex items-center gap-3 text-xs font-black uppercase tracking-[0.22em] text-aurora-gold dark:text-aurora-pinebright" style="animation-delay: 60ms">
           <span class="hero-rule"></span>
           <lucide-icon [img]="Sparkles" size="14" />
           {{ 'home.badge' | t }}
@@ -68,7 +68,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               />
             </div>
             <div class="absolute -left-3 bottom-5 flex items-center gap-2 rounded-ui border border-aurora-line bg-aurora-paper px-3 py-2 shadow-lift dark:border-white/10 dark:bg-aurora-night">
-              <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-aurora-emerald dark:bg-emerald-500/15">
+              <span class="flex h-7 w-7 items-center justify-center rounded-full bg-aurora-pine/10 text-aurora-emerald dark:bg-aurora-pine/15">
                 <lucide-icon [img]="CheckCircle2" size="15" />
               </span>
               <span class="text-xs font-bold text-aurora-ink dark:text-white">{{ 'home.hero.inStock' | t }}</span>
@@ -157,7 +157,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           @for (benefit of benefits; track benefit.title) {
             <div class="surface-panel p-5">
               <div class="flex items-start gap-4">
-                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-ui bg-amber-50 text-aurora-gold dark:bg-amber-400/10 dark:text-amber-300">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-ui bg-aurora-pine/10 text-aurora-gold dark:bg-aurora-pine/10 dark:text-aurora-pinebright">
                   <lucide-icon [img]="benefit.icon" size="21" />
                 </span>
                 <div>
@@ -175,7 +175,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       <div class="grid gap-4 md:grid-cols-3">
         @for (promise of promises; track promise.title) {
           <div class="soft-card p-6">
-            <lucide-icon class="text-aurora-ocean dark:text-blue-300" [img]="promise.icon" size="24" />
+            <lucide-icon class="text-aurora-ocean dark:text-aurora-pinebright" [img]="promise.icon" size="24" />
             <h3 class="mt-5 text-lg font-black text-aurora-ink dark:text-white">{{ promise.title | t }}</h3>
             <p class="mt-2 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ promise.copy | t }}</p>
           </div>

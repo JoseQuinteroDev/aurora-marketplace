@@ -44,7 +44,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
         <header class="sticky top-0 z-30 border-b border-white/10 bg-slate-950/90 backdrop-blur-xl">
           <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div>
-              <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">{{ 'admin.workspace' | t }}</p>
+              <p class="text-xs font-bold uppercase tracking-[0.18em] text-aurora-pinebright">{{ 'admin.workspace' | t }}</p>
               <p class="text-sm text-slate-300">{{ 'admin.workspaceCopy' | t }}</p>
             </div>
             <div class="flex items-center gap-2">
@@ -53,7 +53,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
                 {{ 'nav.signOut' | t }}
               </button>
               <div class="flex items-center gap-2 rounded-ui border border-white/10 bg-white/10 px-3 py-2 text-sm">
-                <button class="cursor-pointer font-black text-amber-200" type="button" (click)="language.toggle()">{{ language.language().toUpperCase() }}</button>
+                <button class="cursor-pointer font-black text-aurora-pinebright" type="button" (click)="language.toggle()">{{ language.language().toUpperCase() }}</button>
                 <lucide-icon [img]="ShieldCheck" size="17" />
                 {{ 'admin.roleBadge' | t }}
               </div>

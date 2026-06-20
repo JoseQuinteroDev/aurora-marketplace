@@ -66,7 +66,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
                 {{ 'catalog.refine' | t }}
               </div>
               @if (selectedCategory() || selectedBrand()) {
-                <button class="cursor-pointer text-xs font-bold text-aurora-gold underline dark:text-amber-300" type="button" (click)="clearFilters()">{{ 'catalog.clearFilters' | t }}</button>
+                <button class="cursor-pointer text-xs font-bold text-aurora-gold underline dark:text-aurora-pinebright" type="button" (click)="clearFilters()">{{ 'catalog.clearFilters' | t }}</button>
               } @else {
                 <span class="text-xs font-bold text-aurora-muted dark:text-stone-400">{{ visibleProducts().length }} {{ 'catalog.itemsCount' | t }}</span>
               }

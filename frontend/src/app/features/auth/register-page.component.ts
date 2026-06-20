@@ -91,12 +91,12 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <div class="mt-6 grid gap-3">
             @for (item of panelItems; track item) {
               <div class="flex items-center gap-3 rounded-ui border border-white/10 bg-white/10 p-3">
-                <lucide-icon class="text-emerald-300" [img]="CheckCircle2" size="18" />
+                <lucide-icon class="text-aurora-pinebright" [img]="CheckCircle2" size="18" />
                 <span class="text-sm font-semibold text-stone-100">{{ item | t }}</span>
               </div>
             }
           </div>
-          <a routerLink="/catalog" class="mt-7 inline-flex cursor-pointer items-center gap-2 text-sm font-black text-amber-200 transition-colors duration-200 hover:text-white">
+          <a routerLink="/catalog" class="mt-7 inline-flex cursor-pointer items-center gap-2 text-sm font-black text-aurora-pinebright transition-colors duration-200 hover:text-white">
             {{ 'cart.keepShopping' | t }}
             <lucide-icon [img]="ArrowRight" size="16" />
           </a>

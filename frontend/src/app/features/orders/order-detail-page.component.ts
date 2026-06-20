@@ -156,13 +156,13 @@ export class OrderDetailPageComponent implements OnInit {
 
   statusClass(status: OrderStatus): string {
     if (status === 'PAID' || status === 'DELIVERED') {
-      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
+      return 'bg-aurora-pine/10 text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright';
     }
 
     if (status === 'CANCELLED' || status === 'REFUNDED') {
-      return 'bg-rose-50 text-aurora-rose dark:bg-rose-500/15';
+      return 'bg-aurora-rose/10 text-aurora-rose dark:bg-aurora-rose/15';
     }
 
-    return 'bg-amber-50 text-aurora-gold dark:bg-amber-400/10 dark:text-amber-300';
+    return 'bg-aurora-pine/10 text-aurora-gold dark:bg-aurora-pine/10 dark:text-aurora-pinebright';
   }
 }

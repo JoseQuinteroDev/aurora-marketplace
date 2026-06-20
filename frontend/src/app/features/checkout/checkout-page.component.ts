@@ -56,7 +56,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <div class="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
             <form class="surface-panel p-5 sm:p-6" [formGroup]="addressForm" (ngSubmit)="confirm(data)">
               <div class="flex items-center gap-3">
-                <span class="flex h-11 w-11 items-center justify-center rounded-ui bg-amber-50 text-aurora-gold dark:bg-amber-400/10 dark:text-amber-300">
+                <span class="flex h-11 w-11 items-center justify-center rounded-ui bg-aurora-pine/10 text-aurora-gold dark:bg-aurora-pine/10 dark:text-aurora-pinebright">
                   <lucide-icon [img]="MapPin" size="21" />
                 </span>
                 <div>
@@ -75,7 +75,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               </div>
 
               @if (success()) {
-                <p class="mt-5 rounded-ui bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{{ 'checkout.success' | t }}</p>
+                <p class="mt-5 rounded-ui bg-aurora-pine/10 px-3 py-2 text-sm font-bold text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">{{ 'checkout.success' | t }}</p>
               }
 
               <button class="ui-button ui-button-primary mt-6 w-full" type="submit" [disabled]="addressForm.invalid || confirming()">
@@ -118,7 +118,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   </div>
                 </div>
 
-                <div class="mt-5 rounded-ui bg-emerald-50 p-3 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                <div class="mt-5 rounded-ui bg-aurora-pine/10 p-3 text-sm font-semibold text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">
                   <lucide-icon class="inline-block align-[-3px]" [img]="ShieldCheck" size="17" />
                   {{ 'checkout.backendTrust' | t }}
                 </div>

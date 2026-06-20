@@ -13,7 +13,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
   template: `
     <section class="px-4 py-8 sm:px-6 lg:px-8">
       <div class="max-w-7xl">
-        <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">{{ 'admin.eyebrow' | t }}</p>
+        <p class="text-xs font-bold uppercase tracking-[0.18em] text-aurora-pinebright">{{ 'admin.eyebrow' | t }}</p>
         <h1 class="mt-3 text-3xl font-black tracking-normal text-white sm:text-4xl">{{ 'admin.title' | t }}</h1>
         <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-300">{{ 'admin.subtitle' | t }}</p>
 
@@ -33,7 +33,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <div class="rounded-ui border border-white/10 bg-white/[0.06] p-5">
                 <div class="flex items-center justify-between gap-4">
                   <p class="text-sm font-semibold text-slate-300">{{ metric.label | t }}</p>
-                  <span class="flex h-10 w-10 items-center justify-center rounded-ui bg-white/10 text-emerald-300">
+                  <span class="flex h-10 w-10 items-center justify-center rounded-ui bg-white/10 text-aurora-pinebright">
                     <lucide-icon [img]="metric.icon" size="19" />
                   </span>
                 </div>
@@ -59,7 +59,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
             <div class="rounded-ui border border-white/10 bg-white/[0.06] p-6">
               <h2 class="text-lg font-bold text-white">{{ 'admin.paidRevenue' | t }}</h2>
-              <p class="mt-5 text-4xl font-black text-emerald-300">{{ data.totalRevenuePaid | currency }}</p>
+              <p class="mt-5 text-4xl font-black text-aurora-pinebright">{{ data.totalRevenuePaid | currency }}</p>
               <p class="mt-3 text-sm leading-6 text-slate-300">{{ 'admin.paidRevenueCopy' | t }}</p>
             </div>
           </div>

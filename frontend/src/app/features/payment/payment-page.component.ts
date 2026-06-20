@@ -34,7 +34,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         <div class="mt-8 grid gap-6 lg:grid-cols-[1fr_380px]">
           <div class="surface-panel p-6">
             <div class="flex items-center gap-3">
-              <span class="flex h-12 w-12 items-center justify-center rounded-ui bg-amber-50 text-aurora-gold dark:bg-amber-400/10 dark:text-amber-300">
+              <span class="flex h-12 w-12 items-center justify-center rounded-ui bg-aurora-pine/10 text-aurora-gold dark:bg-aurora-pine/10 dark:text-aurora-pinebright">
                 <lucide-icon [img]="CreditCard" size="22" />
               </span>
               <div>
@@ -51,11 +51,11 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             </div>
 
             @if (payment(); as result) {
-              <div class="mt-6 rounded-ui border p-5" [ngClass]="result.paymentStatus === 'PAID' ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-400/40 dark:bg-emerald-500/10' : 'border-rose-200 bg-rose-50 dark:border-rose-400/40 dark:bg-rose-500/10'">
+              <div class="mt-6 rounded-ui border p-5" [ngClass]="result.paymentStatus === 'PAID' ? 'border-aurora-pine/30 bg-aurora-pine/10 dark:border-aurora-pine/40 dark:bg-aurora-pine/10' : 'border-aurora-rose/30 bg-aurora-rose/10 dark:border-aurora-rose/40 dark:bg-aurora-rose/10'">
                 <div class="flex items-center gap-3">
                   @if (result.paymentStatus === 'PAID') {
-                    <lucide-icon class="text-emerald-600" [img]="CheckCircle2" size="24" />
-                    <p class="font-black text-emerald-700 dark:text-emerald-300">{{ 'payment.paid' | t }}</p>
+                    <lucide-icon class="text-aurora-pine" [img]="CheckCircle2" size="24" />
+                    <p class="font-black text-aurora-pine dark:text-aurora-pinebright">{{ 'payment.paid' | t }}</p>
                   } @else {
                     <lucide-icon class="text-aurora-rose" [img]="XCircle" size="24" />
                     <p class="font-black text-aurora-rose">{{ 'payment.failed' | t }}</p>

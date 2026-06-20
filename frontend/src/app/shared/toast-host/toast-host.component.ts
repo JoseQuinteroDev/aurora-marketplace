@@ -17,8 +17,8 @@ import { ToastService } from '../../services/toast.service';
           role="status"
           class="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-ui border bg-white p-4 shadow-premium animate-fadeUp dark:bg-aurora-night"
           [class.border-aurora-line]="toast.tone === 'info'"
-          [class.border-emerald-200]="toast.tone === 'success'"
-          [class.border-rose-200]="toast.tone === 'error'"
+          [class.border-aurora-pine/30]="toast.tone === 'success'"
+          [class.border-aurora-rose/30]="toast.tone === 'error'"
           [class.dark:border-white/10]="true"
         >
           <span class="mt-0.5 shrink-0">

@@ -42,7 +42,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <article class="surface-panel p-5">
               <div class="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div class="flex items-start gap-4">
-                  <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-ui bg-amber-50 text-aurora-gold dark:bg-amber-400/10 dark:text-amber-300">
+                  <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-ui bg-aurora-pine/10 text-aurora-gold dark:bg-aurora-pine/10 dark:text-aurora-pinebright">
                     <lucide-icon [img]="ReceiptText" size="22" />
                   </span>
                   <div>
@@ -101,13 +101,13 @@ export class OrdersPageComponent implements OnInit {
 
   statusClass(status: OrderStatus): string {
     if (status === 'PAID' || status === 'DELIVERED') {
-      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
+      return 'bg-aurora-pine/10 text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright';
     }
 
     if (status === 'CANCELLED' || status === 'REFUNDED') {
-      return 'bg-rose-50 text-aurora-rose dark:bg-rose-500/15';
+      return 'bg-aurora-rose/10 text-aurora-rose dark:bg-aurora-rose/15';
     }
 
-    return 'bg-amber-50 text-aurora-gold dark:bg-amber-400/10 dark:text-amber-300';
+    return 'bg-aurora-pine/10 text-aurora-gold dark:bg-aurora-pine/10 dark:text-aurora-pinebright';
   }
 }

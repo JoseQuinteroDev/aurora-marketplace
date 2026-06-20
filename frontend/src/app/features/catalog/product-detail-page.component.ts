@@ -86,7 +86,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   <h1 class="mt-3 text-4xl font-semibold leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ item.name }}</h1>
                   <div class="mt-4 flex flex-wrap items-center gap-3">
                     @if (reviews().length > 0) {
-                      <span class="inline-flex items-center gap-1.5 text-sm font-black text-amber-700 dark:text-amber-300">
+                      <span class="inline-flex items-center gap-1.5 text-sm font-black text-aurora-pine dark:text-aurora-pinebright">
                         <lucide-icon [img]="Star" size="16" />
                         {{ averageRating() }}
                         <span class="font-semibold text-aurora-muted dark:text-stone-300">· {{ reviews().length }} {{ (reviews().length === 1 ? 'product.reviewsCountLabelSingular' : 'product.reviewsCountLabel') | t }}</span>
@@ -99,7 +99,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                     }
                     <span class="h-1 w-1 rounded-full bg-aurora-line dark:bg-white/20"></span>
                     <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ activeVariantCount(item) }} {{ (activeVariantCount(item) === 1 ? 'product.variantLabelSingular' : 'product.variantsLabel') | t }}</span>
-                    <span class="aurora-badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    <span class="aurora-badge bg-aurora-pine/10 text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">
                       <lucide-icon [img]="BadgeCheck" size="14" />
                       {{ 'product.inStock' | t }}
                     </span>
@@ -136,7 +136,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                       <button class="rounded-ui border border-aurora-line bg-white p-3 text-left transition duration-200 hover:border-aurora-amber hover:shadow-sm dark:border-white/10 dark:bg-white/10" [class.border-aurora-amber]="variant.id === selectedVariant()" type="button" (click)="selectedVariant.set(variant.id)">
                         <span class="block text-sm font-black text-aurora-ink dark:text-white">{{ variant.name }}</span>
                         <span class="mt-1 block text-xs font-semibold text-aurora-muted dark:text-stone-400">{{ variant.sku }}</span>
-                        <span class="mt-2 block text-sm font-black text-aurora-gold dark:text-amber-300">{{ variant.effectivePrice | currency }}</span>
+                        <span class="mt-2 block text-sm font-black text-aurora-gold dark:text-aurora-pinebright">{{ variant.effectivePrice | currency }}</span>
                       </button>
                     } @empty {
                       <p class="text-sm text-aurora-muted dark:text-stone-300">{{ 'product.defaultVariant' | t }}</p>
@@ -147,7 +147,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                 <div class="grid gap-3 sm:grid-cols-3">
                   @for (promise of promises; track promise.title) {
                     <div class="surface-panel p-4">
-                      <lucide-icon class="text-aurora-ocean dark:text-blue-300" [img]="promise.icon" size="20" />
+                      <lucide-icon class="text-aurora-ocean dark:text-aurora-pinebright" [img]="promise.icon" size="20" />
                       <p class="mt-3 text-sm font-black text-aurora-ink dark:text-white">{{ promise.title | t }}</p>
                       <p class="mt-1 text-xs leading-5 text-aurora-muted dark:text-stone-300">{{ promise.copy | t }}</p>
                     </div>
@@ -221,7 +221,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                               <p class="font-black text-aurora-ink dark:text-white">{{ review.authorName }}</p>
                               <p class="text-xs text-aurora-muted dark:text-stone-400">{{ review.createdAt | date:'mediumDate' }}</p>
                             </div>
-                            <div class="flex items-center gap-1 text-amber-600 dark:text-amber-300">
+                            <div class="flex items-center gap-1 text-aurora-pine dark:text-aurora-pinebright">
                               @for (star of stars; track star) {
                                 <lucide-icon [img]="Star" size="15" [class.opacity-30]="star > review.rating" />
                               }
@@ -264,10 +264,10 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                         <textarea class="ui-input mt-2 h-auto min-h-28 py-3" formControlName="comment"></textarea>
                       </label>
                       @if (reviewMessage()) {
-                        <p class="rounded-ui bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{{ reviewMessage() }}</p>
+                        <p class="rounded-ui bg-aurora-pine/10 px-3 py-2 text-sm font-bold text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">{{ reviewMessage() }}</p>
                       }
                       @if (reviewError()) {
-                        <p class="rounded-ui bg-rose-50 px-3 py-2 text-sm font-bold text-aurora-rose dark:bg-rose-500/15">{{ reviewError() }}</p>
+                        <p class="rounded-ui bg-aurora-rose/10 px-3 py-2 text-sm font-bold text-aurora-rose dark:bg-aurora-rose/15">{{ reviewError() }}</p>
                       }
                       <button class="ui-button ui-button-primary w-full" type="submit" [disabled]="reviewForm.invalid || reviewSubmitting()">{{ 'product.submitReview' | t }}</button>
                     </form>

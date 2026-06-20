@@ -21,21 +21,22 @@ import { CartService } from '../../services/cart.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ThemeService } from '../../core/theme/theme.service';
 import { WishlistService } from '../../services/wishlist.service';
+import { BrandLogoComponent } from '../../shared/brand-logo/brand-logo.component';
 import { ToastHostComponent } from '../../shared/toast-host/toast-host.component';
 
 @Component({
   selector: 'app-storefront-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, TranslatePipe, ToastHostComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, TranslatePipe, BrandLogoComponent, ToastHostComponent],
   template: `
     <div class="min-h-screen text-aurora-ink dark:text-white">
       <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-ui focus:bg-aurora-ink focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-white focus:shadow-lift dark:focus:bg-white dark:focus:text-aurora-night">{{ 'a11y.skipToContent' | t }}</a>
       <div class="border-b border-white/10 bg-aurora-night text-white">
         <div class="page-shell flex min-h-10 items-center justify-center gap-3 text-center text-xs font-bold sm:justify-between">
           <span class="inline-flex items-center gap-2">
-            <lucide-icon class="text-amber-300" [img]="Sparkles" size="14" />
+            <lucide-icon class="text-aurora-pinebright" [img]="Sparkles" size="14" />
             {{ 'nav.promo' | t }}
           </span>
-          <a routerLink="/catalog" class="hidden cursor-pointer items-center gap-1 text-amber-200 transition-colors duration-200 hover:text-white sm:inline-flex">
+          <a routerLink="/catalog" class="hidden cursor-pointer items-center gap-1 text-aurora-pinebright transition-colors duration-200 hover:text-white sm:inline-flex">
             {{ 'nav.browseArrivals' | t }}
             <lucide-icon [img]="ArrowRight" size="14" />
           </a>
@@ -44,12 +45,8 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
 
       <header class="sticky top-0 z-40 border-b border-white/60 bg-white/80 backdrop-blur-2xl dark:border-white/10 dark:bg-aurora-night/80">
         <div class="page-shell flex min-h-20 items-center gap-3 py-3">
-          <a routerLink="/" class="flex cursor-pointer items-center gap-3" [attr.aria-label]="'a11y.home' | t">
-            <span class="flex h-11 w-11 items-center justify-center rounded-ui bg-aurora-ink text-base font-black text-white shadow-lift dark:bg-white dark:text-aurora-night">A</span>
-            <span class="hidden leading-none sm:block">
-              <span class="block text-sm font-black uppercase tracking-[0.22em] text-aurora-ink dark:text-white">Aurora</span>
-              <span class="mt-1 block text-[11px] font-bold text-aurora-muted dark:text-stone-400">Marketplace</span>
-            </span>
+          <a routerLink="/" class="flex cursor-pointer items-center text-aurora-ink dark:text-white" [attr.aria-label]="'a11y.home' | t">
+            <app-brand-logo />
           </a>
 
           <nav class="hidden items-center gap-1 md:flex">
@@ -128,7 +125,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
             <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
               @for (item of trustItems; track item.title) {
                 <div class="rounded-ui border border-white/10 bg-white/[0.06] p-4">
-                  <lucide-icon class="text-amber-300" [img]="item.icon" size="20" />
+                  <lucide-icon class="text-aurora-pinebright" [img]="item.icon" size="20" />
                   <p class="mt-3 font-black">{{ item.title | t }}</p>
                   <p class="mt-1 text-sm leading-5 text-stone-300">{{ item.copy | t }}</p>
                 </div>

@@ -40,18 +40,18 @@ import { WishlistService } from '../../services/wishlist.service';
       </a>
       <div class="p-4 sm:p-5">
         <div class="flex items-center justify-between gap-3">
-          <p class="text-xs font-black uppercase tracking-[0.14em] text-aurora-gold dark:text-amber-300">
+          <p class="text-xs font-black uppercase tracking-[0.14em] text-aurora-gold dark:text-aurora-pinebright">
             {{ product().brand.name }}
           </p>
           @if (product().reviewCount) {
-            <div class="flex items-center gap-1 text-xs font-bold text-amber-700 dark:text-amber-300" [attr.aria-label]="(product().averageRating | number: '1.1-1') + ' / 5'">
+            <div class="flex items-center gap-1 text-xs font-bold text-aurora-pine dark:text-aurora-pinebright" [attr.aria-label]="(product().averageRating | number: '1.1-1') + ' / 5'">
               <lucide-icon [img]="Star" size="14" />
               {{ product().averageRating | number: '1.1-1' }}
               <span class="font-semibold text-aurora-muted dark:text-stone-400">({{ product().reviewCount }})</span>
             </div>
           }
         </div>
-        <a [routerLink]="['/products', product().slug]" class="mt-2 line-clamp-2 block cursor-pointer text-lg font-black leading-6 text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white dark:hover:text-amber-300">
+        <a [routerLink]="['/products', product().slug]" class="mt-2 line-clamp-2 block cursor-pointer text-lg font-black leading-6 text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white dark:hover:text-aurora-pinebright">
           {{ product().name }}
         </a>
         <p class="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-aurora-muted dark:text-stone-300">

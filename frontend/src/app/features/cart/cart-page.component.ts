@@ -117,7 +117,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <div class="mt-6 rounded-ui border border-aurora-line bg-white/70 p-3 dark:border-white/10 dark:bg-white/5">
                   <label class="text-sm font-black text-aurora-ink dark:text-white">{{ 'cart.coupon' | t }}</label>
                   @if (data.coupon) {
-                    <div class="mt-3 flex items-center justify-between gap-3 rounded-ui bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    <div class="mt-3 flex items-center justify-between gap-3 rounded-ui bg-aurora-pine/10 px-3 py-2 text-sm font-black text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">
                       <span>{{ data.coupon.code }}</span>
                       <button class="cursor-pointer text-xs underline" type="button" [disabled]="actionId() === 'coupon'" (click)="removeCoupon()">{{ 'cart.removeCoupon' | t }}</button>
                     </div>
