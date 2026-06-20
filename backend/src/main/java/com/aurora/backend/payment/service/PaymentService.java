@@ -62,7 +62,11 @@ public class PaymentService {
             );
         }
 
-        if (order.getStatus() == OrderStatus.PAID && Boolean.TRUE.equals(request.success())) {
+        // A paid order is terminal for payment: reject ANY further simulation
+        // (success OR failure). Otherwise a success=false replay would flip the
+        // payment to FAILED, regress the order to PENDING_PAYMENT, and emit a
+        // misleading PAYMENT_FAILED notification for an order that was paid.
+        if (order.getStatus() == OrderStatus.PAID) {
             throw new BusinessException(HttpStatus.CONFLICT, "ORDER_ALREADY_PAID", "Order is already paid.");
         }
 

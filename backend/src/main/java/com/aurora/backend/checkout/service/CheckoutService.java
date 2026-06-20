@@ -203,7 +203,25 @@ public class CheckoutService {
     }
 
     private void decreaseStock(ProductVariant variant, int quantity, String orderNumber) {
-        Inventory inventory = getInventory(variant);
+        // Lock the inventory row for the rest of the transaction and re-check under the
+        // lock, so concurrent checkouts of the same variant serialize instead of both
+        // decrementing the same units (overselling). The earlier ensureStockAvailable
+        // check is only a fast, unlocked pre-validation.
+        Inventory inventory = inventoryRepository.findByVariantIdForUpdate(variant.getId())
+                .orElseThrow(() -> new BusinessException(
+                        HttpStatus.CONFLICT,
+                        "INVENTORY_NOT_AVAILABLE",
+                        "Inventory is not available for variant " + variant.getSku() + "."
+                ));
+
+        if (inventory.getAvailableQuantity() < quantity) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "INSUFFICIENT_STOCK",
+                    "Not enough available stock for variant " + variant.getSku() + "."
+            );
+        }
+
         inventory.adjustAvailableQuantity(inventory.getAvailableQuantity() - quantity);
         stockMovementRepository.save(new StockMovement(
                 variant,

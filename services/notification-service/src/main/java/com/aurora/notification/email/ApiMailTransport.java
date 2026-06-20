@@ -1,5 +1,6 @@
 package com.aurora.notification.email;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -31,7 +33,12 @@ public class ApiMailTransport implements MailTransport {
             @Value("${app.notification.email.api.base-url:https://api.resend.com}") String baseUrl,
             @Value("${app.notification.email.api.key:}") String apiKey
     ) {
-        this.client = RestClient.builder().baseUrl(baseUrl).build();
+        // Bounded timeouts: a hung provider must surface as an exception (handled by
+        // EmailService -> retry/DLT), never block the Kafka consumer thread forever.
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(10));
+        this.client = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build();
         this.apiKey = apiKey;
     }
 

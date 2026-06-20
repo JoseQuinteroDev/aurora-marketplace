@@ -1,10 +1,13 @@
 package com.aurora.notification.sms;
 
+import java.time.Duration;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -32,7 +35,12 @@ public class TwilioSmsTransport implements SmsTransport {
             @Value("${app.notification.sms.twilio.account-sid:}") String accountSid,
             @Value("${app.notification.sms.twilio.auth-token:}") String authToken
     ) {
-        this.client = RestClient.builder().baseUrl(baseUrl).build();
+        // Bounded timeouts so a hung provider surfaces as an exception (SMS is
+        // best-effort, so SmsService swallows it) rather than blocking the consumer.
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(10));
+        this.client = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build();
         this.accountSid = accountSid;
         this.authToken = authToken;
     }

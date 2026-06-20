@@ -76,6 +76,7 @@ public class AuthService {
                 passwordEncoder.encode(request.password()),
                 request.firstName().trim(),
                 request.lastName().trim(),
+                normalizePhone(request.phone()),
                 Role.CUSTOMER,
                 true
         );
@@ -154,5 +155,13 @@ public class AuthService {
 
     private String normalizeEmail(String email) {
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** Optional field: trim, and store a blank phone as NULL (the @Pattern allows an empty string). */
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        return phone.trim();
     }
 }

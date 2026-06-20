@@ -26,8 +26,10 @@ spring:
 management:
   endpoints:
     web:
+      # No Spring Security guards this actuator, so keep the public surface minimal
+      # (consistent with the gateway): expose only health,info,prometheus.
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: always

@@ -157,6 +157,9 @@ public class NotificationListener {
                         event.customerName()
                 );
         if (smsService.send(event.customerPhone(), text)) {
+            // Be honest on the observability surface: the dev "log" transport only
+            // writes to the log, so record LOGGED rather than SENT for it.
+            String status = "log".equals(smsService.transportName()) ? "LOGGED" : "SENT";
             store.add(new NotificationRecord(
                     UUID.randomUUID().toString(),
                     "ORDER_CREATED",
@@ -164,7 +167,7 @@ public class NotificationListener {
                     event.customerPhone(),
                     "Order " + event.orderNumber() + " confirmed",
                     event.orderNumber(),
-                    "SENT",
+                    status,
                     Instant.now()
             ));
         }

@@ -29,6 +29,11 @@ public class SmsService {
         this.from = from;
     }
 
+    /** The active transport's short name (e.g. "log", "twilio") — used to record an honest delivery status. */
+    public String transportName() {
+        return transport.name();
+    }
+
     /**
      * @return {@code true} when the SMS was accepted by the transport. Returns
      * {@code false} (without throwing) when SMS is disabled, no number is
