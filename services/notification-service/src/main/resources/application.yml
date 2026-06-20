@@ -47,6 +47,21 @@ logging:
 app:
   notification:
     from: ${APP_NOTIFICATION_FROM:Aurora Marketplace <no-reply@aurora.dev>}
+    email:
+      # smtp = local Mailpit (dev). api = HTTP provider (e.g. Resend) — set the key.
+      provider: ${APP_NOTIFICATION_EMAIL_PROVIDER:smtp}
+      api:
+        base-url: ${APP_NOTIFICATION_EMAIL_API_BASE_URL:https://api.resend.com}
+        key: ${APP_NOTIFICATION_EMAIL_API_KEY:}
+    sms:
+      # log = write the SMS to the log (dev). twilio = send via Twilio — set sid + token.
+      enabled: ${APP_NOTIFICATION_SMS_ENABLED:true}
+      provider: ${APP_NOTIFICATION_SMS_PROVIDER:log}
+      from: ${APP_NOTIFICATION_SMS_FROM:Aurora}
+      twilio:
+        base-url: ${APP_NOTIFICATION_SMS_TWILIO_BASE_URL:https://api.twilio.com}
+        account-sid: ${APP_NOTIFICATION_SMS_TWILIO_ACCOUNT_SID:}
+        auth-token: ${APP_NOTIFICATION_SMS_TWILIO_AUTH_TOKEN:}
 
   # Consumer resilience: transient failures are retried with exponential backoff;
   # exhausted/poison records are routed to "<topic>.DLT".

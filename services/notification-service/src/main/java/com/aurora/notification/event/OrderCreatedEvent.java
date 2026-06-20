@@ -18,6 +18,7 @@ public record OrderCreatedEvent(
         String orderNumber,
         String customerEmail,
         String customerName,
+        String customerPhone,
         int itemCount,
         BigDecimal subtotal,
         BigDecimal discountTotal,

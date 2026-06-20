@@ -7,6 +7,7 @@ import com.aurora.notification.email.EmailService;
 import com.aurora.notification.event.OrderCreatedEvent;
 import com.aurora.notification.event.PaymentConfirmedEvent;
 import com.aurora.notification.event.PaymentFailedEvent;
+import com.aurora.notification.sms.SmsService;
 import com.aurora.notification.store.NotificationRecord;
 import com.aurora.notification.store.NotificationStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,13 +43,15 @@ public class NotificationListener {
 
     private final ObjectMapper objectMapper;
     private final EmailService emailService;
+    private final SmsService smsService;
     private final NotificationStore store;
     private final ProcessedEventTracker processedEvents;
 
-    public NotificationListener(ObjectMapper objectMapper, EmailService emailService,
+    public NotificationListener(ObjectMapper objectMapper, EmailService emailService, SmsService smsService,
                                 NotificationStore store, ProcessedEventTracker processedEvents) {
         this.objectMapper = objectMapper;
         this.emailService = emailService;
+        this.smsService = smsService;
         this.store = store;
         this.processedEvents = processedEvents;
     }
@@ -81,6 +84,10 @@ public class NotificationListener {
         );
 
         deliver(event.eventId(), "ORDER_CREATED", event.customerEmail(), subject, event.orderNumber(), body);
+
+        // Secondary channel: an order SMS if the customer left a phone. Best-effort —
+        // it must never fail or re-trigger the (already-delivered, idempotent) email.
+        sendOrderSms(event);
     }
 
     @KafkaListener(topics = TOPIC_PAYMENT_CONFIRMED)
@@ -138,6 +145,29 @@ public class NotificationListener {
         );
 
         deliver(event.eventId(), "PAYMENT_FAILED", event.customerEmail(), subject, event.orderNumber(), body);
+    }
+
+    private void sendOrderSms(OrderCreatedEvent event) {
+        String text = "Aurora Marketplace: order %s confirmed — %d item(s), total %s %s. Thank you, %s!"
+                .formatted(
+                        event.orderNumber(),
+                        event.itemCount(),
+                        event.total(),
+                        event.currency(),
+                        event.customerName()
+                );
+        if (smsService.send(event.customerPhone(), text)) {
+            store.add(new NotificationRecord(
+                    UUID.randomUUID().toString(),
+                    "ORDER_CREATED",
+                    "SMS",
+                    event.customerPhone(),
+                    "Order " + event.orderNumber() + " confirmed",
+                    event.orderNumber(),
+                    "SENT",
+                    Instant.now()
+            ));
+        }
     }
 
     private boolean isDuplicate(String eventId, String topic) {

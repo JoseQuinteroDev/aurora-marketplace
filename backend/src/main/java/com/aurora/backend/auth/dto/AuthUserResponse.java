@@ -10,6 +10,7 @@ public record AuthUserResponse(
         String email,
         String firstName,
         String lastName,
+        String phone,
         Role role
 ) {
 
@@ -19,6 +20,7 @@ public record AuthUserResponse(
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
+                user.getPhone(),
                 user.getRole()
         );
     }

@@ -2,6 +2,7 @@ package com.aurora.backend.auth.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record RegisterRequest(
@@ -20,6 +21,14 @@ public record RegisterRequest(
 
         @NotBlank(message = "Last name is required.")
         @Size(max = 100, message = "Last name must be at most 100 characters.")
-        String lastName
+        String lastName,
+
+        // Optional. Used to send an order-confirmation SMS in addition to email.
+        @Size(max = 32, message = "Phone must be at most 32 characters.")
+        @Pattern(
+                regexp = "^$|^\\+?[0-9][0-9 ().-]{6,30}$",
+                message = "Phone must be a valid number."
+        )
+        String phone
 ) {
 }
