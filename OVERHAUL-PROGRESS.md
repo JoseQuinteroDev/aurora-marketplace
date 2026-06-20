@@ -32,6 +32,7 @@ Plan por fases para sanear el frontend Angular.
 | `6aec870` | **Review #3** | UX/comercio/detalle: carrito y wishlist con **placeholder de marca** (antes una foto de stock idéntica para todo); badge de carrito oculto si está vacío; precio del detalle según la variante seleccionada; estado de error real + reintentar en wishlist; reset de búsqueda en catálogo sin resultados; `returnUrl` preservado entre login↔register; CTA de éxito en pago; skeleton del admin 8→7; miniatura de carrito acotada en móvil; **fix del ThemeService** (persistía en cada run, congelando la preferencia del SO → ahora solo al togglear); dedupe de galería (evita NG0955). |
 
 | `cac7277` | **Feature: ratings reales (full-stack)** | Las tarjetas no tenían prueba social. Ahora el backend expone `averageRating`+`reviewCount` en list/search/detalle mediante **una sola query de agregación por lote** (proyección `ProductRatingStats`, **sin N+1**); la tarjeta muestra `★ media (nº)` **solo si hay reseñas reales**. Tests del backend 12/12. Verificado end-to-end (reseña publicada → API + tarjeta + detalle). |
+| `5268e59` | **Harness de tests (frontend)** | No había runner de tests. Cableado el builder moderno de Angular con **Vitest** (jsdom, sin navegador) + primera suite (**17 tests verde**): open-redirect guard, mapeo de errores de carrito, product-media, `ThemeService` y un componente. `npm test` corre una vez (CI-friendly), `npm run test:watch` para desarrollo. |
 
 **Tres rondas de revisión adversarial** (12 agentes: a11y, i18n, bugs, diseño, responsive, cobertura de estados, seguridad, código muerto, UX/microcopy, comercio, detalle visual, correctness del código nuevo) — **24 hallazgos, todos corregidos y verificados**. Revisión de seguridad: sin hallazgos.
 
@@ -43,7 +44,7 @@ Verificación de la sesión: build de producción verde en cada commit + **Playw
 
 - ~~Rating real en tarjetas~~ ✅ **hecho** (`cac7277`, full-stack, sin N+1).
 - **Admin**: el dashboard no se re-verificó visualmente esta noche (no se pudo promover un usuario a ADMIN por guardrail). Sus cambios fueron mínimos (solo la fuente global de titulares). Revisar de pasada con un admin real.
-- **Test harness**: sigue sin runner de tests unitarios (`ng test` sin Karma/Jasmine). Montar Vitest/Karma es tarea pendiente opcional.
+- ~~Test harness~~ ✅ **hecho** (`5268e59`, Vitest + jsdom, 17 tests). Ampliable: más cobertura de componentes/servicios y, si se quiere, e2e con Playwright.
 - **Imágenes editoriales**: las fotos decorativas (hero, auth, promo) siguen siendo Unsplash; se ven bien, pero un set propio/curado de marca elevaría aún más.
 
 ---
