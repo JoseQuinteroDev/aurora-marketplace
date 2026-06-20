@@ -26,7 +26,8 @@ export function productImage(product: Product): string {
 
 /** Up to four gallery images from the product itself — no fabricated stock photos. */
 export function productGallery(product: Product): string[] {
-  const urls = product.images.map((image) => image.url).filter(Boolean);
+  // De-duplicate so the gallery's `track image` keys stay unique (avoids NG0955).
+  const urls = [...new Set(product.images.map((image) => image.url).filter(Boolean))];
   return urls.length > 0 ? urls.slice(0, 4) : [productImage(product)];
 }
 

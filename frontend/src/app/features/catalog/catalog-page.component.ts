@@ -128,6 +128,9 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
             <app-state-panel mode="error" title="{{ 'catalog.error' | t }}" [message]="error()!" />
           } @else if (visibleProducts().length === 0) {
             <app-state-panel title="{{ 'catalog.empty' | t }}" message="{{ 'catalog.emptyMessage' | t }}" />
+            <div class="mt-6 text-center">
+              <button class="ui-button ui-button-primary" type="button" (click)="resetAll()">{{ 'catalog.clearFilters' | t }}</button>
+            </div>
           } @else {
             <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               @for (product of visibleProducts(); track product.id) {
@@ -156,7 +159,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
             <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (category of categories(); track category.id) {
-                <button class="aurora-chip" type="button" [class.ring-2]="selectedCategory() === category.slug" [class.ring-aurora-amber]="selectedCategory() === category.slug" (click)="toggleCategory(category.slug)">{{ category.name }}</button>
+                <button class="aurora-chip" type="button" [class.ring-2]="selectedCategory() === category.slug" [class.ring-aurora-amber]="selectedCategory() === category.slug" [class.ring-offset-1]="selectedCategory() === category.slug" (click)="toggleCategory(category.slug)">{{ category.name }}</button>
               } @empty {
                 <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noCategories' | t }}</span>
               }
@@ -167,7 +170,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
             <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (brand of brands(); track brand.id) {
-                <button class="aurora-chip" type="button" [class.ring-2]="selectedBrand() === brand.slug" [class.ring-aurora-amber]="selectedBrand() === brand.slug" (click)="toggleBrand(brand.slug)">{{ brand.name }}</button>
+                <button class="aurora-chip" type="button" [class.ring-2]="selectedBrand() === brand.slug" [class.ring-aurora-amber]="selectedBrand() === brand.slug" [class.ring-offset-1]="selectedBrand() === brand.slug" (click)="toggleBrand(brand.slug)">{{ brand.name }}</button>
               } @empty {
                 <span class="text-sm text-aurora-muted dark:text-stone-400">{{ 'catalog.noBrands' | t }}</span>
               }
@@ -268,6 +271,14 @@ export class CatalogPageComponent implements OnInit {
 
   clearFilters(): void {
     this.updateParams({ category: null, brand: null });
+    this.filtersOpen.set(false);
+  }
+
+  /** Clears the text query as well as the facets — the one-click reset the
+   *  no-results empty state offers. */
+  resetAll(): void {
+    this.query.set('');
+    this.updateParams({ q: null, category: null, brand: null });
     this.filtersOpen.set(false);
   }
 

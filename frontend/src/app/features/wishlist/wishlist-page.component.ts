@@ -5,6 +5,7 @@ import { LucideAngularModule, ArrowUpRight, Heart, Trash2 } from 'lucide-angular
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
 import { WishlistItem } from '../../core/models/wishlist.model';
+import { PRODUCT_IMAGE_PLACEHOLDER } from '../../core/util/product-media';
 import { WishlistService } from '../../services/wishlist.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
 
@@ -35,6 +36,9 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       } @else if (error()) {
         <div class="mt-8">
           <app-state-panel mode="error" title="{{ 'common.error' | t }}" [message]="error()!" />
+          <div class="mt-6 text-center">
+            <button class="ui-button ui-button-primary" type="button" (click)="reload()">{{ 'common.retry' | t }}</button>
+          </div>
         </div>
       } @else if (items().length === 0) {
         <div class="mt-8">
@@ -48,7 +52,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           @for (item of items(); track item.id) {
             <article class="soft-card group overflow-hidden">
               <a [routerLink]="['/products', item.productSlug]" class="relative block cursor-pointer">
-                <img loading="lazy" class="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80" [alt]="item.productName" />
+                <img loading="lazy" class="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" [src]="placeholder" [alt]="item.productName" />
                 <div class="absolute inset-0 bg-gradient-to-t from-aurora-night/45 via-transparent to-transparent"></div>
                 <span class="absolute left-3 top-3 aurora-badge border-white/60 bg-white/90 text-aurora-ink">
                   <lucide-icon [img]="Heart" size="14" />
@@ -87,12 +91,20 @@ export class WishlistPageComponent implements OnInit {
   readonly ArrowUpRight = ArrowUpRight;
   readonly Heart = Heart;
   readonly Trash2 = Trash2;
+  // Wishlist items carry no image; show the branded placeholder, not an unrelated stock photo.
+  readonly placeholder = PRODUCT_IMAGE_PLACEHOLDER;
 
   ngOnInit(): void {
+    this.reload();
+  }
+
+  reload(): void {
+    this.loading.set(true);
+    this.error.set(null);
     this.wishlistService.loadWishlist().subscribe({
       next: () => this.loading.set(false),
       error: () => {
-        this.error.set(this.language.translate('wishlist.login'));
+        this.error.set(this.language.translate('wishlist.loadError'));
         this.loading.set(false);
       }
     });

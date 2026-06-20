@@ -110,7 +110,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   <div class="flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <p class="text-sm font-semibold text-aurora-muted dark:text-stone-400">{{ 'product.startingAt' | t }}</p>
-                      <p class="mt-1 text-4xl font-black text-aurora-ink dark:text-white">{{ item.basePrice | currency }}</p>
+                      <p class="mt-1 text-4xl font-black text-aurora-ink dark:text-white">{{ displayPrice(item) | currency }}</p>
                     </div>
                     <button class="ui-button h-11 w-11 min-h-11 p-0" [class.ui-button-primary]="wishlist.isWishlisted(item.id)" [class.ui-button-secondary]="!wishlist.isWishlisted(item.id)" type="button" [disabled]="wishlistLoading()" (click)="toggleWishlist(item)" [attr.aria-label]="'product.save' | t">
                       <lucide-icon [img]="Heart" size="18" />
@@ -482,6 +482,14 @@ export class ProductDetailPageComponent implements OnInit {
 
   selectedVariantId(product: Product): string | null {
     return this.selectedVariant() ?? firstActiveVariantId(product);
+  }
+
+  /** Price of the currently selected variant so the headline matches the CTA;
+   *  falls back to the product base price. */
+  displayPrice(product: Product): number {
+    const id = this.selectedVariant();
+    const variant = id ? product.variants.find((v) => v.id === id) : undefined;
+    return variant?.effectivePrice ?? product.basePrice;
   }
 
   averageRating(): string {

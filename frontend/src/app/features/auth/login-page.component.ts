@@ -74,7 +74,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
           <p class="mt-6 text-center text-sm text-aurora-muted dark:text-stone-300">
             {{ 'auth.new' | t }}
-            <a routerLink="/register" class="premium-link">{{ 'auth.create' | t }}</a>
+            <a routerLink="/register" queryParamsHandling="preserve" class="premium-link">{{ 'auth.create' | t }}</a>
           </p>
         </div>
 

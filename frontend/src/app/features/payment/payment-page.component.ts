@@ -65,16 +65,23 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               </div>
             }
 
-            <div class="mt-6 grid gap-3 sm:grid-cols-2">
-              <button class="ui-button ui-button-accent w-full" type="button" [disabled]="processing()" (click)="simulate(true)">
+            @if (payment()?.paymentStatus === 'PAID') {
+              <a [routerLink]="['/account/orders', data.id]" class="ui-button ui-button-primary mt-6 w-full">
                 <lucide-icon [img]="CheckCircle2" size="18" />
-                {{ 'payment.success' | t }}
-              </button>
-              <button class="ui-button ui-button-secondary w-full text-aurora-rose" type="button" [disabled]="processing()" (click)="simulate(false)">
-                <lucide-icon [img]="XCircle" size="18" />
-                {{ 'payment.failure' | t }}
-              </button>
-            </div>
+                {{ 'orders.detail' | t }}
+              </a>
+            } @else {
+              <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                <button class="ui-button ui-button-accent w-full" type="button" [disabled]="processing()" (click)="simulate(true)">
+                  <lucide-icon [img]="CheckCircle2" size="18" />
+                  {{ 'payment.success' | t }}
+                </button>
+                <button class="ui-button ui-button-secondary w-full text-aurora-rose" type="button" [disabled]="processing()" (click)="simulate(false)">
+                  <lucide-icon [img]="XCircle" size="18" />
+                  {{ 'payment.failure' | t }}
+                </button>
+              </div>
+            }
           </div>
 
           <aside class="surface-panel p-5 lg:sticky lg:top-28 lg:h-fit">

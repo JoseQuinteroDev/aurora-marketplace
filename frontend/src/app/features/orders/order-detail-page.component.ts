@@ -33,7 +33,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <div class="premium-shell p-6 sm:p-8">
               <p class="section-kicker">{{ 'orders.detail' | t }}</p>
               <div class="mt-3 flex flex-wrap items-center gap-3">
-                <h1 class="text-4xl font-black text-aurora-ink dark:text-white">{{ data.orderNumber }}</h1>
+                <h1 class="text-4xl font-semibold leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ data.orderNumber }}</h1>
                 <span class="aurora-badge" [ngClass]="statusClass(data.status)">{{ ('order.status.' + data.status) | t }}</span>
               </div>
               <p class="mt-3 text-sm text-aurora-muted dark:text-stone-300">{{ data.createdAt | date:'medium' }}</p>

@@ -19,7 +19,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
         @if (loading()) {
           <div class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            @for (item of [1, 2, 3, 4, 5, 6, 7, 8]; track item) {
+            @for (item of [1, 2, 3, 4, 5, 6, 7]; track item) {
               <div class="h-32 animate-pulse rounded-ui bg-white/10"></div>
             }
           </div>

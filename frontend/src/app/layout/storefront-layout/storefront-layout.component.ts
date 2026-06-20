@@ -85,7 +85,9 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
             </a>
             <a routerLink="/cart" class="ui-button ui-button-secondary relative h-10 w-10 min-h-10 p-0" [attr.aria-label]="'nav.cart' | t">
               <lucide-icon [img]="ShoppingBag" size="18" />
-              <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-aurora-amber px-1 text-[10px] font-black text-white">{{ cart.itemCount() }}</span>
+              @if (cart.itemCount() > 0) {
+                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-aurora-amber px-1 text-[10px] font-black text-white">{{ cart.itemCount() }}</span>
+              }
             </a>
             @if (auth.currentUser(); as user) {
               <button class="ui-button ui-button-primary hidden sm:inline-flex" type="button" (click)="auth.logout()">

@@ -6,6 +6,7 @@ import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
 import { Cart, CartItem } from '../../core/models/cart.model';
 import { cartErrorKey } from '../../core/util/cart-errors';
+import { PRODUCT_IMAGE_PLACEHOLDER } from '../../core/util/product-media';
 import { CartService } from '../../services/cart.service';
 import { ToastService } from '../../services/toast.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
@@ -57,8 +58,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               @for (item of data.items; track item.id) {
                 <article class="surface-panel p-4">
                   <div class="grid gap-4 sm:grid-cols-[112px_1fr_auto] sm:items-center">
-                    <a [routerLink]="['/products', item.productSlug]" class="block overflow-hidden rounded-ui bg-stone-100 dark:bg-white/10">
-                      <img loading="lazy" class="aspect-square w-full object-cover" src="https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=500&q=75" [alt]="item.productName" />
+                    <a [routerLink]="['/products', item.productSlug]" class="block w-24 overflow-hidden rounded-ui bg-stone-100 sm:w-full dark:bg-white/10">
+                      <img loading="lazy" class="aspect-square w-full object-cover" [src]="placeholder" [alt]="item.productName" />
                     </a>
                     <div>
                       <a [routerLink]="['/products', item.productSlug]" class="cursor-pointer text-lg font-black text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white">{{ item.productName }}</a>
@@ -156,6 +157,8 @@ export class CartPageComponent implements OnInit {
   readonly Plus = Plus;
   readonly ShoppingBag = ShoppingBag;
   readonly Trash2 = Trash2;
+  // Cart items carry no image; show the branded placeholder, never an unrelated stock photo.
+  readonly placeholder = PRODUCT_IMAGE_PLACEHOLDER;
 
   ngOnInit(): void {
     this.cartService.loadCart().subscribe({

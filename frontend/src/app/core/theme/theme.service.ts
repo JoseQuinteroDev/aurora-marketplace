@@ -15,17 +15,15 @@ export class ThemeService {
   readonly theme = signal<ThemeMode>(this.readInitial());
 
   constructor() {
+    // The effect only reflects the theme in the DOM. Persistence happens on an
+    // explicit toggle (below), so a first-time visitor's OS preference stays the
+    // live default until they actually choose a theme.
     effect(() => {
       const mode = this.theme();
       if (typeof document === 'undefined') {
         return;
       }
       document.documentElement.classList.toggle('dark', mode === 'dark');
-      try {
-        localStorage.setItem(STORAGE_KEY, mode);
-      } catch {
-        // Private mode / storage disabled — theme still applies for this session.
-      }
     });
   }
 
@@ -35,6 +33,11 @@ export class ThemeService {
 
   toggle(): void {
     this.theme.update((mode) => (mode === 'dark' ? 'light' : 'dark'));
+    try {
+      localStorage.setItem(STORAGE_KEY, this.theme());
+    } catch {
+      // Private mode / storage disabled — theme still applies for this session.
+    }
   }
 
   private readInitial(): ThemeMode {

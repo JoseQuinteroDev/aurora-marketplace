@@ -78,7 +78,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
 
           <p class="mt-6 text-center text-sm text-aurora-muted dark:text-stone-300">
             {{ 'auth.exists' | t }}
-            <a routerLink="/login" class="premium-link">{{ 'auth.signIn' | t }}</a>
+            <a routerLink="/login" queryParamsHandling="preserve" class="premium-link">{{ 'auth.signIn' | t }}</a>
           </p>
         </div>
       </div>
