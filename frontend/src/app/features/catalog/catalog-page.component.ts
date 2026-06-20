@@ -141,7 +141,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
 
     @if (filtersOpen()) {
       <div class="fixed inset-0 z-50 bg-aurora-night/55 p-3 backdrop-blur-sm lg:hidden" (click)="closeFilters()" (keydown)="onFilterKeydown($event)">
-        <div class="absolute inset-x-3 bottom-3 rounded-ui border border-white/70 bg-white p-5 shadow-premium dark:border-white/10 dark:bg-aurora-night" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" data-filter-dialog [attr.aria-label]="'catalog.filters' | t">
+        <div class="absolute inset-x-3 bottom-3 max-h-[85vh] overflow-y-auto rounded-ui border border-white/70 bg-white p-5 shadow-premium dark:border-white/10 dark:bg-aurora-night" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" data-filter-dialog [attr.aria-label]="'catalog.filters' | t">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2 font-black text-aurora-ink dark:text-white">
               <lucide-icon [img]="SlidersHorizontal" size="18" />

@@ -47,10 +47,16 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
               <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">{{ 'admin.workspace' | t }}</p>
               <p class="text-sm text-slate-300">{{ 'admin.workspaceCopy' | t }}</p>
             </div>
-            <div class="flex items-center gap-2 rounded-ui border border-white/10 bg-white/10 px-3 py-2 text-sm">
-              <button class="cursor-pointer font-black text-amber-200" type="button" (click)="language.toggle()">{{ language.language().toUpperCase() }}</button>
-              <lucide-icon [img]="ShieldCheck" size="17" />
-              {{ 'admin.roleBadge' | t }}
+            <div class="flex items-center gap-2">
+              <button class="ui-button border border-white/10 bg-white/10 text-white hover:bg-white/15 h-10 min-h-10 px-3 lg:hidden" type="button" (click)="auth.logout()">
+                <lucide-icon [img]="LogOut" size="16" />
+                {{ 'nav.signOut' | t }}
+              </button>
+              <div class="flex items-center gap-2 rounded-ui border border-white/10 bg-white/10 px-3 py-2 text-sm">
+                <button class="cursor-pointer font-black text-amber-200" type="button" (click)="language.toggle()">{{ language.language().toUpperCase() }}</button>
+                <lucide-icon [img]="ShieldCheck" size="17" />
+                {{ 'admin.roleBadge' | t }}
+              </div>
             </div>
           </div>
         </header>

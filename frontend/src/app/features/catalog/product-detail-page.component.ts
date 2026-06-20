@@ -204,6 +204,10 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                         <div class="skeleton-line h-28 rounded-ui"></div>
                       }
                     </div>
+                  } @else if (reviewsError()) {
+                    <div class="mt-4">
+                      <app-state-panel mode="error" title="{{ 'common.error' | t }}" [message]="reviewsError()!" />
+                    </div>
                   } @else if (reviews().length === 0) {
                     <div class="mt-4">
                       <app-state-panel title="{{ 'product.noReviews' | t }}" message="{{ 'product.noReviewsMessage' | t }}" />
@@ -287,6 +291,7 @@ export class ProductDetailPageComponent implements OnInit {
   readonly activeTab = signal<ProductTab>('description');
   readonly loading = signal(true);
   readonly reviewsLoading = signal(false);
+  readonly reviewsError = signal<string | null>(null);
   readonly cartLoading = signal(false);
   readonly wishlistLoading = signal(false);
   readonly reviewSubmitting = signal(false);
@@ -305,10 +310,8 @@ export class ProductDetailPageComponent implements OnInit {
   readonly Heart = Heart;
   readonly ListChecks = ListChecks;
   readonly MessageSquareText = MessageSquareText;
-  readonly ShieldCheck = ShieldCheck;
   readonly ShoppingBag = ShoppingBag;
   readonly Star = Star;
-  readonly Truck = Truck;
   readonly Zap = Zap;
   readonly stars = [1, 2, 3, 4, 5];
 
@@ -508,12 +511,16 @@ export class ProductDetailPageComponent implements OnInit {
 
   private loadReviews(productId: string): void {
     this.reviewsLoading.set(true);
+    this.reviewsError.set(null);
     this.reviewService.list(productId).subscribe({
       next: (reviews) => {
         this.reviews.set(reviews);
         this.reviewsLoading.set(false);
       },
-      error: () => this.reviewsLoading.set(false)
+      error: () => {
+        this.reviewsError.set(this.language.translate('product.reviewsLoadError'));
+        this.reviewsLoading.set(false);
+      }
     });
   }
 }

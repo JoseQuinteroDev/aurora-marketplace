@@ -73,13 +73,6 @@ export class AdminDashboardPageComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
 
-  readonly Package = Package;
-  readonly Boxes = Boxes;
-  readonly Users = Users;
-  readonly ReceiptText = ReceiptText;
-  readonly BadgeDollarSign = BadgeDollarSign;
-  readonly Star = Star;
-
   constructor(
     private readonly adminDashboardService: AdminDashboardService,
     private readonly language: LanguageService
