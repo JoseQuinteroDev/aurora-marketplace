@@ -3,6 +3,7 @@ export interface AuthUser {
   email: string;
   firstName: string;
   lastName: string;
+  phone?: string | null;
   role: 'CUSTOMER' | 'ADMIN';
 }
 
@@ -23,4 +24,5 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
+  phone?: string;
 }

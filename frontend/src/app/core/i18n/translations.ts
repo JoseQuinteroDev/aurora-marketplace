@@ -75,6 +75,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'auth.passwordLength': 'Usa entre 8 y 72 caracteres.',
     'auth.firstNameRequired': 'El nombre es obligatorio.',
     'auth.lastNameRequired': 'Los apellidos son obligatorios.',
+    'auth.phone': 'Teléfono (opcional)',
+    'auth.phoneInvalid': 'Introduce un teléfono válido.',
 
     'product.back': 'Volver al catálogo',
     'product.inStock': 'En stock',
@@ -291,6 +293,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'auth.placeholder.passwordNew': 'Mínimo 8 caracteres',
     'auth.placeholder.firstName': 'Nombre',
     'auth.placeholder.lastName': 'Apellidos',
+    'auth.placeholder.phone': '+34 600 000 000',
 
     'admin.eyebrow': 'Panel de Aurora',
     'admin.title': 'Resumen de tu tienda',
@@ -428,6 +431,8 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'auth.passwordLength': 'Use 8 to 72 characters.',
     'auth.firstNameRequired': 'First name is required.',
     'auth.lastNameRequired': 'Last name is required.',
+    'auth.phone': 'Phone (optional)',
+    'auth.phoneInvalid': 'Enter a valid phone number.',
 
     'product.back': 'Back to catalog',
     'product.inStock': 'In stock',
@@ -644,6 +649,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'auth.placeholder.passwordNew': 'Minimum 8 characters',
     'auth.placeholder.firstName': 'First name',
     'auth.placeholder.lastName': 'Last name',
+    'auth.placeholder.phone': '+1 555 000 0000',
 
     'admin.eyebrow': 'Aurora admin',
     'admin.title': 'Store overview',

@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { LucideAngularModule, ArrowRight, CheckCircle2, LockKeyhole, Mail, UserPlus, UserRound } from 'lucide-angular';
+import { LucideAngularModule, ArrowRight, CheckCircle2, LockKeyhole, Mail, Phone, UserPlus, UserRound } from 'lucide-angular';
 import { LanguageService } from '../../core/i18n/language.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { safeInternalUrl } from '../../core/util/safe-internal-url';
@@ -52,6 +52,17 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               </span>
               @if (controlInvalid('email')) {
                 <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
+              }
+            </label>
+
+            <label class="block">
+              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.phone' | t }}</span>
+              <span class="field-shell" [class.field-shell-invalid]="controlInvalid('phone')">
+                <lucide-icon class="text-stone-400" [img]="Phone" size="17" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="phone" type="tel" autocomplete="tel" inputmode="tel" [placeholder]="'auth.placeholder.phone' | t" />
+              </span>
+              @if (controlInvalid('phone')) {
+                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.phoneInvalid' | t }}</span>
               }
             </label>
 
@@ -113,6 +124,7 @@ export class RegisterPageComponent {
   readonly ArrowRight = ArrowRight;
   readonly CheckCircle2 = CheckCircle2;
   readonly Mail = Mail;
+  readonly Phone = Phone;
   readonly LockKeyhole = LockKeyhole;
   readonly UserPlus = UserPlus;
   readonly UserRound = UserRound;
@@ -122,6 +134,7 @@ export class RegisterPageComponent {
     firstName: ['', [Validators.required, Validators.maxLength(100)]],
     lastName: ['', [Validators.required, Validators.maxLength(100)]],
     email: ['', [Validators.required, Validators.email]],
+    phone: ['', [Validators.maxLength(32), Validators.pattern(/^\+?[0-9][0-9 ().-]{6,30}$/)]],
     password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(72)]]
   });
 
@@ -132,7 +145,7 @@ export class RegisterPageComponent {
     private readonly route: ActivatedRoute
   ) {}
 
-  controlInvalid(controlName: 'firstName' | 'lastName' | 'email' | 'password'): boolean {
+  controlInvalid(controlName: 'firstName' | 'lastName' | 'email' | 'phone' | 'password'): boolean {
     const control = this.form.controls[controlName];
     return control.invalid && (control.dirty || control.touched);
   }

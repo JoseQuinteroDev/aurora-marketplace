@@ -51,6 +51,14 @@ export class AuthService {
    * navigating (used by the HTTP error interceptor, which redirects to /login itself).
    */
   logout(redirectTo: string | null = '/'): void {
+    // On an explicit user logout, revoke the token server-side (best-effort, the
+    // interceptor still attaches it). Skipped when redirectTo is null: that path is
+    // the interceptor reacting to an already-rejected token, so there is nothing to
+    // revoke. Never block the UI on the response.
+    if (redirectTo && this.getToken()) {
+      this.http.post('/api/auth/logout', {}).subscribe({ next: () => {}, error: () => {} });
+    }
+
     this.clearSession();
 
     if (redirectTo) {
