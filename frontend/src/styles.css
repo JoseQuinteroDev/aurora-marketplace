@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=Fraunces:opsz,wght@9..144,400..700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -59,6 +59,17 @@ input,
 select,
 textarea {
   @apply motion-reduce:transition-none;
+}
+
+@layer base {
+  /* Two-tier type: Fraunces (display serif) for headings, DM Sans for body/UI. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+  }
 }
 
 @layer components {

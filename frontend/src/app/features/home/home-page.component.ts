@@ -42,7 +42,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <lucide-icon [img]="Sparkles" size="14" />
             {{ 'home.badge' | t }}
           </div>
-          <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-normal text-aurora-ink sm:text-6xl lg:text-7xl dark:text-white">
+          <h1 class="mt-5 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-tight text-aurora-ink sm:text-6xl lg:text-7xl dark:text-white">
             {{ 'home.title' | t }}
           </h1>
           <p class="mt-6 max-w-2xl text-base leading-8 text-aurora-muted sm:text-lg dark:text-stone-300">

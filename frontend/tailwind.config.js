@@ -33,7 +33,8 @@ module.exports = {
         soft: '14px'
       },
       fontFamily: {
-        sans: ['"DM Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif']
+        sans: ['"DM Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+        display: ['"Fraunces"', '"DM Sans"', 'ui-serif', 'Georgia', 'serif']
       },
       backgroundImage: {
         'aurora-radial': 'radial-gradient(circle at 20% 15%, rgba(201, 135, 23, 0.16), transparent 30rem), radial-gradient(circle at 85% 0%, rgba(29, 78, 216, 0.12), transparent 34rem), linear-gradient(135deg, #FEFCF8 0%, #F7F4EF 52%, #EEF6F1 100%)',

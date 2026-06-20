@@ -82,7 +82,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
               <div class="space-y-5">
                 <div>
                   <p class="section-kicker">{{ item.brand.name }} / {{ item.category.name }}</p>
-                  <h1 class="mt-3 text-4xl font-black leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ item.name }}</h1>
+                  <h1 class="mt-3 text-4xl font-semibold leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ item.name }}</h1>
                   <div class="mt-4 flex flex-wrap items-center gap-3">
                     @if (reviews().length > 0) {
                       <span class="inline-flex items-center gap-1.5 text-sm font-black text-amber-700 dark:text-amber-300">
