@@ -1,0 +1,166 @@
+name: DAST (NightVision)
+
+# Dynamic Application Security Testing — the one security layer that needs a
+# RUNNING application. The static scanners in security.yml read code, manifests
+# and Dockerfiles; DAST exercises the live API the way an attacker would.
+#
+# NightVision is white-box-assisted DAST:
+#   1. API Discovery   — static analysis of the Spring Boot core extracts an
+#                        OpenAPI spec annotated with source file:line.
+#   2. Dynamic scan    — ZAP + Nuclei engines attack the running API.
+#   3. Code Traceback  — each finding links back to the exact source location,
+#                        so SARIF alerts in the Security tab point at the code.
+#
+# This workflow is OPT-IN and self-gating:
+#   - It runs only on manual dispatch and a weekly schedule (DAST takes 5-15 min
+#     and needs the stack up, so it must not gate every push).
+#   - It no-ops cleanly unless the repo secret NIGHTVISION_TOKEN is configured,
+#     so forks and contributors are never blocked by a red required-setup job.
+#
+# One-time setup (local + interactive — cannot be automated, needs a browser):
+#   1. nightvision login                                   # browser-based login
+#   2. nightvision token create                            # store output as the
+#                                                          #   repo secret NIGHTVISION_TOKEN
+#   3. nightvision project create -n aurora-marketplace
+#   4. (optional, for deeper coverage) record authentication so the scanner can
+#      reach customer/admin endpoints instead of only the public surface:
+#        nightvision auth playwright create aurora-auth http://localhost:8088
+#      then set NV_AUTH below and drop the --no-auth flag in the scan step.
+#
+# See docs/devops/cicd-security.md and docs/appsec/security-testing.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_duration_minutes:
+        description: 'Max scan duration in minutes (default 30, max 480)'
+        required: false
+        default: '30'
+  schedule:
+    # Weekly, offset from the security.yml scan (23 4 * * 1) to spread the load.
+    - cron: '37 4 * * 1'
+
+# Don't pile up DAST runs on the same ref — each one boots the whole stack.
+concurrency:
+  group: dast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write   # required to upload SARIF to the Security tab
+
+jobs:
+  dast:
+    name: NightVision DAST (API)
+    runs-on: ubuntu-latest
+    env:
+      NIGHTVISION_TOKEN: ${{ secrets.NIGHTVISION_TOKEN }}
+      NV_PROJECT: aurora-marketplace
+      NV_TARGET: aurora-gateway
+      # The gateway is the single entry point; scan the API the way clients hit it.
+      TARGET_URL: http://localhost:8088
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Secrets are not available in job-level `if`, so gate here and let every
+      # downstream step key off this output. Keeps the workflow green-by-default
+      # until the owner wires up the token.
+      - name: Check for NightVision token
+        id: gate
+        run: |
+          if [ -z "$NIGHTVISION_TOKEN" ]; then
+            echo "::notice::NIGHTVISION_TOKEN is not set — skipping the DAST scan. Add the secret to enable it."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install NightVision CLI
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          curl -L https://downloads.nightvision.net/binaries/latest/nightvision_latest_linux_amd64.tar.gz | tar -xz
+          sudo mv nightvision /usr/local/bin/
+          nightvision --help >/dev/null
+
+      - name: Extract OpenAPI spec from source (API Discovery)
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          # White-box step: static analysis of the Spring Boot core. The spec is
+          # annotated with source file:line, which powers Code Traceback so each
+          # DAST finding links to the controller/method that owns the endpoint.
+          nightvision swagger extract ./backend -o openapi-spec.yml --lang java --no-upload || true
+          if [ ! -e openapi-spec.yml ]; then
+            echo "::warning::API Discovery produced no spec — scanning will run without Code Traceback."
+          fi
+
+      - name: Start the application stack
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          docker compose --profile apps up -d --build
+          # Wait for the gateway to report healthy before scanning.
+          for i in $(seq 1 60); do
+            if curl -fsS "$TARGET_URL/actuator/health" >/dev/null 2>&1; then
+              echo "Gateway healthy after ${i} attempt(s)."; exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Gateway did not become healthy in time."
+          docker compose --profile apps logs --tail=100
+          exit 1
+
+      - name: Create / update the NightVision target
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          nightvision project create -n "$NV_PROJECT" || true
+          if [ -e openapi-spec.yml ]; then
+            nightvision target create "$NV_TARGET" "$TARGET_URL" --type API -p "$NV_PROJECT" --spec-file openapi-spec.yml \
+              || nightvision target update "$NV_TARGET" -p "$NV_PROJECT" --spec-file openapi-spec.yml
+          else
+            nightvision target create "$NV_TARGET" "$TARGET_URL" --type WEB -p "$NV_PROJECT" || true
+          fi
+          # Keep the unauthenticated scan focused: actuator endpoints are health/
+          # metrics noise, and /api/admin/** only returns 401 without recorded auth.
+          nightvision target update "$NV_TARGET" -p "$NV_PROJECT" \
+            --exclude-url "/actuator.*,/api/admin/.*" || true
+
+      - name: Run the DAST scan
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          # Smart Proxy auto-tunnels to the private localhost stack through the CLI.
+          # --no-auth scans the public surface; record auth (see header) for deeper
+          # coverage of authenticated endpoints.
+          nightvision scan "$NV_TARGET" -p "$NV_PROJECT" --no-auth \
+            --max-duration-minutes "${{ github.event.inputs.max_duration_minutes || '30' }}" \
+            --verbose > scan-results.txt || echo "::warning::nightvision scan exited non-zero (see findings/logs)."
+          echo "SCAN_ID=$(head -n 1 scan-results.txt)" >> "$GITHUB_ENV"
+
+      - name: Export findings as SARIF
+        if: steps.gate.outputs.enabled == 'true' && env.SCAN_ID != ''
+        run: |
+          if [ -e openapi-spec.yml ]; then
+            nightvision export sarif -s "$SCAN_ID" --swagger-file openapi-spec.yml -o nightvision.sarif
+          else
+            nightvision export sarif -s "$SCAN_ID" -o nightvision.sarif
+          fi
+
+      - name: Upload SARIF to GitHub Security
+        if: steps.gate.outputs.enabled == 'true' && hashFiles('nightvision.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: nightvision.sarif
+          category: nightvision-dast
+
+      - name: Upload scan logs (artifact)
+        if: always() && steps.gate.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightvision-dast-logs
+          path: |
+            scan-results.txt
+            openapi-spec.yml
+          if-no-files-found: ignore
+
+      - name: Tear down the stack
+        if: always() && steps.gate.outputs.enabled == 'true'
+        run: docker compose --profile apps down -v || true

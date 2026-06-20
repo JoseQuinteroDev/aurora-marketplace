@@ -12,9 +12,9 @@ the risks in [`threat-model.md`](threat-model.md) and [`owasp-top-10.md`](owasp-
         │   ┌───────────────────────────────┐
         │   │  Manual pentest / exploratory │   ← checklist below; vulnerable-lab
         │   ├───────────────────────────────┤
-        │   │  DAST (running app)           │   ← OWASP ZAP against the stack
+        │   │  DAST (running app)           │   ← NightVision (CI, opt-in) + ZAP (local)
         │   ├───────────────────────────────┤
-        │   │  Integration / API tests      │   ← authz on real endpoints
+        │   │  Integration / API tests      │   ← planned (see §2)
         │   ├───────────────────────────────┤
         │   │  Security unit tests          │   ← shipped: JwtService, auth filter
         │   ├───────────────────────────────┤
@@ -22,6 +22,11 @@ the risks in [`threat-model.md`](threat-model.md) and [`owasp-top-10.md`](owasp-
         ▼   └───────────────────────────────┘
             more, faster, run on every commit
 ```
+
+> **What runs today vs. planned.** The bottom two layers are live: the CI static
+> scanners (§1) on every push/PR, and the JWT security unit tests (§2). **DAST** is
+> wired as an opt-in workflow (§3, NightVision in CI + ZAP locally). **Integration
+> / API authz tests** are the single highest-value gap to close (§2).
 
 ## 1. Automated in CI (every push/PR)
 
@@ -69,10 +74,22 @@ cd backend
   add next — see the threat model (A01).
 - **Validation:** assert oversized/blank/negative inputs yield `400`, not `500`.
 
-## 3. DAST — dynamic testing (deployment)
+## 3. DAST — dynamic testing (the running app)
 
-Run against a *running* stack (not in this repo's CI, since it needs a live
-environment):
+Static analysis reads code; DAST attacks the **live** API. Aurora has two ways to
+run it.
+
+### a) NightVision — automated, in CI ([`dast.yml`](../../.github/workflows/dast.yml))
+
+A *white-box-assisted* DAST: it extracts an OpenAPI spec from the Spring Boot
+source (**API Discovery**), boots the stack, scans the gateway with the **ZAP +
+Nuclei** engines, and traces each finding back to the exact source line (**Code
+Traceback**), uploading SARIF to the Security tab. It runs on a weekly schedule
+and on manual dispatch, and is **opt-in** — it no-ops unless the
+`NIGHTVISION_TOKEN` secret is set. Setup and details are in
+[`../devops/cicd-security.md`](../devops/cicd-security.md) §6.
+
+### b) OWASP ZAP — free baseline, locally (no account needed)
 
 ```powershell
 docker compose --profile apps up -d --build
@@ -81,8 +98,9 @@ docker run --rm -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py `
   -t http://host.docker.internal:8088 -r zap-report.html
 ```
 
-Focus DAST on: missing security headers, CORS behavior, error handling, and
-authentication edge cases at the edge.
+Either way, focus DAST on: missing security headers, CORS behavior, error
+handling/leakage, and authentication edge cases at the edge — exactly the
+runtime-only issues the static scanners can't see.
 
 ## 4. Manual penetration-test checklist
 

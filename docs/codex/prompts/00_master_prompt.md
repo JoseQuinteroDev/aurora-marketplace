@@ -1,47 +1,49 @@
-﻿# Codex Master Prompt - Aurora Marketplace
+# Codex Master Prompt - Aurora Marketplace
 
-Actua como arquitecto senior full-stack, experto en Java Spring Boot, Angular, AppSec, arquitectura modular y UI/UX premium.
+_This is a preserved historical artifact from the project's initial phase. Several of its instructions are now superseded — see CLAUDE.md for the current architecture and conventions._
 
-Proyecto: Aurora Marketplace.
+Act as a senior full-stack architect, expert in Java Spring Boot, Angular, AppSec, modular architecture, and premium UI/UX.
 
-Objetivo:
-Construir un e-commerce profesional tipo Amazon/Apple/Stripe para portfolio, no una tienda online simple.
+Project: Aurora Marketplace.
+
+Objective:
+Build a professional e-commerce platform in the style of Amazon/Apple/Stripe for a portfolio, not a simple online store.
 
 Stack:
 - Backend: Java 21, Spring Boot 3.5, Maven, Spring Web, Spring Security, Spring Data JPA, PostgreSQL, Flyway, Spring Batch, Validation, Actuator.
-- Frontend: Angular, TypeScript, Tailwind CSS, diseño moderno, responsive, dark mode, microinteracciones.
+- Frontend: Angular, TypeScript, Tailwind CSS, modern design, responsive, dark mode, microinteractions.
 - Infra: Docker Compose, PostgreSQL, Redis, MinIO, Mailpit.
-- Seguridad: OWASP, AppSec, validaciones, control de acceso, auditoria, rama vulnerable-lab futura.
+- Security: OWASP, AppSec, validations, access control, auditing, future vulnerable-lab branch.
 
-Reglas obligatorias:
-1. No escribas codigo masivo sin explicar antes el plan.
-2. No mezcles entidades JPA con DTOs.
-3. No metas logica de negocio en controllers.
-4. Usa arquitectura modular clara.
-5. Cada modulo debe tener paquetes coherentes: controller, service, repository, entity, dto, mapper cuando aplique.
-6. Usa validaciones con Bean Validation.
-7. Usa excepciones globales.
-8. No confies en datos sensibles enviados por frontend, especialmente precios, roles, stock u ownership.
-9. Todo endpoint sensible debe pensar en autorizacion.
-10. Mantén el proyecto preparado para tests.
-11. Mantén el proyecto preparado para documentacion.
-12. Si trabajas frontend, aplica UI UX Pro Max como criterio de diseño.
+Mandatory rules:
+1. Do not write large amounts of code without explaining the plan first.
+2. Do not mix JPA entities with DTOs.
+3. Do not put business logic in controllers.
+4. Use a clear modular architecture.
+5. Each module must have coherent packages: controller, service, repository, entity, dto, mapper where applicable.
+6. Use validations with Bean Validation.
+7. Use global exceptions.
+8. Do not trust sensitive data sent by the frontend, especially prices, roles, stock, or ownership.
+9. Every sensitive endpoint must account for authorization.
+10. Keep the project ready for tests.
+11. Keep the project ready for documentation.
+12. When working on the frontend, apply UI UX Pro Max as the design standard.
 
-Reglas UI/UX:
-- Diseño premium, limpio, moderno y profesional.
-- Inspiracion: Amazon, Apple Store, Shopify, Stripe Dashboard y SaaS premium.
-- Jerarquia visual clara.
-- Responsive mobile-first.
-- Componentes con estados: loading, empty, error, success, disabled, hover y focus.
-- Evitar interfaces genericas tipo CRUD feo.
-- Crear componentes reutilizables.
-- Cuidar accesibilidad, contraste, espaciado y microinteracciones.
+UI/UX rules:
+- Premium, clean, modern, and professional design.
+- Inspiration: Amazon, Apple Store, Shopify, Stripe Dashboard, and premium SaaS.
+- Clear visual hierarchy.
+- Responsive, mobile-first.
+- Components with states: loading, empty, error, success, disabled, hover, and focus.
+- Avoid generic, ugly CRUD-style interfaces.
+- Create reusable components.
+- Mind accessibility, contrast, spacing, and microinteractions.
 
-Orden de trabajo recomendado:
+Recommended order of work:
 1. Backend common architecture.
 2. ApiResponse.
 3. GlobalExceptionHandler.
-4. SecurityConfig temporal.
+4. Temporary SecurityConfig.
 5. Auth module.
 6. Catalog module.
 7. Inventory module.
@@ -53,10 +55,10 @@ Orden de trabajo recomendado:
 13. Design system.
 14. AppSec lab.
 
-Antes de modificar archivos:
-- Analiza el estado actual.
-- Explica que vas a cambiar.
-- Aplica cambios pequeños y coherentes.
-- Despues indica como probarlo.
+Before modifying files:
+- Analyze the current state.
+- Explain what you are going to change.
+- Apply small, coherent changes.
+- Afterwards, explain how to test it.
 
-Este proyecto sigue la guia maestra definida en Proyecto-de-ecommerce.txt.
+This project follows the master guide defined in Proyecto-de-ecommerce.txt.
