@@ -103,6 +103,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'product.unavailable': 'Producto no disponible',
     'product.featured': 'Destacado',
     'product.reviewsCountLabel': 'opiniones',
+    'product.reviewsCountLabelSingular': 'opinión',
     'product.beFirstReview': 'Sé el primero en opinar',
 
     'cart.title': 'Tu carrito',
@@ -260,6 +261,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'product.descriptionFallback': 'Este producto todavía no tiene descripción detallada. Consulta sus especificaciones y variantes.',
     'product.specBrand': 'Marca',
     'product.variantsLabel': 'variantes',
+    'product.variantLabelSingular': 'variante',
     'product.promise.shipping': 'Envío rápido',
     'product.promise.shippingCopy': 'Entrega rápida y con seguimiento en cada pedido.',
     'product.promise.secure': 'Pago seguro',
@@ -458,6 +460,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'product.unavailable': 'Product unavailable',
     'product.featured': 'Featured',
     'product.reviewsCountLabel': 'reviews',
+    'product.reviewsCountLabelSingular': 'review',
     'product.beFirstReview': 'Be the first to review',
 
     'cart.title': 'Your cart',
@@ -615,6 +618,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
     'product.descriptionFallback': 'This product doesn’t have a detailed description yet. Check its specifications and variants.',
     'product.specBrand': 'Brand',
     'product.variantsLabel': 'variants',
+    'product.variantLabelSingular': 'variant',
     'product.promise.shipping': 'Fast shipping',
     'product.promise.shippingCopy': 'Fast, tracked delivery on every order.',
     'product.promise.secure': 'Secure checkout',

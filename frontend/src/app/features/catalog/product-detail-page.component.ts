@@ -89,7 +89,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                       <span class="inline-flex items-center gap-1.5 text-sm font-black text-amber-700 dark:text-amber-300">
                         <lucide-icon [img]="Star" size="16" />
                         {{ averageRating() }}
-                        <span class="font-semibold text-aurora-muted dark:text-stone-300">· {{ reviews().length }} {{ 'product.reviewsCountLabel' | t }}</span>
+                        <span class="font-semibold text-aurora-muted dark:text-stone-300">· {{ reviews().length }} {{ (reviews().length === 1 ? 'product.reviewsCountLabelSingular' : 'product.reviewsCountLabel') | t }}</span>
                       </span>
                     } @else {
                       <button type="button" class="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-aurora-muted transition-colors hover:text-aurora-gold dark:text-stone-300" (click)="activeTab.set('reviews')">
@@ -98,7 +98,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                       </button>
                     }
                     <span class="h-1 w-1 rounded-full bg-aurora-line dark:bg-white/20"></span>
-                    <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ activeVariantCount(item) }} {{ 'product.variantsLabel' | t }}</span>
+                    <span class="text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ activeVariantCount(item) }} {{ (activeVariantCount(item) === 1 ? 'product.variantLabelSingular' : 'product.variantsLabel') | t }}</span>
                     <span class="aurora-badge bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                       <lucide-icon [img]="BadgeCheck" size="14" />
                       {{ 'product.inStock' | t }}
