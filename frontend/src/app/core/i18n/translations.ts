@@ -315,6 +315,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     'a11y.home': 'Inicio de Aurora Marketplace',
     'a11y.changeLanguage': 'Cambiar idioma',
+    'a11y.toggleTheme': 'Cambiar entre tema claro y oscuro',
     'a11y.openMenu': 'Abrir catálogo',
     'a11y.newsletterEmail': 'Email para la newsletter',
     'a11y.addToCart': 'Añadir al carrito',
@@ -660,6 +661,7 @@ export const translations: Record<LanguageCode, Record<string, string>> = {
 
     'a11y.home': 'Aurora Marketplace home',
     'a11y.changeLanguage': 'Change language',
+    'a11y.toggleTheme': 'Toggle light or dark theme',
     'a11y.openMenu': 'Open catalog',
     'a11y.newsletterEmail': 'Newsletter email',
     'a11y.addToCart': 'Add to cart',

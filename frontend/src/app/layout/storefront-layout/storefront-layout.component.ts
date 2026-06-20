@@ -5,11 +5,13 @@ import {
   ArrowRight,
   Heart,
   Menu,
+  Moon,
   PackageCheck,
   Search,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
+  Sun,
   Truck,
   UserRound
 } from 'lucide-angular';
@@ -17,6 +19,7 @@ import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { LanguageService } from '../../core/i18n/language.service';
+import { ThemeService } from '../../core/theme/theme.service';
 import { WishlistService } from '../../services/wishlist.service';
 import { ToastHostComponent } from '../../shared/toast-host/toast-host.component';
 
@@ -66,6 +69,9 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
           <div class="flex items-center gap-2">
             <button class="ui-button ui-button-secondary h-10 min-h-10 px-2 text-xs" type="button" (click)="language.toggle()" [attr.aria-label]="'a11y.changeLanguage' | t">
               {{ language.language().toUpperCase() }}
+            </button>
+            <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" (click)="theme.toggle()" [attr.aria-label]="'a11y.toggleTheme' | t">
+              <lucide-icon [img]="theme.isDark() ? Sun : Moon" size="18" />
             </button>
             <a routerLink="/catalog" class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0 md:hidden" [attr.aria-label]="'a11y.openMenu' | t">
               <lucide-icon [img]="Menu" size="18" />
@@ -166,9 +172,11 @@ export class StorefrontLayoutComponent {
   readonly ArrowRight = ArrowRight;
   readonly Heart = Heart;
   readonly Menu = Menu;
+  readonly Moon = Moon;
   readonly Search = Search;
   readonly ShoppingBag = ShoppingBag;
   readonly Sparkles = Sparkles;
+  readonly Sun = Sun;
   readonly UserRound = UserRound;
 
   readonly trustItems = [
@@ -181,6 +189,7 @@ export class StorefrontLayoutComponent {
     readonly auth: AuthService,
     readonly cart: CartService,
     readonly language: LanguageService,
+    readonly theme: ThemeService,
     readonly wishlist: WishlistService,
     private readonly router: Router
   ) {}
