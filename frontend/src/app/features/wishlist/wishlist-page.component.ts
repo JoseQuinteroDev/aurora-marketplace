@@ -60,8 +60,8 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 </span>
               </a>
               <div class="p-5">
-                <a [routerLink]="['/products', item.productSlug]" class="cursor-pointer text-xl font-black text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white">{{ item.productName }}</a>
-                <p class="mt-3 text-2xl font-black text-aurora-ink dark:text-white">{{ item.basePrice | currency }}</p>
+                <a [routerLink]="['/products', item.productSlug]" class="cursor-pointer text-xl font-extrabold text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white">{{ item.productName }}</a>
+                <p class="mt-3 text-2xl font-extrabold text-aurora-ink dark:text-white">{{ item.basePrice | currency }}</p>
                 <div class="mt-5 flex gap-2">
                   <a [routerLink]="['/products', item.productSlug]" class="ui-button ui-button-primary flex-1">
                     {{ 'common.view' | t }}

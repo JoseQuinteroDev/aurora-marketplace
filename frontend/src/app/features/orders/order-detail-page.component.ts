@@ -42,17 +42,17 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <div class="surface-panel p-5">
               <div class="flex items-center gap-2">
                 <lucide-icon class="text-aurora-gold" [img]="PackageCheck" size="20" />
-                <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'orders.items' | t }}</h2>
+                <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'orders.items' | t }}</h2>
               </div>
               <div class="mt-5 grid gap-3">
                 @for (item of data.items; track item.id) {
                   <div class="grid gap-3 rounded-ui bg-stone-50 p-4 dark:bg-white/5 sm:grid-cols-[1fr_auto] sm:items-center">
                     <div>
-                      <a [routerLink]="['/products', item.productSlug]" class="cursor-pointer font-black text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white">{{ item.productName }}</a>
+                      <a [routerLink]="['/products', item.productSlug]" class="cursor-pointer font-extrabold text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white">{{ item.productName }}</a>
                       <p class="mt-1 text-sm text-aurora-muted dark:text-stone-400">{{ item.variantName }} / {{ item.variantSku }}</p>
                       <p class="mt-2 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ item.quantity }} x {{ item.unitPrice | currency }}</p>
                     </div>
-                    <p class="text-xl font-black text-aurora-ink dark:text-white">{{ item.lineTotal | currency }}</p>
+                    <p class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ item.lineTotal | currency }}</p>
                   </div>
                 }
               </div>
@@ -61,14 +61,14 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <div class="surface-panel p-5">
               <div class="flex items-center gap-2">
                 <lucide-icon class="text-aurora-gold" [img]="ReceiptText" size="20" />
-                <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'orders.timeline' | t }}</h2>
+                <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'orders.timeline' | t }}</h2>
               </div>
               <div class="mt-5 grid gap-3">
                 @for (history of data.statusHistory; track history.id) {
                   <div class="flex gap-3">
                     <span class="mt-1 h-3 w-3 shrink-0 rounded-full bg-aurora-amber"></span>
                     <div>
-                      <p class="font-black text-aurora-ink dark:text-white">{{ ('order.status.' + history.status) | t }}</p>
+                      <p class="font-extrabold text-aurora-ink dark:text-white">{{ ('order.status.' + history.status) | t }}</p>
                       <p class="text-sm text-aurora-muted dark:text-stone-400">{{ history.createdAt | date:'medium' }}</p>
                       @if (history.note) {
                         <p class="mt-1 text-sm text-aurora-muted dark:text-stone-300">{{ history.note }}</p>
@@ -85,7 +85,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <aside class="surface-panel p-5 lg:sticky lg:top-28 lg:h-fit">
             <div class="flex items-center gap-2">
               <lucide-icon class="text-aurora-gold" [img]="CreditCard" size="20" />
-              <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'cart.summary' | t }}</h2>
+              <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'cart.summary' | t }}</h2>
             </div>
             <div class="mt-5 space-y-3 text-sm">
               <div class="flex justify-between text-aurora-muted dark:text-stone-300">
@@ -102,7 +102,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   <span class="font-bold">{{ data.couponCode }}</span>
                 </div>
               }
-              <div class="border-t border-aurora-line pt-3 text-lg font-black text-aurora-ink dark:border-white/10 dark:text-white">
+              <div class="border-t border-aurora-line pt-3 text-lg font-extrabold text-aurora-ink dark:border-white/10 dark:text-white">
                 <div class="flex justify-between">
                   <span>{{ 'cart.total' | t }}</span>
                   <span>{{ data.total | currency }}</span>

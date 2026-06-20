@@ -24,9 +24,9 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           @for (step of steps; track step.key; let index = $index) {
             <div class="rounded-ui border border-aurora-line bg-white/80 p-4 dark:border-white/10 dark:bg-white/5">
               <div class="flex items-center gap-3">
-                <span class="flex h-9 w-9 items-center justify-center rounded-ui bg-aurora-ink text-sm font-black text-white dark:bg-white dark:text-aurora-night">{{ index + 1 }}</span>
+                <span class="flex h-9 w-9 items-center justify-center rounded-ui bg-aurora-ink text-sm font-extrabold text-white dark:bg-white dark:text-aurora-night">{{ index + 1 }}</span>
                 <div>
-                  <p class="text-sm font-black text-aurora-ink dark:text-white">{{ step.label | t }}</p>
+                  <p class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ step.label | t }}</p>
                   <p class="mt-1 text-xs text-aurora-muted dark:text-stone-400">{{ step.copy | t }}</p>
                 </div>
               </div>
@@ -60,7 +60,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   <lucide-icon [img]="MapPin" size="21" />
                 </span>
                 <div>
-                  <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'checkout.address' | t }}</h2>
+                  <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'checkout.address' | t }}</h2>
                   <p class="text-sm text-aurora-muted dark:text-stone-300">{{ 'checkout.uiOnly' | t }}</p>
                 </div>
               </div>
@@ -68,7 +68,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <div class="mt-6 grid gap-4 sm:grid-cols-2">
                 @for (field of addressFields; track field.name) {
                   <label class="block" [ngClass]="{ 'sm:col-span-2': field.full }">
-                    <span class="text-sm font-black text-aurora-ink dark:text-white">{{ field.label | t }}</span>
+                    <span class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ field.label | t }}</span>
                     <input class="ui-input mt-2" [formControlName]="field.name" [type]="field.type" />
                   </label>
                 }
@@ -88,17 +88,17 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <div class="surface-panel p-5">
                 <div class="flex items-center gap-2">
                   <lucide-icon class="text-aurora-gold" [img]="CreditCard" size="20" />
-                  <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'checkout.review' | t }}</h2>
+                  <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'checkout.review' | t }}</h2>
                 </div>
 
                 <div class="mt-5 grid gap-3">
                   @for (item of data.items; track item.id) {
                     <div class="flex justify-between gap-4 rounded-ui bg-stone-50 p-3 text-sm dark:bg-white/5">
                       <div>
-                        <p class="font-black text-aurora-ink dark:text-white">{{ item.productName }}</p>
+                        <p class="font-extrabold text-aurora-ink dark:text-white">{{ item.productName }}</p>
                         <p class="mt-1 text-xs text-aurora-muted dark:text-stone-400">{{ item.quantity }} x {{ item.unitPrice | currency }}</p>
                       </div>
-                      <p class="font-black text-aurora-ink dark:text-white">{{ item.lineTotal | currency }}</p>
+                      <p class="font-extrabold text-aurora-ink dark:text-white">{{ item.lineTotal | currency }}</p>
                     </div>
                   }
                 </div>
@@ -112,7 +112,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                     <span>{{ 'cart.discount' | t }}</span>
                     <span class="font-bold text-aurora-emerald">-{{ data.discountTotal | currency }}</span>
                   </div>
-                  <div class="flex justify-between text-lg font-black text-aurora-ink dark:text-white">
+                  <div class="flex justify-between text-lg font-extrabold text-aurora-ink dark:text-white">
                     <span>{{ 'cart.total' | t }}</span>
                     <span>{{ data.total | currency }}</span>
                   </div>

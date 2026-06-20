@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Heart,
   Menu,
+  LogOut,
   Moon,
   PackageCheck,
   Search,
@@ -58,10 +59,10 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
             }
           </nav>
 
-          <label class="ml-auto hidden h-12 min-w-0 flex-1 max-w-xl items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm transition duration-200 focus-within:border-aurora-amber focus-within:ring-2 focus-within:ring-aurora-amber/20 lg:flex dark:border-white/10 dark:bg-white/10">
+          <label class="ml-auto hidden h-12 min-w-0 flex-1 max-w-xl items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm transition duration-200 focus-within:border-aurora-pine focus-within:ring-1 focus-within:ring-aurora-pine/30 lg:flex dark:border-white/10 dark:bg-white/10">
             <lucide-icon [img]="Search" size="18" />
             <input #deskSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.search' | t" [attr.aria-label]="'nav.search' | t" (keyup.enter)="submitSearch(deskSearch.value)" />
-            <span class="rounded-ui bg-stone-100 px-2 py-1 text-[11px] font-black text-aurora-muted dark:bg-white/10 dark:text-stone-300">/</span>
+            <span class="rounded-ui bg-stone-100 px-2 py-1 text-[11px] font-extrabold text-aurora-muted dark:bg-white/10 dark:text-stone-300">/</span>
           </label>
 
           <div class="flex items-center gap-2">
@@ -77,19 +78,20 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
             <a routerLink="/wishlist" class="ui-button ui-button-secondary relative h-10 w-10 min-h-10 p-0" [attr.aria-label]="'nav.wishlist' | t">
               <lucide-icon [img]="Heart" size="18" />
               @if (wishlist.count() > 0) {
-                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-aurora-emerald px-1 text-[10px] font-black text-white">{{ wishlist.count() }}</span>
+                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-aurora-pine px-1 text-[10px] font-extrabold text-white">{{ wishlist.count() }}</span>
               }
             </a>
             <a routerLink="/cart" class="ui-button ui-button-secondary relative h-10 w-10 min-h-10 p-0" [attr.aria-label]="'nav.cart' | t">
               <lucide-icon [img]="ShoppingBag" size="18" />
               @if (cart.itemCount() > 0) {
-                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-aurora-amber px-1 text-[10px] font-black text-white">{{ cart.itemCount() }}</span>
+                <span class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-aurora-pine px-1 text-[10px] font-extrabold text-white">{{ cart.itemCount() }}</span>
               }
             </a>
             @if (auth.currentUser(); as user) {
-              <button class="ui-button ui-button-primary hidden sm:inline-flex" type="button" (click)="auth.logout()">
+              <button class="ui-button ui-button-primary hidden sm:inline-flex" type="button" (click)="auth.logout()" [attr.aria-label]="('nav.signOut' | t) + ' — ' + user.firstName" [attr.title]="'nav.signOut' | t">
                 <lucide-icon [img]="UserRound" size="17" />
                 {{ user.firstName }}
+                <lucide-icon [img]="LogOut" size="15" class="opacity-70" />
               </button>
             } @else {
               <a routerLink="/login" class="ui-button ui-button-primary hidden sm:inline-flex">
@@ -100,7 +102,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
           </div>
         </div>
         <div class="page-shell pb-3 lg:hidden">
-          <label class="flex h-11 items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm dark:border-white/10 dark:bg-white/10">
+          <label class="flex h-11 items-center gap-2 rounded-ui border border-aurora-line bg-white px-3 text-aurora-muted shadow-sm transition duration-200 focus-within:border-aurora-pine focus-within:ring-1 focus-within:ring-aurora-pine/30 dark:border-white/10 dark:bg-white/10">
             <lucide-icon [img]="Search" size="17" />
             <input #mobSearch class="min-w-0 flex-1 bg-transparent text-sm text-aurora-ink outline-none placeholder:text-stone-400 dark:text-white" [placeholder]="'nav.mobileSearch' | t" [attr.aria-label]="'nav.mobileSearch' | t" (keyup.enter)="submitSearch(mobSearch.value)" />
           </label>
@@ -116,7 +118,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
           <div class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <div class="rounded-ui border border-white/10 bg-white/[0.06] p-6 shadow-innerline">
               <p class="section-kicker">{{ 'footer.membership' | t }}</p>
-              <h2 class="mt-3 max-w-2xl text-3xl font-black">{{ 'footer.title' | t }}</h2>
+              <h2 class="mt-3 max-w-2xl text-3xl font-extrabold">{{ 'footer.title' | t }}</h2>
               <div class="mt-6 flex flex-col gap-3 sm:flex-row">
                 <input class="ui-input border-white/10 bg-white/10 text-white placeholder:text-stone-400" [placeholder]="'footer.email' | t" [attr.aria-label]="'a11y.newsletterEmail' | t" />
                 <button class="ui-button bg-white text-aurora-night hover:bg-stone-100" type="button">{{ 'footer.notify' | t }}</button>
@@ -126,7 +128,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
               @for (item of trustItems; track item.title) {
                 <div class="rounded-ui border border-white/10 bg-white/[0.06] p-4">
                   <lucide-icon class="text-aurora-pinebright" [img]="item.icon" size="20" />
-                  <p class="mt-3 font-black">{{ item.title | t }}</p>
+                  <p class="mt-3 font-extrabold">{{ item.title | t }}</p>
                   <p class="mt-1 text-sm leading-5 text-stone-300">{{ item.copy | t }}</p>
                 </div>
               }
@@ -135,7 +137,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
 
           <div class="mt-10 grid gap-8 border-t border-white/10 pt-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
             <div>
-              <p class="text-xl font-black">Aurora Marketplace</p>
+              <p class="text-xl font-extrabold">Aurora Marketplace</p>
               <p class="mt-4 max-w-sm text-sm leading-6 text-stone-300">
                 {{ 'footer.copy' | t }}
               </p>
@@ -172,6 +174,7 @@ export class StorefrontLayoutComponent {
   readonly ArrowRight = ArrowRight;
   readonly Heart = Heart;
   readonly Menu = Menu;
+  readonly LogOut = LogOut;
   readonly Moon = Moon;
   readonly Search = Search;
   readonly ShoppingBag = ShoppingBag;

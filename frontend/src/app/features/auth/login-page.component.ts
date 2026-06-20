@@ -17,11 +17,11 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=85" alt="Compra online en Aurora" />
         <div class="absolute inset-0 bg-gradient-to-t from-aurora-night via-aurora-night/40 to-transparent"></div>
         <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
-          <div class="inline-flex items-center gap-2 rounded-ui border border-white/15 bg-white/10 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-aurora-pinebright">
+          <div class="inline-flex items-center gap-2 rounded-ui border border-white/15 bg-white/10 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-aurora-pinebright">
             <lucide-icon [img]="Sparkles" size="14" />
             {{ 'auth.memberAccess' | t }}
           </div>
-          <h1 class="mt-5 max-w-md text-4xl font-black leading-tight">{{ 'auth.login.title' | t }}</h1>
+          <h1 class="mt-5 max-w-md text-4xl font-extrabold leading-tight">{{ 'auth.login.title' | t }}</h1>
           <div class="mt-6 grid gap-3">
             @for (item of panelItems; track item) {
               <div class="flex items-center gap-3 rounded-ui border border-white/10 bg-white/10 p-3">

@@ -86,7 +86,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   <h1 class="mt-3 text-4xl font-semibold leading-tight text-aurora-ink sm:text-5xl dark:text-white">{{ item.name }}</h1>
                   <div class="mt-4 flex flex-wrap items-center gap-3">
                     @if (reviews().length > 0) {
-                      <span class="inline-flex items-center gap-1.5 text-sm font-black text-aurora-pine dark:text-aurora-pinebright">
+                      <span class="inline-flex items-center gap-1.5 text-sm font-extrabold text-aurora-pine dark:text-aurora-pinebright">
                         <lucide-icon [img]="Star" size="16" />
                         {{ averageRating() }}
                         <span class="font-semibold text-aurora-muted dark:text-stone-300">· {{ reviews().length }} {{ (reviews().length === 1 ? 'product.reviewsCountLabelSingular' : 'product.reviewsCountLabel') | t }}</span>
@@ -110,7 +110,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   <div class="flex flex-wrap items-end justify-between gap-4">
                     <div>
                       <p class="text-sm font-semibold text-aurora-muted dark:text-stone-400">{{ 'product.startingAt' | t }}</p>
-                      <p class="mt-1 text-4xl font-black text-aurora-ink dark:text-white">{{ displayPrice(item) | currency }}</p>
+                      <p class="mt-1 text-4xl font-extrabold text-aurora-ink dark:text-white">{{ displayPrice(item) | currency }}</p>
                     </div>
                     <button class="ui-button h-11 w-11 min-h-11 p-0" [class.ui-button-primary]="wishlist.isWishlisted(item.id)" [class.ui-button-secondary]="!wishlist.isWishlisted(item.id)" type="button" [disabled]="wishlistLoading()" (click)="toggleWishlist(item)" [attr.aria-label]="'product.save' | t">
                       <lucide-icon [img]="Heart" size="18" />
@@ -130,13 +130,13 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                 </div>
 
                 <div class="surface-panel p-5">
-                  <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.variant' | t }}</p>
+                  <p class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'product.variant' | t }}</p>
                   <div class="mt-3 grid gap-2 sm:grid-cols-2">
                     @for (variant of item.variants; track variant.id) {
                       <button class="rounded-ui border border-aurora-line bg-white p-3 text-left transition duration-200 hover:border-aurora-amber hover:shadow-sm dark:border-white/10 dark:bg-white/10" [class.border-aurora-amber]="variant.id === selectedVariant()" type="button" (click)="selectedVariant.set(variant.id)">
-                        <span class="block text-sm font-black text-aurora-ink dark:text-white">{{ variant.name }}</span>
+                        <span class="block text-sm font-extrabold text-aurora-ink dark:text-white">{{ variant.name }}</span>
                         <span class="mt-1 block text-xs font-semibold text-aurora-muted dark:text-stone-400">{{ variant.sku }}</span>
-                        <span class="mt-2 block text-sm font-black text-aurora-gold dark:text-aurora-pinebright">{{ variant.effectivePrice | currency }}</span>
+                        <span class="mt-2 block text-sm font-extrabold text-aurora-gold dark:text-aurora-pinebright">{{ variant.effectivePrice | currency }}</span>
                       </button>
                     } @empty {
                       <p class="text-sm text-aurora-muted dark:text-stone-300">{{ 'product.defaultVariant' | t }}</p>
@@ -148,7 +148,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   @for (promise of promises; track promise.title) {
                     <div class="surface-panel p-4">
                       <lucide-icon class="text-aurora-ocean dark:text-aurora-pinebright" [img]="promise.icon" size="20" />
-                      <p class="mt-3 text-sm font-black text-aurora-ink dark:text-white">{{ promise.title | t }}</p>
+                      <p class="mt-3 text-sm font-extrabold text-aurora-ink dark:text-white">{{ promise.title | t }}</p>
                       <p class="mt-1 text-xs leading-5 text-aurora-muted dark:text-stone-300">{{ promise.copy | t }}</p>
                     </div>
                   }
@@ -183,21 +183,21 @@ type ProductTab = 'description' | 'specs' | 'reviews';
               <div class="grid gap-3 sm:grid-cols-3">
                 <div class="rounded-ui bg-stone-50 p-4 dark:bg-white/5">
                   <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">{{ 'product.specBrand' | t }}</p>
-                  <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.brand.name }}</p>
+                  <p class="mt-2 font-extrabold text-aurora-ink dark:text-white">{{ item.brand.name }}</p>
                 </div>
                 <div class="rounded-ui bg-stone-50 p-4 dark:bg-white/5">
                   <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">{{ 'catalog.categories' | t }}</p>
-                  <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.category.name }}</p>
+                  <p class="mt-2 font-extrabold text-aurora-ink dark:text-white">{{ item.category.name }}</p>
                 </div>
                 <div class="rounded-ui bg-stone-50 p-4 dark:bg-white/5">
                   <p class="text-xs font-bold uppercase tracking-[0.12em] text-aurora-muted dark:text-stone-400">{{ 'orders.status' | t }}</p>
-                  <p class="mt-2 font-black text-aurora-ink dark:text-white">{{ item.active ? ('common.active' | t) : ('common.inactive' | t) }}</p>
+                  <p class="mt-2 font-extrabold text-aurora-ink dark:text-white">{{ item.active ? ('common.active' | t) : ('common.inactive' | t) }}</p>
                 </div>
               </div>
             } @else {
               <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
                 <div>
-                  <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'product.reviewsTitle' | t }}</h2>
+                  <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'product.reviewsTitle' | t }}</h2>
                   @if (reviewsLoading()) {
                     <div class="mt-4 space-y-3">
                       @for (review of [1, 2]; track review) {
@@ -218,7 +218,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                         <article class="rounded-ui border border-aurora-line bg-white p-4 dark:border-white/10 dark:bg-white/5">
                           <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                              <p class="font-black text-aurora-ink dark:text-white">{{ review.authorName }}</p>
+                              <p class="font-extrabold text-aurora-ink dark:text-white">{{ review.authorName }}</p>
                               <p class="text-xs text-aurora-muted dark:text-stone-400">{{ review.createdAt | date:'mediumDate' }}</p>
                             </div>
                             <div class="flex items-center gap-1 text-aurora-pine dark:text-aurora-pinebright">
@@ -228,7 +228,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                             </div>
                           </div>
                           @if (review.title) {
-                            <h3 class="mt-4 font-black text-aurora-ink dark:text-white">{{ review.title }}</h3>
+                            <h3 class="mt-4 font-extrabold text-aurora-ink dark:text-white">{{ review.title }}</h3>
                           }
                           @if (review.comment) {
                             <p class="mt-2 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ review.comment }}</p>
@@ -246,7 +246,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                   } @else {
                     <form [formGroup]="reviewForm" (ngSubmit)="submitReview(item)" class="space-y-4">
                       <label class="block">
-                        <span class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.reviewRating' | t }}</span>
+                        <span class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'product.reviewRating' | t }}</span>
                         <div class="mt-2 flex gap-2">
                           @for (star of stars; track star) {
                             <button class="ui-button h-10 w-10 min-h-10 p-0" [class.ui-button-primary]="reviewForm.controls.rating.value >= star" [class.ui-button-secondary]="reviewForm.controls.rating.value < star" type="button" (click)="reviewForm.controls.rating.setValue(star)">
@@ -256,11 +256,11 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                         </div>
                       </label>
                       <label class="block">
-                        <span class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.reviewTitle' | t }}</span>
+                        <span class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'product.reviewTitle' | t }}</span>
                         <input class="ui-input mt-2" formControlName="title" maxlength="160" />
                       </label>
                       <label class="block">
-                        <span class="text-sm font-black text-aurora-ink dark:text-white">{{ 'product.reviewComment' | t }}</span>
+                        <span class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'product.reviewComment' | t }}</span>
                         <textarea class="ui-input mt-2 h-auto min-h-28 py-3" formControlName="comment"></textarea>
                       </label>
                       @if (reviewMessage()) {

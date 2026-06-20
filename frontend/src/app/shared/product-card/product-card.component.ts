@@ -40,7 +40,7 @@ import { WishlistService } from '../../services/wishlist.service';
       </a>
       <div class="p-4 sm:p-5">
         <div class="flex items-center justify-between gap-3">
-          <p class="text-xs font-black uppercase tracking-[0.14em] text-aurora-gold dark:text-aurora-pinebright">
+          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-aurora-gold dark:text-aurora-pinebright">
             {{ product().brand.name }}
           </p>
           @if (product().reviewCount) {
@@ -51,7 +51,7 @@ import { WishlistService } from '../../services/wishlist.service';
             </div>
           }
         </div>
-        <a [routerLink]="['/products', product().slug]" class="mt-2 line-clamp-2 block cursor-pointer text-lg font-black leading-6 text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white dark:hover:text-aurora-pinebright">
+        <a [routerLink]="['/products', product().slug]" class="mt-2 line-clamp-2 block cursor-pointer text-lg font-extrabold leading-6 text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white dark:hover:text-aurora-pinebright">
           {{ product().name }}
         </a>
         <p class="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-aurora-muted dark:text-stone-300">
@@ -60,7 +60,7 @@ import { WishlistService } from '../../services/wishlist.service';
         <div class="mt-5 flex items-end justify-between gap-3">
           <div>
             <p class="text-xs font-semibold text-aurora-muted dark:text-stone-400">{{ 'common.from' | t }}</p>
-            <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ product().basePrice | currency }}</p>
+            <p class="text-2xl font-extrabold text-aurora-ink dark:text-white">{{ product().basePrice | currency }}</p>
           </div>
           <div class="flex items-center gap-2">
             <button class="ui-button h-10 w-10 p-0" [class.ui-button-primary]="wishlist.isWishlisted(product().id)" [class.ui-button-secondary]="!wishlist.isWishlisted(product().id)" type="button" [attr.aria-label]="'a11y.saveItem' | t" [disabled]="savingWishlist()" (click)="toggleWishlist()">

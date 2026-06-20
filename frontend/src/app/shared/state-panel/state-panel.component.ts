@@ -15,7 +15,7 @@ import { LucideAngularModule, AlertCircle, CheckCircle2, PackageOpen } from 'luc
           <lucide-icon class="text-aurora-gold" [img]="PackageOpen" size="20" />
         }
       </div>
-      <p class="font-black text-aurora-ink dark:text-white">{{ title() }}</p>
+      <p class="font-extrabold text-aurora-ink dark:text-white">{{ title() }}</p>
       <p class="mx-auto mt-1 max-w-md leading-6">{{ message() }}</p>
     </div>
   `

@@ -62,17 +62,17 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                       <img loading="lazy" class="aspect-square w-full object-cover" [src]="placeholder" [alt]="item.productName" />
                     </a>
                     <div>
-                      <a [routerLink]="['/products', item.productSlug]" class="cursor-pointer text-lg font-black text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white">{{ item.productName }}</a>
+                      <a [routerLink]="['/products', item.productSlug]" class="cursor-pointer text-lg font-extrabold text-aurora-ink transition-colors duration-200 hover:text-aurora-gold dark:text-white">{{ item.productName }}</a>
                       <p class="mt-1 text-sm font-semibold text-aurora-muted dark:text-stone-300">{{ item.variantName }} / {{ item.variantSku }}</p>
                       <p class="mt-3 text-sm text-aurora-muted dark:text-stone-400">{{ item.unitPrice | currency }} x {{ item.quantity }}</p>
                     </div>
                     <div class="flex items-center justify-between gap-4 sm:block sm:text-right">
-                      <p class="text-xl font-black text-aurora-ink dark:text-white">{{ item.lineTotal | currency }}</p>
+                      <p class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ item.lineTotal | currency }}</p>
                       <div class="mt-0 flex items-center gap-2 sm:mt-4">
                         <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" [disabled]="actionId() === item.id || item.quantity <= 1" (click)="changeQuantity(item, item.quantity - 1)" [attr.aria-label]="'a11y.decreaseQty' | t">
                           <lucide-icon [img]="Minus" size="16" />
                         </button>
-                        <span class="flex h-10 min-w-10 items-center justify-center rounded-ui border border-aurora-line bg-white px-3 text-sm font-black dark:border-white/10 dark:bg-white/10">{{ item.quantity }}</span>
+                        <span class="flex h-10 min-w-10 items-center justify-center rounded-ui border border-aurora-line bg-white px-3 text-sm font-extrabold dark:border-white/10 dark:bg-white/10">{{ item.quantity }}</span>
                         <button class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" type="button" [disabled]="actionId() === item.id" (click)="changeQuantity(item, item.quantity + 1)" [attr.aria-label]="'a11y.increaseQty' | t">
                           <lucide-icon [img]="Plus" size="16" />
                         </button>
@@ -94,7 +94,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <div class="surface-panel p-5">
                 <div class="flex items-center gap-2">
                   <lucide-icon class="text-aurora-gold" [img]="ShoppingBag" size="20" />
-                  <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'cart.summary' | t }}</h2>
+                  <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'cart.summary' | t }}</h2>
                 </div>
 
                 <div class="mt-5 space-y-3 text-sm">
@@ -106,7 +106,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                     <span>{{ 'cart.discount' | t }}</span>
                     <span class="font-bold text-aurora-emerald">-{{ data.discountTotal | currency }}</span>
                   </div>
-                  <div class="border-t border-aurora-line pt-3 text-lg font-black text-aurora-ink dark:border-white/10 dark:text-white">
+                  <div class="border-t border-aurora-line pt-3 text-lg font-extrabold text-aurora-ink dark:border-white/10 dark:text-white">
                     <div class="flex justify-between gap-4">
                       <span>{{ 'cart.total' | t }}</span>
                       <span>{{ data.total | currency }}</span>
@@ -115,9 +115,9 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 </div>
 
                 <div class="mt-6 rounded-ui border border-aurora-line bg-white/70 p-3 dark:border-white/10 dark:bg-white/5">
-                  <label class="text-sm font-black text-aurora-ink dark:text-white">{{ 'cart.coupon' | t }}</label>
+                  <label class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'cart.coupon' | t }}</label>
                   @if (data.coupon) {
-                    <div class="mt-3 flex items-center justify-between gap-3 rounded-ui bg-aurora-pine/10 px-3 py-2 text-sm font-black text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">
+                    <div class="mt-3 flex items-center justify-between gap-3 rounded-ui bg-aurora-pine/10 px-3 py-2 text-sm font-extrabold text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">
                       <span>{{ data.coupon.code }}</span>
                       <button class="cursor-pointer text-xs underline" type="button" [disabled]="actionId() === 'coupon'" (click)="removeCoupon()">{{ 'cart.removeCoupon' | t }}</button>
                     </div>

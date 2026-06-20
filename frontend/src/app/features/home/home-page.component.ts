@@ -37,7 +37,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
   template: `
     <section class="hero-editorial overflow-hidden">
       <div class="page-shell relative z-10 py-16 lg:py-24">
-        <div class="hero-reveal flex items-center gap-3 text-xs font-black uppercase tracking-[0.22em] text-aurora-gold dark:text-aurora-pinebright" style="animation-delay: 60ms">
+        <div class="hero-reveal flex items-center gap-3 text-xs font-extrabold uppercase tracking-[0.22em] text-aurora-gold dark:text-aurora-pinebright" style="animation-delay: 60ms">
           <span class="hero-rule"></span>
           <lucide-icon [img]="Sparkles" size="14" />
           {{ 'home.badge' | t }}
@@ -99,7 +99,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <img class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100" [src]="category.image" [alt]="category.name" />
               <div class="absolute inset-0 bg-gradient-to-t from-aurora-night/70 via-aurora-night/10 to-transparent"></div>
               <div class="absolute bottom-4 left-4 right-4">
-                <p class="text-xl font-black text-white">{{ category.name | t }}</p>
+                <p class="text-xl font-extrabold text-white">{{ category.name | t }}</p>
                 <p class="mt-1 text-sm font-medium text-stone-200">{{ category.copy | t }}</p>
               </div>
             </div>
@@ -141,10 +141,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     <section class="page-shell py-14">
       <div class="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div class="relative overflow-hidden rounded-ui bg-aurora-night p-6 text-white shadow-premium sm:p-8">
-          <img class="absolute inset-0 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80" alt="Travel and lifestyle products" />
+          <img class="absolute inset-0 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80" alt="Viajes y estilo de vida" />
           <div class="relative z-10 max-w-xl">
             <p class="section-kicker">{{ 'home.promo.eyebrow' | t }}</p>
-            <h2 class="mt-3 text-4xl font-black leading-tight">{{ 'home.promo.title' | t }}</h2>
+            <h2 class="mt-3 text-4xl font-extrabold leading-tight">{{ 'home.promo.title' | t }}</h2>
             <p class="mt-4 text-sm leading-6 text-stone-200">{{ 'home.promo.copy' | t }}</p>
             <a routerLink="/catalog" class="ui-button mt-7 bg-white text-aurora-night hover:bg-stone-100">
               {{ 'home.promo.cta' | t }}
@@ -161,7 +161,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   <lucide-icon [img]="benefit.icon" size="21" />
                 </span>
                 <div>
-                  <h3 class="font-black text-aurora-ink dark:text-white">{{ benefit.title | t }}</h3>
+                  <h3 class="font-extrabold text-aurora-ink dark:text-white">{{ benefit.title | t }}</h3>
                   <p class="mt-1 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ benefit.copy | t }}</p>
                 </div>
               </div>
@@ -176,7 +176,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         @for (promise of promises; track promise.title) {
           <div class="soft-card p-6">
             <lucide-icon class="text-aurora-ocean dark:text-aurora-pinebright" [img]="promise.icon" size="24" />
-            <h3 class="mt-5 text-lg font-black text-aurora-ink dark:text-white">{{ promise.title | t }}</h3>
+            <h3 class="mt-5 text-lg font-extrabold text-aurora-ink dark:text-white">{{ promise.title | t }}</h3>
             <p class="mt-2 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ promise.copy | t }}</p>
           </div>
         }
@@ -189,7 +189,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <img class="h-72 w-full object-cover lg:h-full" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1400&q=85" alt="Surtido de productos de tecnología y estilo de vida" />
           <div class="p-7 sm:p-10">
             <p class="section-kicker">{{ 'home.club.eyebrow' | t }}</p>
-            <h2 class="mt-3 text-3xl font-black text-aurora-ink sm:text-4xl dark:text-white">{{ 'home.club.title' | t }}</h2>
+            <h2 class="mt-3 text-3xl font-extrabold text-aurora-ink sm:text-4xl dark:text-white">{{ 'home.club.title' | t }}</h2>
             <p class="mt-4 max-w-xl text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'home.club.copy' | t }}</p>
             <div class="mt-7 flex flex-col gap-3 sm:flex-row">
               <a routerLink="/register" class="ui-button ui-button-primary">

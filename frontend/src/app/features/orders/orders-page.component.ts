@@ -47,7 +47,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   </span>
                   <div>
                     <div class="flex flex-wrap items-center gap-3">
-                      <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ order.orderNumber }}</h2>
+                      <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ order.orderNumber }}</h2>
                       <span class="aurora-badge" [ngClass]="statusClass(order.status)">{{ ('order.status.' + order.status) | t }}</span>
                     </div>
                     <p class="mt-2 text-sm text-aurora-muted dark:text-stone-300">{{ order.createdAt | date:'medium' }}</p>
@@ -55,7 +55,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                   </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-3 md:justify-end">
-                  <p class="text-2xl font-black text-aurora-ink dark:text-white">{{ order.total | currency }}</p>
+                  <p class="text-2xl font-extrabold text-aurora-ink dark:text-white">{{ order.total | currency }}</p>
                   @if (order.status === 'PENDING_PAYMENT' || order.status === 'CREATED') {
                     <a [routerLink]="['/orders', order.id, 'payment']" class="ui-button ui-button-accent">{{ 'orders.pay' | t }}</a>
                   }

@@ -39,14 +39,14 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               </span>
               <div>
                 <p class="text-sm font-bold text-aurora-muted dark:text-stone-400">{{ 'orders.number' | t }}</p>
-                <h2 class="text-2xl font-black text-aurora-ink dark:text-white">{{ data.orderNumber }}</h2>
+                <h2 class="text-2xl font-extrabold text-aurora-ink dark:text-white">{{ data.orderNumber }}</h2>
               </div>
             </div>
 
             <div class="mt-6 rounded-ui border border-aurora-line bg-white p-5 dark:border-white/10 dark:bg-white/5">
               <div class="flex items-center justify-between gap-4">
                 <span class="font-bold text-aurora-muted dark:text-stone-300">{{ 'cart.total' | t }}</span>
-                <span class="text-3xl font-black text-aurora-ink dark:text-white">{{ data.total | currency }}</span>
+                <span class="text-3xl font-extrabold text-aurora-ink dark:text-white">{{ data.total | currency }}</span>
               </div>
             </div>
 
@@ -55,10 +55,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <div class="flex items-center gap-3">
                   @if (result.paymentStatus === 'PAID') {
                     <lucide-icon class="text-aurora-pine" [img]="CheckCircle2" size="24" />
-                    <p class="font-black text-aurora-pine dark:text-aurora-pinebright">{{ 'payment.paid' | t }}</p>
+                    <p class="font-extrabold text-aurora-pine dark:text-aurora-pinebright">{{ 'payment.paid' | t }}</p>
                   } @else {
                     <lucide-icon class="text-aurora-rose" [img]="XCircle" size="24" />
-                    <p class="font-black text-aurora-rose">{{ 'payment.failed' | t }}</p>
+                    <p class="font-extrabold text-aurora-rose">{{ 'payment.failed' | t }}</p>
                   }
                 </div>
                 <p class="mt-2 text-sm text-aurora-muted dark:text-stone-300">{{ result.attempts[0]?.message }}</p>
@@ -87,12 +87,12 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
           <aside class="surface-panel p-5 lg:sticky lg:top-28 lg:h-fit">
             <div class="flex items-center gap-2">
               <lucide-icon class="text-aurora-gold" [img]="ShieldCheck" size="20" />
-              <h2 class="text-xl font-black text-aurora-ink dark:text-white">{{ 'checkout.review' | t }}</h2>
+              <h2 class="text-xl font-extrabold text-aurora-ink dark:text-white">{{ 'checkout.review' | t }}</h2>
             </div>
             <div class="mt-5 grid gap-3">
               @for (item of data.items; track item.id) {
                 <div class="rounded-ui bg-stone-50 p-3 dark:bg-white/5">
-                  <p class="font-black text-aurora-ink dark:text-white">{{ item.productName }}</p>
+                  <p class="font-extrabold text-aurora-ink dark:text-white">{{ item.productName }}</p>
                   <p class="mt-1 text-xs text-aurora-muted dark:text-stone-400">{{ item.quantity }} x {{ item.unitPrice | currency }}</p>
                 </div>
               }

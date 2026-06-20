@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -98,7 +99,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
         <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1400&q=85" alt="Crear una cuenta en Aurora" />
         <div class="absolute inset-0 bg-gradient-to-t from-aurora-night via-aurora-night/40 to-transparent"></div>
         <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
-          <h2 class="max-w-md text-4xl font-black leading-tight">{{ 'auth.register.title' | t }}</h2>
+          <h2 class="max-w-md text-4xl font-extrabold leading-tight">{{ 'auth.register.title' | t }}</h2>
           <div class="mt-6 grid gap-3">
             @for (item of panelItems; track item) {
               <div class="flex items-center gap-3 rounded-ui border border-white/10 bg-white/10 p-3">
@@ -107,7 +108,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               </div>
             }
           </div>
-          <a routerLink="/catalog" class="mt-7 inline-flex cursor-pointer items-center gap-2 text-sm font-black text-aurora-pinebright transition-colors duration-200 hover:text-white">
+          <a routerLink="/catalog" class="mt-7 inline-flex cursor-pointer items-center gap-2 text-sm font-extrabold text-aurora-pinebright transition-colors duration-200 hover:text-white">
             {{ 'cart.keepShopping' | t }}
             <lucide-icon [img]="ArrowRight" size="16" />
           </a>
@@ -163,8 +164,9 @@ export class RegisterPageComponent {
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         this.router.navigateByUrl(safeInternalUrl(returnUrl));
       },
-      error: () => {
-        this.error.set(this.language.translate('auth.register.error'));
+      error: (err: HttpErrorResponse) => {
+        const key = err?.status === 409 ? 'auth.register.emailExists' : 'auth.register.error';
+        this.error.set(this.language.translate(key));
         this.loading.set(false);
       }
     });

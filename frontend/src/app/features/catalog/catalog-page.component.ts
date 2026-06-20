@@ -61,7 +61,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
         <aside class="sticky top-28 hidden h-fit lg:block">
           <div class="surface-panel p-5">
             <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2 font-black text-aurora-ink dark:text-white">
+              <div class="flex items-center gap-2 font-extrabold text-aurora-ink dark:text-white">
                 <lucide-icon [img]="SlidersHorizontal" size="18" />
                 {{ 'catalog.refine' | t }}
               </div>
@@ -82,7 +82,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
             <button class="ui-button ui-button-primary mt-4 w-full" type="button" (click)="search()">{{ 'catalog.apply' | t }}</button>
 
             <div class="mt-6 border-t border-aurora-line pt-6 dark:border-white/10">
-              <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
+              <p class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 @for (category of categories(); track category.id) {
                   <button class="aurora-chip" type="button" [class.ring-2]="selectedCategory() === category.slug" [class.ring-aurora-amber]="selectedCategory() === category.slug" [class.ring-offset-1]="selectedCategory() === category.slug" (click)="toggleCategory(category.slug)">{{ category.name }}</button>
@@ -93,7 +93,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
             </div>
 
             <div class="mt-6 border-t border-aurora-line pt-6 dark:border-white/10">
-              <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
+              <p class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 @for (brand of brands(); track brand.id) {
                   <button class="aurora-chip" type="button" [class.ring-2]="selectedBrand() === brand.slug" [class.ring-aurora-amber]="selectedBrand() === brand.slug" [class.ring-offset-1]="selectedBrand() === brand.slug" (click)="toggleBrand(brand.slug)">{{ brand.name }}</button>
@@ -146,7 +146,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
       <div class="fixed inset-0 z-50 bg-aurora-night/55 p-3 backdrop-blur-sm lg:hidden" (click)="closeFilters()" (keydown)="onFilterKeydown($event)">
         <div class="absolute inset-x-3 bottom-3 max-h-[85vh] overflow-y-auto rounded-ui border border-white/70 bg-white p-5 shadow-premium dark:border-white/10 dark:bg-aurora-night" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" data-filter-dialog [attr.aria-label]="'catalog.filters' | t">
           <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2 font-black text-aurora-ink dark:text-white">
+            <div class="flex items-center gap-2 font-extrabold text-aurora-ink dark:text-white">
               <lucide-icon [img]="SlidersHorizontal" size="18" />
               {{ 'catalog.filters' | t }}
             </div>
@@ -156,7 +156,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
           </div>
 
           <div class="mt-5">
-            <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
+            <p class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'catalog.categories' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (category of categories(); track category.id) {
                 <button class="aurora-chip" type="button" [class.ring-2]="selectedCategory() === category.slug" [class.ring-aurora-amber]="selectedCategory() === category.slug" [class.ring-offset-1]="selectedCategory() === category.slug" (click)="toggleCategory(category.slug)">{{ category.name }}</button>
@@ -167,7 +167,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
           </div>
 
           <div class="mt-5">
-            <p class="text-sm font-black text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
+            <p class="text-sm font-extrabold text-aurora-ink dark:text-white">{{ 'catalog.brands' | t }}</p>
             <div class="mt-3 flex flex-wrap gap-2">
               @for (brand of brands(); track brand.id) {
                 <button class="aurora-chip" type="button" [class.ring-2]="selectedBrand() === brand.slug" [class.ring-aurora-amber]="selectedBrand() === brand.slug" [class.ring-offset-1]="selectedBrand() === brand.slug" (click)="toggleBrand(brand.slug)">{{ brand.name }}</button>
