@@ -9,7 +9,7 @@ COPY src ./src
 RUN mvn -q -B -DskipTests package
 
 # --- Runtime stage ---
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 # curl backs the container HEALTHCHECK used by docker compose for ordered startup.
 # Pinning apt versions (DL3008) is impractical on Debian's rolling repo — old package
 # versions are garbage-collected from the mirror, which would break reproducible builds.
