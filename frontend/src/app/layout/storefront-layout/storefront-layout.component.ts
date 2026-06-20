@@ -9,6 +9,7 @@ import {
   Moon,
   PackageCheck,
   Search,
+  Settings,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
@@ -88,6 +89,9 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
               }
             </a>
             @if (auth.currentUser(); as user) {
+              <a routerLink="/account/settings" routerLinkActive="bg-stone-100 dark:bg-white/10" class="ui-button ui-button-secondary h-10 w-10 min-h-10 p-0" [attr.aria-label]="'nav.settings' | t" [attr.title]="'nav.settings' | t">
+                <lucide-icon [img]="Settings" size="18" />
+              </a>
               <button class="ui-button ui-button-primary hidden sm:inline-flex" type="button" (click)="auth.logout()" [attr.aria-label]="('nav.signOut' | t) + ' — ' + user.firstName" [attr.title]="'nav.signOut' | t">
                 <lucide-icon [img]="UserRound" size="17" />
                 {{ user.firstName }}
@@ -156,6 +160,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
                 <a routerLink="/login" class="cursor-pointer hover:text-white">{{ 'nav.signIn' | t }}</a>
                 <a routerLink="/register" class="cursor-pointer hover:text-white">{{ 'auth.create' | t }}</a>
                 <a routerLink="/account/orders" class="cursor-pointer hover:text-white">{{ 'nav.orders' | t }}</a>
+                <a routerLink="/account/settings" class="cursor-pointer hover:text-white">{{ 'nav.settings' | t }}</a>
               </div>
             </div>
             <div>
@@ -177,6 +182,7 @@ export class StorefrontLayoutComponent {
   readonly LogOut = LogOut;
   readonly Moon = Moon;
   readonly Search = Search;
+  readonly Settings = Settings;
   readonly ShoppingBag = ShoppingBag;
   readonly Sparkles = Sparkles;
   readonly Sun = Sun;

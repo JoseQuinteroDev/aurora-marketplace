@@ -19,6 +19,10 @@ public record OrderCreatedEvent(
         String customerEmail,
         String customerName,
         String customerPhone,
+        // The customer's resolved channel ("EMAIL"/"SMS"). Kept as a String — an
+        // unrecognised value safely falls back to email rather than poisoning the
+        // record, so the producer can add channels without breaking this consumer.
+        String notificationChannel,
         int itemCount,
         BigDecimal subtotal,
         BigDecimal discountTotal,

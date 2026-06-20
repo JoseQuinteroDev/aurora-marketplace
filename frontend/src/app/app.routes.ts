@@ -64,6 +64,13 @@ export const routes: Routes = [
         title: 'title.checkout'
       },
       {
+        path: 'account/settings',
+        loadComponent: () =>
+          import('./features/account/notification-settings-page.component').then((m) => m.NotificationSettingsPageComponent),
+        canActivate: [authGuard],
+        title: 'title.settings'
+      },
+      {
         path: 'account/orders',
         loadComponent: () => import('./features/orders/orders-page.component').then((m) => m.OrdersPageComponent),
         canActivate: [authGuard],

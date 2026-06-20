@@ -18,19 +18,25 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 /**
- * Subscribes to Aurora domain events and turns them into customer emails.
+ * Subscribes to Aurora domain events and turns them into a customer notification
+ * delivered on the channel the customer chose (carried on the event as
+ * {@code notificationChannel}). The choice is exclusive: a customer is notified
+ * by email <em>or</em> SMS, never both.
  *
- * <p>Events are consumed as raw JSON strings and mapped locally, which keeps
- * this service fully decoupled from the producer's classes. Two reliability
- * properties matter here:</p>
+ * <p>Two reliability properties matter here:</p>
  * <ul>
  *   <li><b>Idempotent:</b> each event id is delivered once even if Kafka
  *       redelivers the record (see {@link ProcessedEventTracker}).</li>
  *   <li><b>Resilient:</b> a malformed payload is non-retryable and goes straight
- *       to the dead-letter topic; a transient delivery failure is retried (the
- *       exception propagates to the configured error handler) and dead-lettered
- *       only after the retry budget is spent.</li>
+ *       to the dead-letter topic; a transient delivery failure on the chosen
+ *       channel propagates to the configured error handler (retried, then
+ *       dead-lettered). The event id is marked processed only after the chosen
+ *       channel actually accepts the message.</li>
  * </ul>
+ *
+ * <p>The channel is read defensively: SMS is used only when it was selected
+ * <em>and</em> a phone is present, so an unrecognised channel or a missing number
+ * safely falls back to email rather than failing delivery.</p>
  */
 @Component
 public class NotificationListener {
@@ -40,6 +46,8 @@ public class NotificationListener {
     private static final String TOPIC_ORDER_CREATED = "aurora.orders.created";
     private static final String TOPIC_PAYMENT_CONFIRMED = "aurora.payments.confirmed";
     private static final String TOPIC_PAYMENT_FAILED = "aurora.payments.failed";
+
+    private static final String CHANNEL_SMS = "SMS";
 
     private final ObjectMapper objectMapper;
     private final EmailService emailService;
@@ -64,7 +72,7 @@ public class NotificationListener {
         }
 
         String subject = "Your Aurora order " + event.orderNumber() + " is confirmed";
-        String body = """
+        String emailBody = """
                 Hi %s,
 
                 Thanks for shopping with Aurora Marketplace!
@@ -82,12 +90,17 @@ public class NotificationListener {
                 event.total(),
                 event.currency()
         );
+        String smsText = "Aurora Marketplace: order %s confirmed — %d item(s), total %s %s. Thank you, %s!"
+                .formatted(
+                        event.orderNumber(),
+                        event.itemCount(),
+                        event.total(),
+                        event.currency(),
+                        event.customerName()
+                );
 
-        deliver(event.eventId(), "ORDER_CREATED", event.customerEmail(), subject, event.orderNumber(), body);
-
-        // Secondary channel: an order SMS if the customer left a phone. Best-effort —
-        // it must never fail or re-trigger the (already-delivered, idempotent) email.
-        sendOrderSms(event);
+        deliver(event.eventId(), "ORDER_CREATED", event.notificationChannel(),
+                event.customerEmail(), event.customerPhone(), subject, emailBody, smsText, event.orderNumber());
     }
 
     @KafkaListener(topics = TOPIC_PAYMENT_CONFIRMED)
@@ -98,7 +111,7 @@ public class NotificationListener {
         }
 
         String subject = "Payment received for order " + event.orderNumber();
-        String body = """
+        String emailBody = """
                 Hi %s,
 
                 Good news — we've received your payment of %s %s for order %s.
@@ -113,8 +126,16 @@ public class NotificationListener {
                 event.currency(),
                 event.orderNumber()
         );
+        String smsText = "Aurora Marketplace: payment of %s %s received for order %s. Your order is being prepared. Thanks, %s!"
+                .formatted(
+                        event.amount(),
+                        event.currency(),
+                        event.orderNumber(),
+                        event.customerName()
+                );
 
-        deliver(event.eventId(), "PAYMENT_CONFIRMED", event.customerEmail(), subject, event.orderNumber(), body);
+        deliver(event.eventId(), "PAYMENT_CONFIRMED", event.notificationChannel(),
+                event.customerEmail(), event.customerPhone(), subject, emailBody, smsText, event.orderNumber());
     }
 
     @KafkaListener(topics = TOPIC_PAYMENT_FAILED)
@@ -125,7 +146,7 @@ public class NotificationListener {
         }
 
         String subject = "Action needed: payment failed for order " + event.orderNumber();
-        String body = """
+        String emailBody = """
                 Hi %s,
 
                 We weren't able to process your payment of %s %s for order %s.
@@ -143,34 +164,16 @@ public class NotificationListener {
                 event.orderNumber(),
                 event.reason()
         );
-
-        deliver(event.eventId(), "PAYMENT_FAILED", event.customerEmail(), subject, event.orderNumber(), body);
-    }
-
-    private void sendOrderSms(OrderCreatedEvent event) {
-        String text = "Aurora Marketplace: order %s confirmed — %d item(s), total %s %s. Thank you, %s!"
+        String smsText = "Aurora Marketplace: payment of %s %s for order %s failed (%s). No charge was made — please try again from your account."
                 .formatted(
-                        event.orderNumber(),
-                        event.itemCount(),
-                        event.total(),
+                        event.amount(),
                         event.currency(),
-                        event.customerName()
+                        event.orderNumber(),
+                        event.reason()
                 );
-        if (smsService.send(event.customerPhone(), text)) {
-            // Be honest on the observability surface: the dev "log" transport only
-            // writes to the log, so record LOGGED rather than SENT for it.
-            String status = "log".equals(smsService.transportName()) ? "LOGGED" : "SENT";
-            store.add(new NotificationRecord(
-                    UUID.randomUUID().toString(),
-                    "ORDER_CREATED",
-                    "SMS",
-                    event.customerPhone(),
-                    "Order " + event.orderNumber() + " confirmed",
-                    event.orderNumber(),
-                    status,
-                    Instant.now()
-            ));
-        }
+
+        deliver(event.eventId(), "PAYMENT_FAILED", event.notificationChannel(),
+                event.customerEmail(), event.customerPhone(), subject, emailBody, smsText, event.orderNumber());
     }
 
     private boolean isDuplicate(String eventId, String topic) {
@@ -182,28 +185,49 @@ public class NotificationListener {
     }
 
     /**
-     * Sends the email and records the outcome. A delivery failure is rethrown so
-     * the Kafka error handler can retry it and, ultimately, dead-letter it — the
-     * event id is marked processed only once delivery actually succeeds.
+     * Delivers the notification on the customer's chosen channel and records the
+     * outcome. A delivery failure is rethrown so the Kafka error handler can retry
+     * and ultimately dead-letter it — the event id is marked processed only once
+     * delivery actually succeeds.
      */
-    private void deliver(String eventId, String type, String recipient,
-                         String subject, String orderNumber, String body) {
-        boolean sent = emailService.send(recipient, subject, body);
-        if (!sent) {
-            throw new IllegalStateException("Email delivery failed for event " + eventId + " (" + type + ")");
+    private void deliver(String eventId, String type, String channel,
+                         String email, String phone, String subject,
+                         String emailBody, String smsText, String orderNumber) {
+        if (wantsSms(channel, phone)) {
+            boolean sent = smsService.send(phone, smsText);
+            if (!sent) {
+                throw new IllegalStateException("SMS delivery failed for event " + eventId + " (" + type + ")");
+            }
+            // The dev "log" transport only writes to the log, so record LOGGED rather than SENT.
+            String status = "log".equals(smsService.transportName()) ? "LOGGED" : "SENT";
+            record(type, "SMS", phone, subject, orderNumber, status);
+        } else {
+            boolean sent = emailService.send(email, subject, emailBody);
+            if (!sent) {
+                throw new IllegalStateException("Email delivery failed for event " + eventId + " (" + type + ")");
+            }
+            record(type, "EMAIL", email, subject, orderNumber, "SENT");
         }
+        processedEvents.markProcessed(eventId);
+    }
 
+    /** SMS is the delivery channel only when it was chosen and a number is available to text. */
+    private boolean wantsSms(String channel, String phone) {
+        return CHANNEL_SMS.equalsIgnoreCase(channel) && phone != null && !phone.isBlank();
+    }
+
+    private void record(String type, String channel, String recipient,
+                        String subject, String orderNumber, String status) {
         store.add(new NotificationRecord(
                 UUID.randomUUID().toString(),
                 type,
-                "EMAIL",
+                channel,
                 recipient,
                 subject,
                 orderNumber,
-                "SENT",
+                status,
                 Instant.now()
         ));
-        processedEvents.markProcessed(eventId);
     }
 
     private <T> T parse(String payload, Class<T> type, String topic) {

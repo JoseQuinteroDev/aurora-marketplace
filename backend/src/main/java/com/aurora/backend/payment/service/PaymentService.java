@@ -124,6 +124,8 @@ public class PaymentService {
                             order.getOrderNumber(),
                             user.getEmail(),
                             customerName,
+                            user.getPhone(),
+                            user.resolveNotificationChannel(),
                             savedPayment.getAmount(),
                             CURRENCY,
                             savedPayment.getMethod().name()
@@ -141,6 +143,8 @@ public class PaymentService {
                             order.getOrderNumber(),
                             user.getEmail(),
                             customerName,
+                            user.getPhone(),
+                            user.resolveNotificationChannel(),
                             savedPayment.getAmount(),
                             CURRENCY,
                             normalizeMessage(request.message(), "Payment simulation failed.")

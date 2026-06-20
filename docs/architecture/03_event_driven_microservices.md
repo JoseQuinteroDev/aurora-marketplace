@@ -16,7 +16,7 @@ fulfilment, search indexing tomorrow) are extracted as services that integrate
 |---|---|---|---|
 | API Gateway | Spring Cloud Gateway | 8088 | Single entry point, routing, CORS, circuit breaker + fallback |
 | Core service (`backend`) | Spring Boot 3.5 | 8080 | Commerce domain; **publishes** domain events |
-| notification-service | Spring Boot 3.5 | 8082 | **Consumes** events; sends transactional emails |
+| notification-service | Spring Boot 3.5 | 8082 | **Consumes** events; sends transactional notifications by email or SMS |
 | Kafka | Apache Kafka 3.9 (KRaft) | 29092 | Event backbone |
 | Kafka UI | provectus/kafka-ui | 8081 | Topic / event / consumer-group inspection |
 | Storefront | Angular 21 | 4200 | Customer + admin UI (enters via the gateway) |
@@ -34,6 +34,7 @@ flowchart LR
 
     K --> NS[notification-service :8082]
     NS -->|SMTP| MP[Mailpit :1025]
+    NS -->|SMS| SMS[SMS transport: log / Twilio]
 
     CORE --- PG[(PostgreSQL)]
 ```
@@ -53,7 +54,11 @@ evolve safely.
 
 Event records carry an `eventId`, `occurredAt`, the order identifiers, the
 customer email/name and the relevant monetary fields — enough context for a
-consumer to act without calling back into the core.
+consumer to act without calling back into the core. They also carry the
+customer's `customerPhone` and resolved `notificationChannel` (`EMAIL` or
+`SMS`), so the notification-service can deliver on the channel the customer
+chose. The channel is **resolved in the core** (it degrades `SMS` to `EMAIL`
+when no phone is on file), so a consumer can trust it is always deliverable.
 
 ## Reliability
 
@@ -66,7 +71,9 @@ Delivery is **at-least-once**, end to end:
   a rolled-back checkout produces no event.
 - **Consumer — Idempotent.** Each event carries an `eventId`. The
   notification-service skips ids it has already delivered, so a Kafka redelivery
-  (rebalance, restart) never sends a duplicate email.
+  (rebalance, restart) never sends a duplicate notification. The chosen channel
+  is the primary delivery: its failure propagates (retry → DLT) and the id is
+  marked processed only once that channel actually accepts the message.
 - **Consumer — Retry + Dead Letter Topic.** Transient failures (e.g. SMTP down)
   are retried with exponential backoff; a malformed/poison record is
   non-retryable. Exhausted or poison records are routed to `<topic>.DLT` for

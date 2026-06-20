@@ -15,6 +15,8 @@ public record PaymentConfirmedEvent(
         String orderNumber,
         String customerEmail,
         String customerName,
+        String customerPhone,
+        String notificationChannel,
         BigDecimal amount,
         String currency,
         String paymentMethod

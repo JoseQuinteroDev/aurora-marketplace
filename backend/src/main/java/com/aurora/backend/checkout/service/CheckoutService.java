@@ -173,6 +173,7 @@ public class CheckoutService {
                         user.getEmail(),
                         user.getFirstName() + " " + user.getLastName(),
                         user.getPhone(),
+                        user.resolveNotificationChannel(),
                         savedOrder.getItems().size(),
                         savedOrder.getSubtotal(),
                         savedOrder.getDiscountTotal(),

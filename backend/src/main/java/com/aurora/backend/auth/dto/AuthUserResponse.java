@@ -3,6 +3,7 @@ package com.aurora.backend.auth.dto;
 import java.util.UUID;
 
 import com.aurora.backend.user.entity.User;
+import com.aurora.backend.user.notification.NotificationChannel;
 import com.aurora.backend.user.role.Role;
 
 public record AuthUserResponse(
@@ -11,6 +12,7 @@ public record AuthUserResponse(
         String firstName,
         String lastName,
         String phone,
+        NotificationChannel notificationChannel,
         Role role
 ) {
 
@@ -21,6 +23,7 @@ public record AuthUserResponse(
                 user.getFirstName(),
                 user.getLastName(),
                 user.getPhone(),
+                user.getNotificationChannel(),
                 user.getRole()
         );
     }

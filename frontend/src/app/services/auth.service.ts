@@ -3,7 +3,7 @@ import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { ApiResponse } from '../core/models/api-response.model';
-import { AuthPayload, AuthUser, LoginRequest, RegisterRequest } from '../core/models/auth.model';
+import { AuthPayload, AuthUser, LoginRequest, NotificationPreferenceRequest, RegisterRequest } from '../core/models/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -47,6 +47,17 @@ export class AuthService {
   }
 
   /**
+   * Updates the caller's notification channel preference. On success the backend
+   * returns the refreshed user, which we persist so the stored session reflects
+   * the new channel (and any phone set in the same step) without re-logging in.
+   */
+  updateNotificationPreference(request: NotificationPreferenceRequest) {
+    return this.http
+      .put<ApiResponse<AuthUser>>('/api/account/notification-preference', request)
+      .pipe(tap((response) => this.persistUser(response.data)));
+  }
+
+  /**
    * Clears the session. By default navigates home; pass `null` to clear without
    * navigating (used by the HTTP error interceptor, which redirects to /login itself).
    */
@@ -82,6 +93,12 @@ export class AuthService {
     localStorage.setItem(this.userKey, JSON.stringify(payload.user));
     localStorage.setItem(this.expiryKey, String(Date.now() + payload.expiresInMinutes * 60_000));
     this.userSignal.set(payload.user);
+  }
+
+  /** Refreshes the stored user (and signal) in place, leaving the token/expiry intact. */
+  private persistUser(user: AuthUser): void {
+    localStorage.setItem(this.userKey, JSON.stringify(user));
+    this.userSignal.set(user);
   }
 
   private isSessionExpired(): boolean {

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.aurora.backend.user.notification.NotificationChannel;
 import com.aurora.backend.user.role.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -38,6 +39,10 @@ public class User {
 
     @Column(length = 32)
     private String phone;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "notification_channel", nullable = false, length = 16)
+    private NotificationChannel notificationChannel = NotificationChannel.EMAIL;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -124,6 +129,41 @@ public class User {
 
     public String getPhone() {
         return phone;
+    }
+
+    public NotificationChannel getNotificationChannel() {
+        return notificationChannel;
+    }
+
+    /**
+     * The channel notifications will actually be delivered on. Honours the
+     * customer's preference but degrades {@code SMS} to {@code EMAIL} when no
+     * phone is on file, so a chosen channel is always deliverable.
+     */
+    public NotificationChannel resolveNotificationChannel() {
+        if (notificationChannel == NotificationChannel.SMS && !hasPhone()) {
+            return NotificationChannel.EMAIL;
+        }
+        return notificationChannel;
+    }
+
+    /**
+     * Updates the notification preference, optionally setting a phone in the same
+     * step. Choosing {@code SMS} requires a phone — either already on file or
+     * supplied here — otherwise the change is rejected.
+     */
+    public void updateNotificationPreference(NotificationChannel channel, String newPhone) {
+        if (newPhone != null) {
+            this.phone = newPhone;
+        }
+        if (channel == NotificationChannel.SMS && !hasPhone()) {
+            throw new IllegalArgumentException("A phone number is required to receive notifications by SMS.");
+        }
+        this.notificationChannel = channel;
+    }
+
+    private boolean hasPhone() {
+        return phone != null && !phone.isBlank();
     }
 
     public Role getRole() {
