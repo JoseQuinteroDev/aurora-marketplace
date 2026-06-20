@@ -11,6 +11,9 @@ RUN mvn -q -B -DskipTests package
 # --- Runtime stage ---
 FROM eclipse-temurin:21-jre
 # curl backs the container HEALTHCHECK used by docker compose for ordered startup.
+# Pinning apt versions (DL3008) is impractical on Debian's rolling repo — old package
+# versions are garbage-collected from the mirror, which would break reproducible builds.
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 # Run as an unprivileged user (defense in depth: a compromised process is not root).
