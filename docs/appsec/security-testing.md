@@ -56,6 +56,7 @@ need a database, so they are fast and reliable in CI.
 | `CouponServiceTest` | `backend/.../promotion/service/CouponServiceTest.java` | Percentage/fixed discount math, discount **capped at subtotal** (no negative orders), inactive/expired coupons contribute nothing, and **global + per-user use limits** are enforced (no reuse beyond limit). (OWASP A04) |
 | `AdminAuthorizationTest` | `backend/.../config/AdminAuthorizationTest.java` | **Web-slice** test of the real `SecurityConfig` filter chain: `/api/admin/**` returns **401 anonymous, 403 for `ROLE_CUSTOMER`, 200 for `ROLE_ADMIN`**. Covers the RBAC *wiring*, not just the logic. (OWASP A01) |
 | `ReviewServiceTest` | `backend/.../review/service/ReviewServiceTest.java` | One review per user per product (no duplicates); reviews can only be created/listed for an **active** product (a hidden product leaks nothing); a new review is never auto-`verifiedPurchase`. (OWASP A04) |
+| `CartServiceTest` | `backend/.../cart/service/CartServiceTest.java` | Add-to-cart prices from the **catalog** (not the client) and rejects inactive variants / insufficient stock; cart items are **owner-scoped** (`findByIdAndCartUserId`), so a customer cannot update/remove another's item by id. (OWASP A04 + A01/IDOR) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -68,9 +69,9 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **29 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
+> Current status: **34 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
 > `CheckoutServiceTest` ×4, `CouponServiceTest` ×9, `AdminAuthorizationTest` ×3,
-> `ReviewServiceTest` ×4.)
+> `ReviewServiceTest` ×4, `CartServiceTest` ×5.)
 > The JWT and service tests need no Spring context; `AdminAuthorizationTest` is a
 > web slice (Spring context, still no database/Docker).
 
@@ -85,9 +86,11 @@ real filter chain (`AdminAuthorizationTest`). Remaining gaps:
   PostgreSQL), drive the same checks through a real JWT issued by `/api/auth/login`
   and the running security chain end-to-end. (Needs Docker — runs in CI, not in a
   Docker-less dev shell.)
-- **IDOR breadth:** extend the ownership assertion to cart and review resources
-  by id, mirroring `OrderServiceTest`.
-- **Validation:** assert oversized/blank/negative inputs yield `400`, not `500`.
+- **IDOR breadth:** orders and cart items are now covered (`OrderServiceTest`,
+  `CartServiceTest`); the remaining surfaces are admin-only resources, already
+  gated by the `/api/admin/**` rule (`AdminAuthorizationTest`).
+- **Validation:** assert oversized/blank/negative inputs yield `400`, not `500`
+  — best as a `@WebMvcTest` per controller.
 
 ## 3. DAST — dynamic testing (the running app)
 
