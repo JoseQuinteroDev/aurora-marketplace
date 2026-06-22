@@ -16,7 +16,7 @@ the risks in [`threat-model.md`](threat-model.md) and [`owasp-top-10.md`](owasp-
         │   ├───────────────────────────────┤
         │   │  Integration / API tests      │   ← planned (see §2)
         │   ├───────────────────────────────┤
-        │   │  Security unit tests          │   ← shipped: JwtService, auth filter
+        │   │  Security unit tests          │   ← shipped: JWT, order IDOR, checkout pricing
         │   ├───────────────────────────────┤
         │   │  SAST · SCA · secrets (CI)    │   ← every push/PR, see cicd-security
         ▼   └───────────────────────────────┘
@@ -50,6 +50,8 @@ so the tests are fast and reliable in CI.
 |---|---|---|
 | `JwtServiceTest` | `backend/src/test/java/com/aurora/backend/security/jwt/JwtServiceTest.java` | A valid token round-trips; a **tampered payload** is rejected; a token **signed with another secret** is rejected; an **expired token** is rejected. (OWASP A02/A07) |
 | `JwtAuthenticationFilterTest` | `backend/.../security/jwt/JwtAuthenticationFilterTest.java` | No header → stays anonymous; valid token → authenticated with **authorities loaded from the database, not the token**; invalid token → fails closed but the chain proceeds. (OWASP A01) |
+| `OrderServiceTest` | `backend/.../order/service/OrderServiceTest.java` | `getUserOrder` resolves only via the **owner-scoped** `findByIdAndUserId` (never the unscoped `findById`), so a customer cannot read another customer's order. Locks the **IDOR** control. (OWASP A01) |
+| `CheckoutServiceTest` | `backend/.../checkout/service/CheckoutServiceTest.java` | Order + payment money is **recomputed server-side** from the cart/catalog (client cannot influence price/total); empty cart, inactive variant and insufficient stock are rejected. Locks the **client-trusted-pricing** control. (OWASP A04) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -62,16 +64,23 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **7 tests, all passing.**
+> Current status: **13 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
+> `CheckoutServiceTest` ×4.)
 
 ### Where to add the next ones
 
+The two highest-value controls — **IDOR** on orders and **client-trusted pricing**
+at checkout — are now locked at the service layer (`OrderServiceTest`,
+`CheckoutServiceTest`). The remaining gaps are the *end-to-end* and *breadth*
+variants:
+
 - **Authorization (integration):** with a test database (Testcontainers
   PostgreSQL), assert `/api/admin/**` returns `403` for a `ROLE_CUSTOMER` token
-  and `200` for `ROLE_ADMIN`, using `spring-security-test` (`@WithMockUser`).
-- **IDOR (the P1 residual risk):** assert customer A cannot read/modify customer
-  B's cart/order/review by id. This is the single most valuable test class to
-  add next — see the threat model (A01).
+  and `200` for `ROLE_ADMIN`, exercising the real security filter chain
+  (`spring-security-test`). The unit tests cover the *logic*; this covers the
+  *wiring*. (Needs Docker — runs in CI, not in a Docker-less dev shell.)
+- **IDOR breadth:** extend the ownership assertion to cart and review resources
+  by id, mirroring `OrderServiceTest`.
 - **Validation:** assert oversized/blank/negative inputs yield `400`, not `500`.
 
 ## 3. DAST — dynamic testing (the running app)
