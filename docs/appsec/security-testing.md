@@ -61,6 +61,7 @@ need a database, so they are fast and reliable in CI.
 | `AuthValidationTest` | `backend/.../auth/controller/AuthValidationTest.java` | **Web-slice**: blank/invalid/malformed register bodies return a clean **400 `VALIDATION_ERROR`** (malformed JSON → `400 BAD_REQUEST`) via `GlobalExceptionHandler`, never a 500, and the service is not invoked with bad input. (OWASP A03) |
 | `WishlistServiceTest` | `backend/.../wishlist/service/WishlistServiceTest.java` | Wishlist entries require an active product, are de-duplicated per user, and are removed via a **user-scoped** lookup (no cross-user deletes). (OWASP A04 + A01) |
 | `ProductServiceTest` | `backend/.../catalog/product/service/ProductServiceTest.java` | Search input validation; an empty product list **skips the rating query** (guards the no-N+1 aggregation); unknown slug → 404. |
+| `PaymentServiceTest` | `backend/.../payment/service/PaymentServiceTest.java` | Order fetched **owner-scoped** (IDOR); charged amount is the **server order total** (request carries no amount, A04); already-paid/cancelled orders are rejected; correct `PAYMENT_CONFIRMED`/`PAYMENT_FAILED` event per outcome. (A01 + A04) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -73,11 +74,12 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **51 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
-> `CheckoutServiceTest` ×4, `CouponServiceTest` ×9, `AdminAuthorizationTest` ×3,
-> `ReviewServiceTest` ×4, `CartServiceTest` ×5, `InventoryServiceTest` ×6,
-> `AuthValidationTest` ×4, `WishlistServiceTest` ×3, `ProductServiceTest` ×4.)
-> Beyond these security-focused tests, the full Docker-free backend suite is **61
+> Current status: **56 security-focused tests, all passing.** (JWT ×7,
+> `OrderServiceTest` ×2, `CheckoutServiceTest` ×4, `CouponServiceTest` ×9,
+> `AdminAuthorizationTest` ×3, `ReviewServiceTest` ×4, `CartServiceTest` ×5,
+> `InventoryServiceTest` ×6, `AuthValidationTest` ×4, `WishlistServiceTest` ×3,
+> `ProductServiceTest` ×4, `PaymentServiceTest` ×5.)
+> Beyond these security-focused tests, the full Docker-free backend suite is **66
 > tests**. A parallel **frontend** suite (Vitest) covers the auth service, route
 > guards, the HTTP interceptor, cart/toast services, i18n parity and utilities
 > (**45 tests**), and the **notification-service** covers its listener +
