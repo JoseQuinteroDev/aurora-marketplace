@@ -107,4 +107,52 @@ class NotificationListenerTest {
         verify(emailService, times(1)).send(any(), any(), any());
         assertThat(store.count()).isEqualTo(1);
     }
+
+    private static final String PAYMENT_CONFIRMED_EVENT = """
+            {"eventId":"pc-1","orderNumber":"AUR-1001","customerEmail":"a@b.com",
+             "customerName":"Ada","amount":99.90,"currency":"USD"}
+            """;
+
+    private static final String PAYMENT_FAILED_EVENT = """
+            {"eventId":"pf-1","orderNumber":"AUR-1001","customerEmail":"a@b.com",
+             "customerName":"Ada","amount":99.90,"currency":"USD","reason":"Card declined"}
+            """;
+
+    @Test
+    void sendsAConfirmationEmailForAPaymentConfirmedEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onPaymentConfirmed(PAYMENT_CONFIRMED_EVENT);
+
+        verify(emailService, times(1)).send(any(), any(), any());
+        assertThat(store.count()).isEqualTo(1);
+        assertThat(store.findRecent().get(0).type()).isEqualTo("PAYMENT_CONFIRMED");
+    }
+
+    @Test
+    void doesNotResendARedeliveredPaymentConfirmedEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onPaymentConfirmed(PAYMENT_CONFIRMED_EVENT);
+        listener.onPaymentConfirmed(PAYMENT_CONFIRMED_EVENT); // duplicate delivery
+
+        verify(emailService, times(1)).send(any(), any(), any());
+        assertThat(store.count()).isEqualTo(1);
+    }
+
+    @Test
+    void sendsAFailureEmailForAPaymentFailedEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onPaymentFailed(PAYMENT_FAILED_EVENT);
+
+        verify(emailService, times(1)).send(any(), any(), any());
+        assertThat(store.findRecent().get(0).type()).isEqualTo("PAYMENT_FAILED");
+    }
+
+    @Test
+    void treatsAMalformedPaymentPayloadAsNonRetryable() {
+        assertThatThrownBy(() -> listener.onPaymentConfirmed("{ broken"))
+                .isInstanceOf(NonRetryableEventException.class);
+    }
 }
