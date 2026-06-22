@@ -79,7 +79,7 @@ public class CheckoutService {
     }
 
     @Transactional
-    public OrderResponse confirmCheckout(User user) {
+    public OrderResponse confirmCheckout(User user, com.aurora.backend.checkout.dto.CheckoutRequest request) {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new BusinessException(
                         HttpStatus.BAD_REQUEST,
@@ -98,6 +98,14 @@ public class CheckoutService {
                 : couponService.validateCouponForCart(cart.getCoupon().getCode(), user, subtotal);
         BigDecimal discountTotal = couponService.calculateDiscount(coupon, user, subtotal);
         BigDecimal total = subtotal.subtract(discountTotal).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+
+        // LAB 03 — A04. The server-recomputed `total` above is correct and trustworthy.
+        // This branch then THROWS IT AWAY if the client sent its own total, trusting a
+        // value fully under the attacker's control. main never does this — it ignores
+        // anything the client says about money. See docs/appsec/labs/03-trusting-client-prices.md
+        if (request != null && request.clientTotal() != null) {
+            total = request.clientTotal().setScale(2, RoundingMode.HALF_UP);
+        }
 
         Order order = new Order(
                 generateOrderNumber(),

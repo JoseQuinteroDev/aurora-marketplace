@@ -1,5 +1,6 @@
 package com.aurora.backend.checkout.controller;
 
+import com.aurora.backend.checkout.dto.CheckoutRequest;
 import com.aurora.backend.checkout.service.CheckoutService;
 import com.aurora.backend.common.api.ApiResponse;
 import com.aurora.backend.order.dto.OrderResponse;
@@ -8,6 +9,7 @@ import com.aurora.backend.user.entity.User;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,8 +26,13 @@ public class CheckoutController {
     }
 
     @PostMapping("/confirm")
-    public ApiResponse<OrderResponse> confirmCheckout(Authentication authentication) {
+    public ApiResponse<OrderResponse> confirmCheckout(
+            Authentication authentication,
+            // LAB 03 — A04. main takes NO body and recomputes the total server-side.
+            // Here we accept a client-supplied total and pass it down to be trusted.
+            @RequestBody(required = false) CheckoutRequest request
+    ) {
         User user = currentUserService.getCurrentUser(authentication);
-        return ApiResponse.success("Checkout confirmed successfully.", checkoutService.confirmCheckout(user));
+        return ApiResponse.success("Checkout confirmed successfully.", checkoutService.confirmCheckout(user, request));
     }
 }
