@@ -43,8 +43,9 @@ These run in [`security.yml`](../../.github/workflows/security.yml) — see
 
 ## 2. Security unit tests (shipped in the repo)
 
-The authentication core is tested directly, with no database or Spring context,
-so the tests are fast and reliable in CI.
+The security-critical core is tested directly — mostly with no Spring context at
+all (pure Mockito), plus one fast web slice for the authorization wiring. None
+need a database, so they are fast and reliable in CI.
 
 | Test | File | Asserts |
 |---|---|---|
@@ -52,6 +53,8 @@ so the tests are fast and reliable in CI.
 | `JwtAuthenticationFilterTest` | `backend/.../security/jwt/JwtAuthenticationFilterTest.java` | No header → stays anonymous; valid token → authenticated with **authorities loaded from the database, not the token**; invalid token → fails closed but the chain proceeds. (OWASP A01) |
 | `OrderServiceTest` | `backend/.../order/service/OrderServiceTest.java` | `getUserOrder` resolves only via the **owner-scoped** `findByIdAndUserId` (never the unscoped `findById`), so a customer cannot read another customer's order. Locks the **IDOR** control. (OWASP A01) |
 | `CheckoutServiceTest` | `backend/.../checkout/service/CheckoutServiceTest.java` | Order + payment money is **recomputed server-side** from the cart/catalog (client cannot influence price/total); empty cart, inactive variant and insufficient stock are rejected. Locks the **client-trusted-pricing** control. (OWASP A04) |
+| `CouponServiceTest` | `backend/.../promotion/service/CouponServiceTest.java` | Percentage/fixed discount math, discount **capped at subtotal** (no negative orders), inactive/expired coupons contribute nothing, and **global + per-user use limits** are enforced (no reuse beyond limit). (OWASP A04) |
+| `AdminAuthorizationTest` | `backend/.../config/AdminAuthorizationTest.java` | **Web-slice** test of the real `SecurityConfig` filter chain: `/api/admin/**` returns **401 anonymous, 403 for `ROLE_CUSTOMER`, 200 for `ROLE_ADMIN`**. Covers the RBAC *wiring*, not just the logic. (OWASP A01) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -64,21 +67,22 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **13 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
-> `CheckoutServiceTest` ×4.)
+> Current status: **25 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
+> `CheckoutServiceTest` ×4, `CouponServiceTest` ×9, `AdminAuthorizationTest` ×3.)
+> The JWT and service tests need no Spring context; `AdminAuthorizationTest` is a
+> web slice (Spring context, still no database/Docker).
 
 ### Where to add the next ones
 
-The two highest-value controls — **IDOR** on orders and **client-trusted pricing**
-at checkout — are now locked at the service layer (`OrderServiceTest`,
-`CheckoutServiceTest`). The remaining gaps are the *end-to-end* and *breadth*
-variants:
+The highest-value controls are now locked: **IDOR** on orders and
+**client-trusted pricing** at checkout at the service layer, **coupon abuse** in
+`CouponService`, and the **`/api/admin/**` RBAC wiring** end-to-end through the
+real filter chain (`AdminAuthorizationTest`). Remaining gaps:
 
-- **Authorization (integration):** with a test database (Testcontainers
-  PostgreSQL), assert `/api/admin/**` returns `403` for a `ROLE_CUSTOMER` token
-  and `200` for `ROLE_ADMIN`, exercising the real security filter chain
-  (`spring-security-test`). The unit tests cover the *logic*; this covers the
-  *wiring*. (Needs Docker — runs in CI, not in a Docker-less dev shell.)
+- **Full-stack authz (integration):** with a test database (Testcontainers
+  PostgreSQL), drive the same checks through a real JWT issued by `/api/auth/login`
+  and the running security chain end-to-end. (Needs Docker — runs in CI, not in a
+  Docker-less dev shell.)
 - **IDOR breadth:** extend the ownership assertion to cart and review resources
   by id, mirroring `OrderServiceTest`.
 - **Validation:** assert oversized/blank/negative inputs yield `400`, not `500`.
