@@ -57,6 +57,7 @@ need a database, so they are fast and reliable in CI.
 | `AdminAuthorizationTest` | `backend/.../config/AdminAuthorizationTest.java` | **Web-slice** test of the real `SecurityConfig` filter chain: `/api/admin/**` returns **401 anonymous, 403 for `ROLE_CUSTOMER`, 200 for `ROLE_ADMIN`**. Covers the RBAC *wiring*, not just the logic. (OWASP A01) |
 | `ReviewServiceTest` | `backend/.../review/service/ReviewServiceTest.java` | One review per user per product (no duplicates); reviews can only be created/listed for an **active** product (a hidden product leaks nothing); a new review is never auto-`verifiedPurchase`. (OWASP A04) |
 | `CartServiceTest` | `backend/.../cart/service/CartServiceTest.java` | Add-to-cart prices from the **catalog** (not the client) and rejects inactive variants / insufficient stock; cart items are **owner-scoped** (`findByIdAndCartUserId`), so a customer cannot update/remove another's item by id. (OWASP A04 + A01/IDOR) |
+| `InventoryServiceTest` | `backend/.../inventory/service/InventoryServiceTest.java` | Stock invariants: quantities must be positive, available stock can never go negative (no overselling), and reserve/release keep the available/reserved split consistent. (integrity / A04) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -69,9 +70,9 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **34 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
+> Current status: **40 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
 > `CheckoutServiceTest` ×4, `CouponServiceTest` ×9, `AdminAuthorizationTest` ×3,
-> `ReviewServiceTest` ×4, `CartServiceTest` ×5.)
+> `ReviewServiceTest` ×4, `CartServiceTest` ×5, `InventoryServiceTest` ×6.)
 > The JWT and service tests need no Spring context; `AdminAuthorizationTest` is a
 > web slice (Spring context, still no database/Docker).
 
