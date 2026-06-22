@@ -77,8 +77,11 @@ cd backend
 > `CheckoutServiceTest` ×4, `CouponServiceTest` ×9, `AdminAuthorizationTest` ×3,
 > `ReviewServiceTest` ×4, `CartServiceTest` ×5, `InventoryServiceTest` ×6,
 > `AuthValidationTest` ×4, `WishlistServiceTest` ×3, `ProductServiceTest` ×4.)
-> A parallel **frontend** suite (Vitest) covers the auth service, route guards,
-> the HTTP interceptor, cart/toast services and utilities (39 tests).
+> Beyond these security-focused tests, the full Docker-free backend suite is **61
+> tests**. A parallel **frontend** suite (Vitest) covers the auth service, route
+> guards, the HTTP interceptor, cart/toast services, i18n parity and utilities
+> (**45 tests**), and the **notification-service** covers its listener +
+> idempotency tracker (**13 tests**) — ~119 fast tests green across the stack.
 > The JWT and service tests need no Spring context; `AdminAuthorizationTest` is a
 > web slice (Spring context, still no database/Docker).
 
