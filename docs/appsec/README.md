@@ -89,6 +89,11 @@ that is the point of an AppSec program.
   a placeholder JWT secret (`JwtSecretValidator`).
 - **Security-event logging** — authentication outcomes, JWT rejections, 401/403
   denials and unexpected 500s are logged; lockouts/logouts are audited.
+- **HTTP security headers** — the core sets a lock-everything CSP
+  (`default-src 'none'; frame-ancestors 'none'`), `Referrer-Policy: no-referrer`,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Permissions-Policy`
+  and HSTS via Spring Security (`config/SecurityConfig.java`). Appropriate for a
+  JSON API that never serves HTML. HSTS only engages over HTTPS (TLS at the edge).
 
 ### Partial ⚠️
 
@@ -101,9 +106,6 @@ that is the point of an AppSec program.
 
 ### Gaps ❌ (tracked)
 
-- **HTTP security headers** — no HSTS / CSP / `X-Content-Type-Options` /
-  `X-Frame-Options` set by the app (expected at the gateway/edge; the
-  [DAST workflow](../../.github/workflows/dast.yml) flags these automatically).
 - **Transport encryption in the stack** — Postgres, Redis, Kafka and SMTP run
   plaintext in compose; TLS is delegated to the deployment environment.
 - **Token lifecycle (remaining)** — revocation/logout and per-account lockout now
