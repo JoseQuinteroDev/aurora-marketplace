@@ -77,6 +77,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Test (headless)
-        run: npm test -- --watch=false --browsers=ChromeHeadless
-        continue-on-error: true
+      # Vitest (jsdom) via the Angular builder — runs once, no browser needed.
+      # This is a real gate: a failing unit test fails CI.
+      - name: Test
+        run: npm test
