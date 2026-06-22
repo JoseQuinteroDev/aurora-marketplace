@@ -45,6 +45,16 @@ public class JwtService {
         return extractClaims(token).getSubject();
     }
 
+    /**
+     * LAB 02 — reads the non-authoritative {@code role} claim straight from the token.
+     * main NEVER uses this for authorization: authorities are loaded from the database
+     * in SecurityConfig#userDetailsService. Trusting this value is the vulnerability.
+     * See docs/appsec/labs/02-jwt-trusting-the-role-claim.md
+     */
+    public String extractRole(String token) {
+        return extractClaims(token).get("role", String.class);
+    }
+
     /** The token's unique id (jti) — used for server-side revocation. */
     public String extractJti(String token) {
         return extractClaims(token).getId();

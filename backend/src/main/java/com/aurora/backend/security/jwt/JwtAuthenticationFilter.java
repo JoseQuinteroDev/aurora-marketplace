@@ -90,10 +90,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // LAB 02 — privilege escalation via the JWT role claim (OWASP A01/A07).
+        // main builds the principal with userDetails.getAuthorities(), i.e. the role
+        // loaded from the DATABASE — the token's "role" claim is non-authoritative.
+        // Here we instead trust the claim carried in the token, so anyone who can mint
+        // a token saying "role":"ADMIN" (e.g. with the known dev secret, or simply by
+        // keeping a stale token after a DB demotion) becomes an admin.
+        // See docs/appsec/labs/02-jwt-trusting-the-role-claim.md
+        var authoritiesFromToken = java.util.List.of(
+                new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                        "ROLE_" + jwtService.extractRole(token)));
         UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
                 userDetails,
                 null,
-                userDetails.getAuthorities()
+                authoritiesFromToken
         );
         authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
