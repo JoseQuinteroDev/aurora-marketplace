@@ -58,6 +58,7 @@ need a database, so they are fast and reliable in CI.
 | `ReviewServiceTest` | `backend/.../review/service/ReviewServiceTest.java` | One review per user per product (no duplicates); reviews can only be created/listed for an **active** product (a hidden product leaks nothing); a new review is never auto-`verifiedPurchase`. (OWASP A04) |
 | `CartServiceTest` | `backend/.../cart/service/CartServiceTest.java` | Add-to-cart prices from the **catalog** (not the client) and rejects inactive variants / insufficient stock; cart items are **owner-scoped** (`findByIdAndCartUserId`), so a customer cannot update/remove another's item by id. (OWASP A04 + A01/IDOR) |
 | `InventoryServiceTest` | `backend/.../inventory/service/InventoryServiceTest.java` | Stock invariants: quantities must be positive, available stock can never go negative (no overselling), and reserve/release keep the available/reserved split consistent. (integrity / A04) |
+| `AuthValidationTest` | `backend/.../auth/controller/AuthValidationTest.java` | **Web-slice**: blank/invalid/malformed register bodies return a clean **400 `VALIDATION_ERROR`** (malformed JSON → `400 BAD_REQUEST`) via `GlobalExceptionHandler`, never a 500, and the service is not invoked with bad input. (OWASP A03) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -70,9 +71,10 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **40 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
+> Current status: **44 tests, all passing.** (JWT ×7, `OrderServiceTest` ×2,
 > `CheckoutServiceTest` ×4, `CouponServiceTest` ×9, `AdminAuthorizationTest` ×3,
-> `ReviewServiceTest` ×4, `CartServiceTest` ×5, `InventoryServiceTest` ×6.)
+> `ReviewServiceTest` ×4, `CartServiceTest` ×5, `InventoryServiceTest` ×6,
+> `AuthValidationTest` ×4.)
 > The JWT and service tests need no Spring context; `AdminAuthorizationTest` is a
 > web slice (Spring context, still no database/Docker).
 
@@ -90,8 +92,9 @@ real filter chain (`AdminAuthorizationTest`). Remaining gaps:
 - **IDOR breadth:** orders and cart items are now covered (`OrderServiceTest`,
   `CartServiceTest`); the remaining surfaces are admin-only resources, already
   gated by the `/api/admin/**` rule (`AdminAuthorizationTest`).
-- **Validation:** assert oversized/blank/negative inputs yield `400`, not `500`
-  — best as a `@WebMvcTest` per controller.
+- **Validation:** the auth endpoints are covered (`AuthValidationTest`); the same
+  `@WebMvcTest` pattern can be extended to the other validated controllers
+  (checkout/cart/review request bodies).
 
 ## 3. DAST — dynamic testing (the running app)
 
