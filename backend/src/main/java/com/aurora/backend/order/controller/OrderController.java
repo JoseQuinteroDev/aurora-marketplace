@@ -35,7 +35,14 @@ public class OrderController {
 
     @GetMapping("/{id}")
     public ApiResponse<OrderResponse> getOrder(Authentication authentication, @PathVariable UUID id) {
+        // LAB 01 — IDOR (OWASP A01). The ownership check is intentionally removed here.
+        // main calls orderService.getUserOrder(user, id), which loads the order via
+        // findByIdAndUserId(...) so a customer can only ever read their OWN order.
+        // Here we authenticate the caller but then look the order up by id ALONE
+        // (the unscoped lookup meant for admins), so any authenticated customer can
+        // read any other customer's order just by guessing/altering the UUID.
+        // See docs/appsec/labs/01-broken-access-control-idor.md
         User user = currentUserService.getCurrentUser(authentication);
-        return ApiResponse.success("Order retrieved successfully.", orderService.getUserOrder(user, id));
+        return ApiResponse.success("Order retrieved successfully.", orderService.getOrder(id));
     }
 }
