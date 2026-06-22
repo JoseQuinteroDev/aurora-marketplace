@@ -51,7 +51,7 @@ need a database, so they are fast and reliable in CI.
 |---|---|---|
 | `JwtServiceTest` | `backend/src/test/java/com/aurora/backend/security/jwt/JwtServiceTest.java` | A valid token round-trips; a **tampered payload** is rejected; a token **signed with another secret** is rejected; an **expired token** is rejected. (OWASP A02/A07) |
 | `JwtAuthenticationFilterTest` | `backend/.../security/jwt/JwtAuthenticationFilterTest.java` | No header → stays anonymous; valid token → authenticated with **authorities loaded from the database, not the token**; invalid token → fails closed but the chain proceeds. (OWASP A01) |
-| `OrderServiceTest` | `backend/.../order/service/OrderServiceTest.java` | `getUserOrder` resolves only via the **owner-scoped** `findByIdAndUserId` (never the unscoped `findById`), so a customer cannot read another customer's order. Locks the **IDOR** control. (OWASP A01) |
+| `OrderServiceTest` | `backend/.../order/service/OrderServiceTest.java` | `getUserOrder` resolves only via the **owner-scoped** `findByIdAndUserId` (never the unscoped `findById`), so a customer cannot read another customer's order (**IDOR**, A01); admin `updateStatus` changes status + audits the change, unknown order → 404, and list scoping holds. |
 | `CheckoutServiceTest` | `backend/.../checkout/service/CheckoutServiceTest.java` | Order + payment money is **recomputed server-side** from the cart/catalog (client cannot influence price/total); empty cart, inactive variant and insufficient stock are rejected. Locks the **client-trusted-pricing** control. (OWASP A04) |
 | `CouponServiceTest` | `backend/.../promotion/service/CouponServiceTest.java` | Percentage/fixed discount math, discount **capped at subtotal** (no negative orders), inactive/expired coupons contribute nothing, and **global + per-user use limits** are enforced (no reuse beyond limit). (OWASP A04) |
 | `AdminAuthorizationTest` | `backend/.../config/AdminAuthorizationTest.java` | **Web-slice** test of the real `SecurityConfig` filter chain: `/api/admin/**` returns **401 anonymous, 403 for `ROLE_CUSTOMER`, 200 for `ROLE_ADMIN`**. Covers the RBAC *wiring*, not just the logic. (OWASP A01) |
@@ -74,12 +74,12 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **56 security-focused tests, all passing.** (JWT ×7,
-> `OrderServiceTest` ×2, `CheckoutServiceTest` ×4, `CouponServiceTest` ×9,
+> Current status: **60 security-focused tests, all passing.** (JWT ×7,
+> `OrderServiceTest` ×6, `CheckoutServiceTest` ×4, `CouponServiceTest` ×9,
 > `AdminAuthorizationTest` ×3, `ReviewServiceTest` ×4, `CartServiceTest` ×5,
 > `InventoryServiceTest` ×6, `AuthValidationTest` ×4, `WishlistServiceTest` ×3,
 > `ProductServiceTest` ×4, `PaymentServiceTest` ×5.)
-> Beyond these security-focused tests, the full Docker-free backend suite is **66
+> Beyond these security-focused tests, the full Docker-free backend suite is **70
 > tests**. A parallel **frontend** suite (Vitest) covers the auth service, route
 > guards, the HTTP interceptor, cart/toast services, i18n parity and utilities
 > (**45 tests**), and the **notification-service** covers its listener +

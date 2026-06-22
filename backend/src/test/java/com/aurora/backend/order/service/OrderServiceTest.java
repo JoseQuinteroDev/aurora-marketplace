@@ -1,12 +1,14 @@
 package com.aurora.backend.order.service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import com.aurora.backend.audit.service.AuditLogService;
 import com.aurora.backend.common.exception.NotFoundException;
 import com.aurora.backend.order.dto.OrderResponse;
+import com.aurora.backend.order.dto.UpdateOrderStatusRequest;
 import com.aurora.backend.order.entity.Order;
 import com.aurora.backend.order.entity.OrderStatus;
 import com.aurora.backend.order.repository.OrderRepository;
@@ -98,5 +100,50 @@ class OrderServiceTest {
         // It never falls back to an unscoped lookup that would leak the data.
         verify(orderRepository).findByIdAndUserId(ORDER_ID, ATTACKER_ID);
         verify(orderRepository, never()).findById(any());
+    }
+
+    @Test
+    void updateStatusChangesTheOrderStatusAndAuditsTheChange() {
+        // updateStatus resolves by id (admin path); the user ids are not read here.
+        Order order = orderOwnedBy(mock(User.class));
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.of(order));
+        when(orderRepository.saveAndFlush(order)).thenReturn(order);
+
+        OrderResponse response = orderService.updateStatus(
+                ORDER_ID, new UpdateOrderStatusRequest(OrderStatus.PAID, "Marked paid"), mock(User.class));
+
+        assertThat(response.status()).isEqualTo(OrderStatus.PAID);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+        verify(orderRepository).saveAndFlush(order);
+        verify(auditLogService).log(any(), any(), any(), any(), any());   // the change is audited
+    }
+
+    @Test
+    void updateStatusOnAnUnknownOrderIsNotFound() {
+        when(orderRepository.findById(ORDER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> orderService.updateStatus(
+                ORDER_ID, new UpdateOrderStatusRequest(OrderStatus.PAID, null), mock(User.class)))
+                .isInstanceOf(NotFoundException.class);
+
+        verify(orderRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void listUserOrdersReturnsOnlyTheCallersOrders() {
+        User owner = userWithId(OWNER_ID);
+        when(orderRepository.findByUserIdOrderByCreatedAtDesc(OWNER_ID))
+                .thenReturn(List.of(orderOwnedBy(owner)));
+
+        assertThat(orderService.listUserOrders(owner)).hasSize(1);
+        verify(orderRepository).findByUserIdOrderByCreatedAtDesc(OWNER_ID);
+    }
+
+    @Test
+    void listAllOrdersMapsEveryOrderForAdmins() {
+        when(orderRepository.findAllByOrderByCreatedAtDesc())
+                .thenReturn(List.of(orderOwnedBy(mock(User.class)), orderOwnedBy(mock(User.class))));
+
+        assertThat(orderService.listAllOrders()).hasSize(2);
     }
 }
