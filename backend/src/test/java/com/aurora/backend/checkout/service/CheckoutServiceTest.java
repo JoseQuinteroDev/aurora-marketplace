@@ -66,7 +66,9 @@ class CheckoutServiceTest {
     private CheckoutService checkoutService;
 
     private User customer() {
-        return new User("buyer@aurora.test", "hash", "Buy", "Er", Role.CUSTOMER, true);
+        User user = new User("buyer@aurora.test", "hash", "Buy", "Er", Role.CUSTOMER, true);
+        user.verifyEmail(); // checkout now requires a verified email; the happy paths assume it
+        return user;
     }
 
     private ProductVariant variant(boolean active) {
@@ -113,6 +115,19 @@ class CheckoutServiceTest {
         ArgumentCaptor<Payment> payment = ArgumentCaptor.forClass(Payment.class);
         verify(paymentRepository).save(payment.capture());
         assertThat(payment.getValue().getAmount()).isEqualByComparingTo("2598.00");
+    }
+
+    @Test
+    void anUnverifiedEmailIsBlockedBeforeAnythingElse() {
+        // Brand-new user (emailVerified=false) — the gate fires before the cart is even read.
+        User unverified = new User("new@aurora.test", "hash", "New", "User", Role.CUSTOMER, true);
+
+        assertThatThrownBy(() -> checkoutService.confirmCheckout(unverified))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("EMAIL_NOT_VERIFIED"));
+
+        verify(cartRepository, never()).findByUserId(any());
+        verify(orderRepository, never()).saveAndFlush(any());
     }
 
     @Test

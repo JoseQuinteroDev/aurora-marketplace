@@ -10,12 +10,16 @@ import com.aurora.backend.auth.dto.AuthResponse;
 import com.aurora.backend.auth.dto.ForgotPasswordRequest;
 import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
+import com.aurora.backend.auth.dto.ResendVerificationRequest;
 import com.aurora.backend.auth.dto.ResetPasswordRequest;
+import com.aurora.backend.auth.dto.VerifyEmailRequest;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.messaging.AuroraTopics;
+import com.aurora.backend.messaging.event.EmailVerificationRequestedEvent;
 import com.aurora.backend.messaging.event.PasswordResetRequestedEvent;
 import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.security.jwt.JwtService;
+import com.aurora.backend.security.token.EmailVerificationTokenService;
 import com.aurora.backend.security.token.PasswordResetTokenService;
 import com.aurora.backend.security.token.RefreshTokenRepository;
 import com.aurora.backend.security.token.RefreshTokenReuseResponder;
@@ -30,6 +34,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -61,6 +66,7 @@ class AuthServiceTest {
     private final AuditLogService auditLogService = mock(AuditLogService.class);
     private final RefreshTokenService refreshTokenService = mock(RefreshTokenService.class);
     private final PasswordResetTokenService passwordResetTokenService = mock(PasswordResetTokenService.class);
+    private final EmailVerificationTokenService emailVerificationTokenService = mock(EmailVerificationTokenService.class);
     private final OutboxEventRecorder outboxRecorder = mock(OutboxEventRecorder.class);
     private final RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
     private final RefreshTokenReuseResponder reuseResponder = mock(RefreshTokenReuseResponder.class);
@@ -68,8 +74,10 @@ class AuthServiceTest {
     private final AuthService authService = new AuthService(
             userRepository, passwordEncoder, authenticationManager, jwtService,
             loginAttemptService, tokenDenylistService, auditLogService, refreshTokenService,
-            passwordResetTokenService, outboxRecorder, refreshTokenRepository, reuseResponder,
-            30, 60L, 0L); // latency-floor 0 in tests (no sleep)
+            passwordResetTokenService, emailVerificationTokenService, outboxRecorder,
+            refreshTokenRepository, reuseResponder,
+            30, 60L, 0L,        // password-reset: expiry, interval, latency-floor (0 = no sleep in tests)
+            1440, 60L, 0L);     // email-verification: expiry, interval, latency-floor
 
     private User user() {
         return new User("ada@aurora.test", "hash", "Ada", "Lovelace", Role.CUSTOMER, true);
@@ -85,7 +93,13 @@ class AuthServiceTest {
     private void stubHappyPath() {
         when(userRepository.existsByEmail(anyString())).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        // Give the saved user an id (register's issueVerification reads it); the captor still
+        // sees the same instance, so phone/email assertions are unaffected.
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", USER_ID);
+            return saved;
+        });
         when(jwtService.generateToken(any(User.class))).thenReturn("token");
         when(jwtService.getExpirationMinutes()).thenReturn(15L);
         when(refreshTokenService.issue(any(User.class), any())).thenReturn("rid.secret");
@@ -252,5 +266,81 @@ class AuthServiceTest {
 
         verify(userRepository, never()).save(any());
         verify(reuseResponder, never()).revokeFamily(any());
+    }
+
+    // --- email verification ---
+
+    @Test
+    void registerIssuesAVerificationTokenAndRecordsTheEvent() {
+        stubHappyPath();
+        when(emailVerificationTokenService.issueInCurrentTransaction(any(User.class))).thenReturn("ev.secret");
+
+        authService.register(new RegisterRequest("ada@aurora.test", "password123", "Ada", "Lovelace", null));
+
+        // Uses the in-current-transaction variant (FK-safe), NOT the REQUIRES_NEW issue().
+        verify(emailVerificationTokenService).issueInCurrentTransaction(any(User.class));
+        verify(emailVerificationTokenService, never()).issue(any());
+        verify(outboxRecorder).record(eq("USER"), any(), eq("EMAIL_VERIFICATION_REQUESTED"),
+                eq(AuroraTopics.EMAIL_VERIFICATION_REQUESTED), any(), any());
+    }
+
+    @Test
+    void verifyEmailFlipsTheFlagOnceAndAuditsWithoutRevokingSessions() {
+        User user = mockUser(true);
+        when(user.isEmailVerified()).thenReturn(false);
+        when(emailVerificationTokenService.consume("ev.secret")).thenReturn(USER_ID);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+        authService.verifyEmail(new VerifyEmailRequest("ev.secret"));
+
+        verify(user).verifyEmail();
+        verify(userRepository).save(user);
+        verify(auditLogService).log(eq(AuditEventType.EMAIL_VERIFIED), eq(user), any(), eq(USER_ID), any());
+        // Verification is NOT a credential change — sessions stay intact (unlike password reset).
+        verify(refreshTokenRepository, never()).findDistinctFamilyIdByUserId(any());
+    }
+
+    @Test
+    void verifyEmailIsANoOpSuccessWhenAlreadyVerified() {
+        User user = mockUser(true);
+        when(user.isEmailVerified()).thenReturn(true);
+        when(emailVerificationTokenService.consume("ev.secret")).thenReturn(USER_ID);
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+        authService.verifyEmail(new VerifyEmailRequest("ev.secret"));
+
+        verify(user, never()).verifyEmail();
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void resendVerificationForAnAlreadyVerifiedAccountBurnsAndIssuesNothing() {
+        User verified = mockUser(true);
+        when(verified.isEmailVerified()).thenReturn(true);
+        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(verified));
+
+        authService.resendVerification(new ResendVerificationRequest("ada@aurora.test"));
+
+        verify(emailVerificationTokenService).burnEquivalentWork();
+        verify(emailVerificationTokenService, never()).issue(any());
+        verifyNoInteractions(outboxRecorder);
+    }
+
+    @Test
+    void resendVerificationForAnUnverifiedAccountIssuesAndRecords() {
+        User unverified = mockUser(true);
+        when(unverified.isEmailVerified()).thenReturn(false);
+        when(unverified.getEmail()).thenReturn("ada@aurora.test");
+        when(unverified.getFirstName()).thenReturn("Ada");
+        when(userRepository.findByEmail("ada@aurora.test")).thenReturn(Optional.of(unverified));
+        when(emailVerificationTokenService.issue(unverified)).thenReturn("ev.secret");
+
+        authService.resendVerification(new ResendVerificationRequest("ada@aurora.test"));
+
+        ArgumentCaptor<Object> payload = ArgumentCaptor.forClass(Object.class);
+        verify(outboxRecorder).record(eq("USER"), eq(USER_ID.toString()), eq("EMAIL_VERIFICATION_REQUESTED"),
+                eq(AuroraTopics.EMAIL_VERIFICATION_REQUESTED), eq(USER_ID.toString()), payload.capture());
+        assertThat(((EmailVerificationRequestedEvent) payload.getValue()).verificationToken()).isEqualTo("ev.secret");
+        verify(auditLogService).log(eq(AuditEventType.EMAIL_VERIFICATION_REQUESTED), eq(unverified), any(), any(), any());
     }
 }

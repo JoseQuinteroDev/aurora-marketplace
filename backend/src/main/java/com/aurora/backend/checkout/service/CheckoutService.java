@@ -80,6 +80,17 @@ public class CheckoutService {
 
     @Transactional
     public OrderResponse confirmCheckout(User user) {
+        // Email-verification gate (OWASP A07): the sole order-creation path. The user is resolved
+        // fresh per-request by CurrentUserService, so this reads live DB state — a stale/early JWT
+        // can't bypass it. Verification is a soft per-action gate, not an authentication boundary.
+        if (!user.isEmailVerified()) {
+            throw new BusinessException(
+                    HttpStatus.FORBIDDEN,
+                    "EMAIL_NOT_VERIFIED",
+                    "Please verify your email before placing an order."
+            );
+        }
+
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new BusinessException(
                         HttpStatus.BAD_REQUEST,

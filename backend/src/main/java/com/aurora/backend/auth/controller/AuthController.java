@@ -6,7 +6,9 @@ import com.aurora.backend.auth.dto.LoginRequest;
 import com.aurora.backend.auth.dto.LogoutRequest;
 import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
+import com.aurora.backend.auth.dto.ResendVerificationRequest;
 import com.aurora.backend.auth.dto.ResetPasswordRequest;
+import com.aurora.backend.auth.dto.VerifyEmailRequest;
 import com.aurora.backend.auth.service.AuthService;
 import com.aurora.backend.common.api.ApiResponse;
 import com.aurora.backend.security.CurrentUserService;
@@ -72,6 +74,19 @@ public class AuthController {
     public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ApiResponse.success("Password updated successfully.");
+    }
+
+    @PostMapping("/verify-email")
+    public ApiResponse<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request);
+        return ApiResponse.success("Email verified successfully.");
+    }
+
+    @PostMapping("/resend-verification")
+    public ApiResponse<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        // Always 200 with an identical message — never reveals whether the account exists/needs it.
+        authService.resendVerification(request);
+        return ApiResponse.success("If your account needs verification, we've sent a new link.");
     }
 
     @PostMapping("/logout")

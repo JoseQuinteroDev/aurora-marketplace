@@ -203,4 +203,46 @@ class AuthValidationTest {
 
         verify(authService, never()).resetPassword(any());
     }
+
+    @Test
+    void verifyEmailWithAValidBodyReturns200() throws Exception {
+        mvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"ev.secret\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Email verified successfully."));
+
+        verify(authService).verifyEmail(any());
+    }
+
+    @Test
+    void verifyEmailWithAnInvalidTokenMapsTo401() throws Exception {
+        doThrow(new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_VERIFICATION_TOKEN",
+                "Invalid or expired verification link."))
+                .when(authService).verifyEmail(any());
+
+        mvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"ev.secret\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_VERIFICATION_TOKEN"));
+    }
+
+    @Test
+    void verifyEmailWithABlankTokenIs400() throws Exception {
+        mvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).verifyEmail(any());
+    }
+
+    @Test
+    void resendVerificationIsPublicAndReturnsTheGenericMessage() throws Exception {
+        mvc.perform(post("/api/auth/resend-verification").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"ada@aurora.test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("If your account needs verification, we've sent a new link."));
+
+        verify(authService).resendVerification(any());
+    }
 }

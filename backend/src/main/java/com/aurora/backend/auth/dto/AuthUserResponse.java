@@ -11,7 +11,8 @@ public record AuthUserResponse(
         String firstName,
         String lastName,
         String phone,
-        Role role
+        Role role,
+        boolean emailVerified
 ) {
 
     public static AuthUserResponse from(User user) {
@@ -21,7 +22,8 @@ public record AuthUserResponse(
                 user.getFirstName(),
                 user.getLastName(),
                 user.getPhone(),
-                user.getRole()
+                user.getRole(),
+                user.isEmailVerified()
         );
     }
 }

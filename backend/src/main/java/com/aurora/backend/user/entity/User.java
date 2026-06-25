@@ -46,6 +46,11 @@ public class User {
     @Column(nullable = false)
     private boolean enabled;
 
+    // Orthogonal to `enabled`: a soft per-action flag (gates order placement), NOT an auth
+    // boundary. New accounts start false; pre-feature accounts were grandfathered true (V12).
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified;
+
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts;
 
@@ -134,6 +139,10 @@ public class User {
         return enabled;
     }
 
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
     /** True while a temporary login lock is still in effect. */
     public boolean isLoginLocked(Instant now) {
         return lockedUntil != null && lockedUntil.isAfter(now);
@@ -166,6 +175,11 @@ public class User {
      */
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
+    }
+
+    /** Marks the account's email as verified (sole write path; {@code @PreUpdate} bumps updatedAt). */
+    public void verifyEmail() {
+        this.emailVerified = true;
     }
 
     public int getFailedLoginAttempts() {

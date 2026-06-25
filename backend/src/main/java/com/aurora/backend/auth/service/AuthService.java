@@ -15,12 +15,16 @@ import com.aurora.backend.auth.dto.ForgotPasswordRequest;
 import com.aurora.backend.auth.dto.LoginRequest;
 import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
+import com.aurora.backend.auth.dto.ResendVerificationRequest;
 import com.aurora.backend.auth.dto.ResetPasswordRequest;
+import com.aurora.backend.auth.dto.VerifyEmailRequest;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.messaging.AuroraTopics;
+import com.aurora.backend.messaging.event.EmailVerificationRequestedEvent;
 import com.aurora.backend.messaging.event.PasswordResetRequestedEvent;
 import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.security.jwt.JwtService;
+import com.aurora.backend.security.token.EmailVerificationTokenService;
 import com.aurora.backend.security.token.PasswordResetTokenService;
 import com.aurora.backend.security.token.RefreshTokenRepository;
 import com.aurora.backend.security.token.RefreshTokenReuseResponder;
@@ -61,13 +65,18 @@ public class AuthService {
     private final OutboxEventRecorder outboxRecorder;
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenReuseResponder reuseResponder;
+    private final EmailVerificationTokenService emailVerificationTokenService;
     private final int resetExpiryMinutes;
     private final long resetMinIntervalSeconds;
     private final long resetLatencyFloorMs;
+    private final int verifyExpiryMinutes;
+    private final long verifyMinIntervalSeconds;
+    private final long verifyLatencyFloorMs;
 
-    // Per-account throttle for forgot-password, so a known address can't be email-bombed
-    // even if the gateway rate-limit is bypassed. Bounded, best-effort (single instance).
+    // Per-account throttles. Forgot-password and resend-verification use SEPARATE instances so
+    // a request to one does not consume the other's window for the same email. Bounded, best-effort.
     private final PasswordResetThrottle resetThrottle = new PasswordResetThrottle();
+    private final PasswordResetThrottle verificationThrottle = new PasswordResetThrottle();
 
     public AuthService(
             UserRepository userRepository,
@@ -79,12 +88,16 @@ public class AuthService {
             AuditLogService auditLogService,
             RefreshTokenService refreshTokenService,
             PasswordResetTokenService passwordResetTokenService,
+            EmailVerificationTokenService emailVerificationTokenService,
             OutboxEventRecorder outboxRecorder,
             RefreshTokenRepository refreshTokenRepository,
             RefreshTokenReuseResponder reuseResponder,
             @Value("${app.security.password-reset-token.expiration-minutes:30}") int resetExpiryMinutes,
             @Value("${app.security.password-reset.min-interval-seconds:60}") long resetMinIntervalSeconds,
-            @Value("${app.security.password-reset.latency-floor-ms:350}") long resetLatencyFloorMs
+            @Value("${app.security.password-reset.latency-floor-ms:350}") long resetLatencyFloorMs,
+            @Value("${app.security.email-verification-token.expiration-minutes:1440}") int verifyExpiryMinutes,
+            @Value("${app.security.email-verification.min-interval-seconds:60}") long verifyMinIntervalSeconds,
+            @Value("${app.security.email-verification.latency-floor-ms:350}") long verifyLatencyFloorMs
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -95,12 +108,16 @@ public class AuthService {
         this.auditLogService = auditLogService;
         this.refreshTokenService = refreshTokenService;
         this.passwordResetTokenService = passwordResetTokenService;
+        this.emailVerificationTokenService = emailVerificationTokenService;
         this.outboxRecorder = outboxRecorder;
         this.refreshTokenRepository = refreshTokenRepository;
         this.reuseResponder = reuseResponder;
         this.resetExpiryMinutes = resetExpiryMinutes;
         this.resetMinIntervalSeconds = resetMinIntervalSeconds;
         this.resetLatencyFloorMs = resetLatencyFloorMs;
+        this.verifyExpiryMinutes = verifyExpiryMinutes;
+        this.verifyMinIntervalSeconds = verifyMinIntervalSeconds;
+        this.verifyLatencyFloorMs = verifyLatencyFloorMs;
     }
 
     @Transactional
@@ -126,8 +143,31 @@ public class AuthService {
         );
 
         User savedUser = userRepository.save(user);
+        issueVerification(savedUser);
         log.info("Registration succeeded (email={}).", email);
         return buildAuthResponse(savedUser);
+    }
+
+    /**
+     * Mints + emails an email-verification token at registration. Uses the IN-CURRENT-TRANSACTION
+     * issue variant (NOT REQUIRES_NEW): the user row is saved-but-not-committed, so the token's
+     * FK is only satisfiable on the same connection. Token + outbox + audit commit atomically with
+     * the user INSERT — an outbox failure rolls the whole registration back rather than 201-ing a
+     * user who will never get a verification email.
+     */
+    private void issueVerification(User user) {
+        String rawToken = emailVerificationTokenService.issueInCurrentTransaction(user);
+        outboxRecorder.record(
+                "USER",
+                user.getId().toString(),
+                "EMAIL_VERIFICATION_REQUESTED",
+                AuroraTopics.EMAIL_VERIFICATION_REQUESTED,
+                user.getId().toString(),
+                EmailVerificationRequestedEvent.of(
+                        user.getId(), user.getEmail(), user.getFirstName(), rawToken, verifyExpiryMinutes)
+        );
+        auditLogService.log(AuditEventType.EMAIL_VERIFICATION_REQUESTED, user, "USER",
+                user.getId(), "Email verification requested at registration.");
     }
 
     // Not @Transactional on purpose: failed-attempt accounting must commit even
@@ -255,12 +295,12 @@ public class AuthService {
             passwordResetTokenService.burnEquivalentWork();
         }
 
-        equalizeLatency(startNanos);
+        equalizeLatency(startNanos, resetLatencyFloorMs);
     }
 
-    /** Sleeps until a fixed floor so every forgot-password response takes the same minimum time. */
-    private void equalizeLatency(long startNanos) {
-        long remainingMs = resetLatencyFloorMs - (System.nanoTime() - startNanos) / 1_000_000L;
+    /** Sleeps until a fixed floor so every anti-enumeration response takes the same minimum time. */
+    private void equalizeLatency(long startNanos, long floorMs) {
+        long remainingMs = floorMs - (System.nanoTime() - startNanos) / 1_000_000L;
         if (remainingMs > 0) {
             try {
                 Thread.sleep(remainingMs);
@@ -297,6 +337,72 @@ public class AuthService {
     private BusinessException invalidResetToken() {
         return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_RESET_TOKEN",
                 "Invalid or expired reset token.");
+    }
+
+    /**
+     * Verifies an account's email from a single-use token. Verification is a soft per-action
+     * state (it gates only order placement), NOT a credential change — so no session is revoked
+     * and the user is not auto-logged-in. Idempotent: re-verifying is a no-op success; any bad
+     * token is a generic 401.
+     */
+    @Transactional
+    public void verifyEmail(VerifyEmailRequest request) {
+        UUID userId = emailVerificationTokenService.consume(request.token());
+        User user = userRepository.findById(userId)
+                .filter(User::isEnabled)
+                .orElseThrow(this::invalidVerificationToken);
+
+        if (!user.isEmailVerified()) {
+            user.verifyEmail();
+            userRepository.save(user);
+            auditLogService.log(AuditEventType.EMAIL_VERIFIED, user, "USER", userId, "Email verified.");
+            log.info("Email verified (userId={}).", userId);
+        }
+    }
+
+    /**
+     * Re-sends the verification email. Anti-enumeration, mirroring {@link #requestPasswordReset}:
+     * always succeeds from the caller's view (the controller returns one generic 200); the throttle
+     * is evaluated for EVERY email and a fixed latency floor hides the positive branch's DB writes.
+     * The already-verified case takes the same no-op branch, so "is this verified?" leaks nothing.
+     */
+    public void resendVerification(ResendVerificationRequest request) {
+        long startNanos = System.nanoTime();
+        String email = normalizeEmail(request.email());
+        boolean throttled = !verificationThrottle.allow(email, Instant.now(), verifyMinIntervalSeconds);
+        Optional<User> maybeUser = userRepository.findByEmail(email);
+
+        if (!throttled && maybeUser.isPresent() && maybeUser.get().isEnabled() && !maybeUser.get().isEmailVerified()) {
+            User user = maybeUser.get();
+            try {
+                // No outer tx here, so REQUIRES_NEW issue() is correct (and a race is catchable).
+                String rawToken = emailVerificationTokenService.issue(user);
+                outboxRecorder.record(
+                        "USER",
+                        user.getId().toString(),
+                        "EMAIL_VERIFICATION_REQUESTED",
+                        AuroraTopics.EMAIL_VERIFICATION_REQUESTED,
+                        user.getId().toString(),
+                        EmailVerificationRequestedEvent.of(
+                                user.getId(), user.getEmail(), user.getFirstName(), rawToken, verifyExpiryMinutes)
+                );
+                auditLogService.log(AuditEventType.EMAIL_VERIFICATION_REQUESTED, user, "USER",
+                        user.getId(), "Email verification re-requested.");
+            } catch (DataIntegrityViolationException race) {
+                log.debug("Concurrent verification-token race for a user ({}).",
+                        race.getClass().getSimpleName());
+            }
+        } else {
+            // No account / disabled / already-verified / throttled: pay the hash cost, write nothing.
+            emailVerificationTokenService.burnEquivalentWork();
+        }
+
+        equalizeLatency(startNanos, verifyLatencyFloorMs);
+    }
+
+    private BusinessException invalidVerificationToken() {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_VERIFICATION_TOKEN",
+                "Invalid or expired verification link.");
     }
 
     private AuthResponse buildAuthResponse(User user) {
