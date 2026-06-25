@@ -56,8 +56,14 @@ npm install
 npm start                        # ng serve via proxy.conf.js -> core on :8080
 $env:AURORA_API_TARGET="http://localhost:8088"; npm start   # route through the gateway instead
 npm run build
-npm test                         # ng test (Karma)
+npm test                         # Vitest (jsdom) via the Angular builder — runs once, CI-friendly
+npm run test:watch               # watch mode
 ```
+
+### Testing
+- **The backend suite is split by Docker need.** `@SpringBootTest` integration tests (e.g. `BackendApplicationTests`) load the full context against a **Testcontainers PostgreSQL** (`TestcontainersConfiguration`) and therefore **require a running Docker daemon**. The bulk of the suite is **pure Mockito unit tests** plus two `@WebMvcTest` slices (security/validation wiring) — **no Docker, no DB** — so they run anywhere. Prefer that style for new service/controller tests; a Docker-free single class runs with `.\mvnw.cmd test -Dtest=CheckoutServiceTest`.
+- **Frontend** tests run on **Vitest** (jsdom) through the Angular builder — no browser. The CI `frontend` job gates on `npm test` (a failing unit test fails the build).
+- The security- and commerce-critical controls (server-side pricing, IDOR/ownership, RBAC, coupon/stock limits, idempotency, i18n EN/ES parity) are locked by tests catalogued in **`docs/appsec/security-testing.md`** — add a regression test there when fixing a security-relevant bug.
 
 ## Key conventions and gotchas
 
@@ -77,6 +83,10 @@ npm test                         # ng test (Karma)
 ### About AGENTS.md
 
 `AGENTS.md` documents the original build order and rules. Several entries are **historical milestones now completed or superseded** — e.g. "Do not create microservices" and "do not touch frontend": the project has since intentionally moved to microservices + Kafka and has a full frontend. Treat its *coding rules* (layering, DTOs, validation, never trust client input) as current; treat its *sequencing/priority* sections as a snapshot of an earlier phase.
+
+### The `vulnerable-lab` branch (do not "fix")
+
+A dedicated `vulnerable-lab` branch (with `lab/0x` tags) **intentionally reintroduces** real vulnerabilities that `main` already fixes — IDOR, JWT role-claim trust, client-trusted prices — each with an exploit→remediation writeup in `docs/appsec/labs/` on that branch. The broken state **is** the teaching artifact: **never "fix" those vulnerabilities or merge `vulnerable-lab` into `main`.** The automated commit security scanner flags them by design — that is expected, not a regression.
 
 ## Local service ports
 
