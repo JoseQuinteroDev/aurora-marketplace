@@ -159,6 +159,15 @@ public class User {
         lockedUntil = null;
     }
 
+    /**
+     * The only sanctioned write path for the BCrypt hash besides the constructors
+     * (used by password reset). Callers MUST pass an already-encoded value, never a
+     * raw password. {@code @PreUpdate} bumps {@code updatedAt}.
+     */
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+    }
+
     public int getFailedLoginAttempts() {
         return failedLoginAttempts;
     }

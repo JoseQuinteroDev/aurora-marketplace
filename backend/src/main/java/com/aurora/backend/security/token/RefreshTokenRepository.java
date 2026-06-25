@@ -14,6 +14,10 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID
     /** All rows in a family — used to denylist outstanding access tokens on reuse detection. */
     List<RefreshToken> findByFamilyId(UUID familyId);
 
+    /** Distinct family ids the user owns — used to kill every session on password reset. */
+    @Query("SELECT DISTINCT t.familyId FROM RefreshToken t WHERE t.userId = :userId")
+    List<UUID> findDistinctFamilyIdByUserId(@Param("userId") UUID userId);
+
     /**
      * Atomic single-use claim: flip ACTIVE → ROTATED for exactly this row. Returns rows
      * affected (1 = this caller won the rotation race, 0 = it was already consumed). This

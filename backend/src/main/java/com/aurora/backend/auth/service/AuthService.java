@@ -2,16 +2,28 @@ package com.aurora.backend.auth.service;
 
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.aurora.backend.audit.entity.AuditEventType;
 import com.aurora.backend.audit.service.AuditLogService;
 import com.aurora.backend.auth.dto.AuthResponse;
 import com.aurora.backend.auth.dto.AuthUserResponse;
+import com.aurora.backend.auth.dto.ForgotPasswordRequest;
 import com.aurora.backend.auth.dto.LoginRequest;
 import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
+import com.aurora.backend.auth.dto.ResetPasswordRequest;
 import com.aurora.backend.common.exception.BusinessException;
+import com.aurora.backend.messaging.AuroraTopics;
+import com.aurora.backend.messaging.event.PasswordResetRequestedEvent;
+import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.security.jwt.JwtService;
+import com.aurora.backend.security.token.PasswordResetTokenService;
+import com.aurora.backend.security.token.RefreshTokenRepository;
+import com.aurora.backend.security.token.RefreshTokenReuseResponder;
 import com.aurora.backend.security.token.RefreshTokenService;
 import com.aurora.backend.security.token.TokenDenylistService;
 import com.aurora.backend.user.entity.User;
@@ -21,6 +33,8 @@ import io.jsonwebtoken.JwtException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -43,6 +57,16 @@ public class AuthService {
     private final TokenDenylistService tokenDenylistService;
     private final AuditLogService auditLogService;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordResetTokenService passwordResetTokenService;
+    private final OutboxEventRecorder outboxRecorder;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenReuseResponder reuseResponder;
+    private final int resetExpiryMinutes;
+    private final long resetMinIntervalSeconds;
+
+    // Per-account throttle for forgot-password, so a known address can't be email-bombed
+    // even if the gateway rate-limit is bypassed. Bounded, best-effort (single instance).
+    private final PasswordResetThrottle resetThrottle = new PasswordResetThrottle();
 
     public AuthService(
             UserRepository userRepository,
@@ -52,7 +76,13 @@ public class AuthService {
             LoginAttemptService loginAttemptService,
             TokenDenylistService tokenDenylistService,
             AuditLogService auditLogService,
-            RefreshTokenService refreshTokenService
+            RefreshTokenService refreshTokenService,
+            PasswordResetTokenService passwordResetTokenService,
+            OutboxEventRecorder outboxRecorder,
+            RefreshTokenRepository refreshTokenRepository,
+            RefreshTokenReuseResponder reuseResponder,
+            @Value("${app.security.password-reset-token.expiration-minutes:30}") int resetExpiryMinutes,
+            @Value("${app.security.password-reset.min-interval-seconds:60}") long resetMinIntervalSeconds
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -62,6 +92,12 @@ public class AuthService {
         this.tokenDenylistService = tokenDenylistService;
         this.auditLogService = auditLogService;
         this.refreshTokenService = refreshTokenService;
+        this.passwordResetTokenService = passwordResetTokenService;
+        this.outboxRecorder = outboxRecorder;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.reuseResponder = reuseResponder;
+        this.resetExpiryMinutes = resetExpiryMinutes;
+        this.resetMinIntervalSeconds = resetMinIntervalSeconds;
     }
 
     @Transactional
@@ -170,6 +206,75 @@ public class AuthService {
         );
     }
 
+    /**
+     * Requests a password reset. ALWAYS succeeds from the caller's view (the controller
+     * returns one generic 200) — known, unknown and disabled accounts are indistinguishable,
+     * both in the response body and (via {@code burnEquivalentWork}) in timing. Only an
+     * enabled, existing, non-throttled account actually mints a token and emails it.
+     */
+    @Transactional
+    public void requestPasswordReset(ForgotPasswordRequest request) {
+        String email = normalizeEmail(request.email());
+        Optional<User> maybeUser = userRepository.findByEmail(email);
+
+        if (maybeUser.isPresent() && maybeUser.get().isEnabled()
+                && resetThrottle.allow(email, Instant.now(), resetMinIntervalSeconds)) {
+            User user = maybeUser.get();
+            try {
+                String rawToken = passwordResetTokenService.issue(user);
+                outboxRecorder.record(
+                        "USER",
+                        user.getId().toString(),
+                        "PASSWORD_RESET_REQUESTED",
+                        AuroraTopics.PASSWORD_RESET_REQUESTED,
+                        user.getId().toString(),
+                        PasswordResetRequestedEvent.of(
+                                user.getId(), user.getEmail(), user.getFirstName(),
+                                rawToken, resetExpiryMinutes)
+                );
+                auditLogService.log(AuditEventType.PASSWORD_RESET_REQUESTED, user, "USER",
+                        user.getId(), "Password reset requested.");
+            } catch (DataIntegrityViolationException race) {
+                // Concurrent same-user requests can collide on the partial unique index —
+                // collapse to the generic success path rather than leaking a 500.
+                log.debug("Concurrent reset-token race for a user ({}).",
+                        race.getClass().getSimpleName());
+            }
+        } else {
+            // No account / disabled / throttled: pay the same CPU cost, write nothing.
+            passwordResetTokenService.burnEquivalentWork();
+        }
+    }
+
+    /**
+     * Completes a password reset: validates + single-uses the token, re-hashes the new
+     * password, and invalidates EVERY session (revokes all refresh-token families, which
+     * also denylists their access tokens). No auto-login. Any failure → generic 401.
+     */
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        UUID userId = passwordResetTokenService.consume(request.token());
+        User user = userRepository.findById(userId)
+                .filter(User::isEnabled)
+                .orElseThrow(this::invalidResetToken);
+
+        user.changePassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+
+        // Kill every session: revoke each family AND denylist its outstanding access tokens.
+        refreshTokenRepository.findDistinctFamilyIdByUserId(userId)
+                .forEach(reuseResponder::revokeFamily);
+
+        auditLogService.log(AuditEventType.PASSWORD_RESET, user, "USER", userId,
+                "Password reset; all sessions invalidated.");
+        log.info("Password reset succeeded (userId={}).", userId);
+    }
+
+    private BusinessException invalidResetToken() {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_RESET_TOKEN",
+                "Invalid or expired reset token.");
+    }
+
     private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtService.generateToken(user);
         String accessJti = jwtService.extractJti(accessToken);
@@ -200,5 +305,28 @@ public class AuthService {
             return null;
         }
         return phone.trim();
+    }
+
+    /**
+     * Per-email forgot-password throttle: at most one issue per {@code minIntervalSeconds}.
+     * Bounded in-memory map, best-effort (single instance) — a backstop behind the gateway
+     * rate limit, not the primary control.
+     */
+    private static final class PasswordResetThrottle {
+        private static final int CAP = 10_000;
+        private final Map<String, Instant> lastIssue = new ConcurrentHashMap<>();
+
+        boolean allow(String email, Instant now, long minIntervalSeconds) {
+            if (lastIssue.size() > CAP) {
+                Instant cutoff = now.minusSeconds(minIntervalSeconds);
+                lastIssue.entrySet().removeIf(e -> e.getValue().isBefore(cutoff));
+            }
+            Instant previous = lastIssue.get(email);
+            if (previous != null && previous.isAfter(now.minusSeconds(minIntervalSeconds))) {
+                return false;
+            }
+            lastIssue.put(email, now);
+            return true;
+        }
     }
 }

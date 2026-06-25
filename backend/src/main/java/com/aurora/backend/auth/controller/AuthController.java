@@ -1,10 +1,12 @@
 package com.aurora.backend.auth.controller;
 
 import com.aurora.backend.auth.dto.AuthResponse;
+import com.aurora.backend.auth.dto.ForgotPasswordRequest;
 import com.aurora.backend.auth.dto.LoginRequest;
 import com.aurora.backend.auth.dto.LogoutRequest;
 import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
+import com.aurora.backend.auth.dto.ResetPasswordRequest;
 import com.aurora.backend.auth.service.AuthService;
 import com.aurora.backend.common.api.ApiResponse;
 import com.aurora.backend.security.CurrentUserService;
@@ -57,6 +59,19 @@ public class AuthController {
         // refresh-token family without a live access token.
         authService.revoke(request);
         return ApiResponse.success("Token revoked.");
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        // Always 200 with an identical message — never reveals whether the email exists.
+        authService.requestPasswordReset(request);
+        return ApiResponse.success("If an account exists for that email, a reset link has been sent.");
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ApiResponse.success("Password updated successfully.");
     }
 
     @PostMapping("/logout")

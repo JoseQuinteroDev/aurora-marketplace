@@ -1,6 +1,7 @@
 package com.aurora.backend.auth.controller;
 
 import com.aurora.backend.auth.service.AuthService;
+import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.config.SecurityConfig;
 import com.aurora.backend.security.CurrentUserService;
 import com.aurora.backend.security.jwt.JwtAuthenticationFilter;
@@ -21,10 +22,12 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.springframework.http.HttpStatus;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -145,5 +148,59 @@ class AuthValidationTest {
                 .andExpect(status().isOk());
 
         verify(authService).logout(any(), any(), eq("rid.secret"));
+    }
+
+    @Test
+    void forgotPasswordIsPublicAndReturnsTheGenericMessage() throws Exception {
+        // permitAll + anti-enumeration: the controller never branches on existence.
+        mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"ada@aurora.test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("If an account exists for that email, a reset link has been sent."));
+
+        verify(authService).requestPasswordReset(any());
+    }
+
+    @Test
+    void forgotPasswordWithAnInvalidEmailIs400() throws Exception {
+        mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-an-email\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).requestPasswordReset(any());
+    }
+
+    @Test
+    void resetPasswordWithAValidBodyReturns200() throws Exception {
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"rid.secret\",\"newPassword\":\"Password123!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Password updated successfully."));
+
+        verify(authService).resetPassword(any());
+    }
+
+    @Test
+    void resetPasswordWithAnInvalidTokenMapsTo401() throws Exception {
+        doThrow(new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_RESET_TOKEN",
+                "Invalid or expired reset token."))
+                .when(authService).resetPassword(any());
+
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"rid.secret\",\"newPassword\":\"Password123!\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_RESET_TOKEN"));
+    }
+
+    @Test
+    void resetPasswordWithAShortPasswordIs400() throws Exception {
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"rid.secret\",\"newPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).resetPassword(any());
     }
 }
