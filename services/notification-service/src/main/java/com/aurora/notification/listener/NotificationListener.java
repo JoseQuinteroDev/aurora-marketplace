@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import com.aurora.notification.email.EmailService;
+import com.aurora.notification.event.EmailVerificationRequestedEvent;
 import com.aurora.notification.event.OrderCreatedEvent;
 import com.aurora.notification.event.PasswordResetRequestedEvent;
 import com.aurora.notification.event.PaymentConfirmedEvent;
@@ -43,26 +44,31 @@ public class NotificationListener {
     private static final String TOPIC_PAYMENT_CONFIRMED = "aurora.payments.confirmed";
     private static final String TOPIC_PAYMENT_FAILED = "aurora.payments.failed";
     private static final String TOPIC_PASSWORD_RESET_REQUESTED = "aurora.auth.password-reset-requested";
+    private static final String TOPIC_EMAIL_VERIFICATION_REQUESTED = "aurora.auth.email-verification-requested";
 
     private final ObjectMapper objectMapper;
     private final EmailService emailService;
     private final SmsService smsService;
     private final NotificationStore store;
     private final ProcessedEventTracker processedEvents;
-    // Storefront base for the reset link — composed HERE from config so the core event
-    // (and thus event_outbox / Kafka / the DLT) only ever carries the bare token.
+    // Storefront bases for the links — composed HERE from config so the core events
+    // (and thus event_outbox / Kafka / the DLT) only ever carry the bare token.
     private final String resetBaseUrl;
+    private final String verifyBaseUrl;
 
     public NotificationListener(ObjectMapper objectMapper, EmailService emailService, SmsService smsService,
                                 NotificationStore store, ProcessedEventTracker processedEvents,
                                 @Value("${app.notification.reset-base-url:http://localhost:4200/reset-password}")
-                                String resetBaseUrl) {
+                                String resetBaseUrl,
+                                @Value("${app.notification.verify-base-url:http://localhost:4200/verify-email}")
+                                String verifyBaseUrl) {
         this.objectMapper = objectMapper;
         this.emailService = emailService;
         this.smsService = smsService;
         this.store = store;
         this.processedEvents = processedEvents;
         this.resetBaseUrl = resetBaseUrl;
+        this.verifyBaseUrl = verifyBaseUrl;
     }
 
     @KafkaListener(topics = TOPIC_ORDER_CREATED)
@@ -185,6 +191,34 @@ public class NotificationListener {
                 """.formatted(event.customerName(), event.expiresInMinutes(), link);
 
         deliver(event.eventId(), "PASSWORD_RESET", event.customerEmail(), subject, null, body);
+    }
+
+    @KafkaListener(topics = TOPIC_EMAIL_VERIFICATION_REQUESTED)
+    public void onEmailVerificationRequested(String payload) {
+        EmailVerificationRequestedEvent event =
+                parse(payload, EmailVerificationRequestedEvent.class, TOPIC_EMAIL_VERIFICATION_REQUESTED);
+        if (isDuplicate(event.eventId(), TOPIC_EMAIL_VERIFICATION_REQUESTED)) {
+            return;
+        }
+
+        // CRLF-safe: static subject + validated recipient; the token (URL-safe Base64) and the
+        // link appear ONLY in the body. Email-only. The link host is composed here from config.
+        String link = verifyBaseUrl + "?token=" + event.verificationToken();
+        String subject = "Verify your Aurora Marketplace email";
+        String body = """
+                Hi %s,
+
+                Thanks for joining Aurora Marketplace! Please confirm your email
+                address by clicking the link below. This link expires in %d minutes:
+
+                %s
+
+                If you didn't create an account, you can safely ignore this email.
+
+                — The Aurora Marketplace team
+                """.formatted(event.customerName(), event.expiresInMinutes(), link);
+
+        deliver(event.eventId(), "EMAIL_VERIFICATION", event.customerEmail(), subject, null, body);
     }
 
     private void sendOrderSms(OrderCreatedEvent event) {

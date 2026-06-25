@@ -38,7 +38,7 @@ class NotificationListenerTest {
         store = new NotificationStore();
         listener = new NotificationListener(
                 new ObjectMapper(), emailService, smsService, store, new ProcessedEventTracker(),
-                "http://localhost:4200/reset-password");
+                "http://localhost:4200/reset-password", "http://localhost:4200/verify-email");
     }
 
     @Test
@@ -202,5 +202,40 @@ class NotificationListenerTest {
         assertThatThrownBy(() -> listener.onPasswordResetRequested(PASSWORD_RESET_EVENT))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(store.count()).isZero();
+    }
+
+    private static final String EMAIL_VERIFICATION_EVENT = """
+            {"eventId":"ev-1","userId":"00000000-0000-0000-0000-000000000002",
+             "customerEmail":"new@aurora.test","customerName":"Newbie",
+             "verificationToken":"ev.secret","expiresInMinutes":1440}
+            """;
+
+    @Test
+    void sendsAVerificationEmailWithTheLinkForAVerificationEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onEmailVerificationRequested(EMAIL_VERIFICATION_EVENT);
+
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(emailService).send(eq("new@aurora.test"), eq("Verify your Aurora Marketplace email"), body.capture());
+        assertThat(body.getValue()).contains("http://localhost:4200/verify-email?token=ev.secret");
+        verify(smsService, never()).send(any(), any()); // email-only
+        assertThat(store.findRecent().get(0).type()).isEqualTo("EMAIL_VERIFICATION");
+    }
+
+    @Test
+    void doesNotResendARedeliveredVerificationEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onEmailVerificationRequested(EMAIL_VERIFICATION_EVENT);
+        listener.onEmailVerificationRequested(EMAIL_VERIFICATION_EVENT); // duplicate delivery
+
+        verify(emailService, times(1)).send(any(), any(), any());
+    }
+
+    @Test
+    void treatsAMalformedVerificationPayloadAsNonRetryable() {
+        assertThatThrownBy(() -> listener.onEmailVerificationRequested("{ broken"))
+                .isInstanceOf(NonRetryableEventException.class);
     }
 }
