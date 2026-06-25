@@ -196,8 +196,11 @@ export class CheckoutPageComponent implements OnInit {
         this.success.set(true);
         this.router.navigateByUrl(`/orders/${order.id}/payment`);
       },
-      error: () => {
-        this.error.set(this.language.translate('checkout.error'));
+      error: (err: { status?: number; error?: { code?: string } }) => {
+        // A 403 EMAIL_NOT_VERIFIED gets a clear explanation (the global banner offers Resend);
+        // anything else is the generic checkout error.
+        const verifyBlocked = err?.status === 403 && err?.error?.code === 'EMAIL_NOT_VERIFIED';
+        this.error.set(this.language.translate(verifyBlocked ? 'auth.checkout.verifyRequired' : 'checkout.error'));
         this.confirming.set(false);
       }
     });

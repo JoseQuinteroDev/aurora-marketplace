@@ -69,6 +69,16 @@ export class AuthService {
     return this.http.post<ApiResponse<void>>('/api/auth/reset-password', { token, newPassword });
   }
 
+  /** Confirms an email-verification token. Does NOT authenticate. */
+  verifyEmail(token: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/verify-email', { token });
+  }
+
+  /** Re-sends the verification email (anti-enumeration; always succeeds from the client's view). */
+  resendVerification(email: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/resend-verification', { email });
+  }
+
   /**
    * Clears the session. By default navigates home; pass `null` to clear without
    * navigating (used by the HTTP error interceptor, which redirects to /login itself).

@@ -56,6 +56,11 @@ export const routes: Routes = [
         title: 'title.resetPassword'
       },
       {
+        path: 'verify-email',
+        loadComponent: () => import('./features/auth/verify-email-page.component').then((m) => m.VerifyEmailPageComponent),
+        title: 'title.verifyEmail'
+      },
+      {
         path: 'cart',
         loadComponent: () => import('./features/cart/cart-page.component').then((m) => m.CartPageComponent),
         canActivate: [authGuard],

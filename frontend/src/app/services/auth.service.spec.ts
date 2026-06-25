@@ -134,4 +134,28 @@ describe('AuthService', () => {
     expect(service.getRefreshToken()).toBeNull();
     http.verify();
   });
+
+  it('verifyEmail posts the token and never touches the session', () => {
+    const { service, http } = setup();
+
+    service.verifyEmail('ev.secret').subscribe();
+    const req = http.expectOne('/api/auth/verify-email');
+    expect(req.request.body).toEqual({ token: 'ev.secret' });
+    req.flush({ data: null });
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull(); // does not authenticate
+    http.verify();
+  });
+
+  it('resendVerification posts the email and does not authenticate', () => {
+    const { service, http } = setup();
+
+    service.resendVerification('a@b.c').subscribe();
+    const req = http.expectOne('/api/auth/resend-verification');
+    expect(req.request.body).toEqual({ email: 'a@b.c' });
+    req.flush({ data: null });
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    http.verify();
+  });
 });
