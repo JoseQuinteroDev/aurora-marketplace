@@ -18,6 +18,7 @@ where and how.
 | [`owasp-top-10.md`](owasp-top-10.md) | OWASP Top 10 (2021) mapped to concrete controls, file references, and remediation status. |
 | [`security-controls.md`](security-controls.md) | Catalog of implemented security controls and where each lives in the codebase. |
 | [`security-testing.md`](security-testing.md) | Security test strategy: SAST, SCA, secret scanning, DAST, and a manual pentest checklist. |
+| [`security-master-plan.md`](security-master-plan.md) | **The hardening roadmap** — OWASP Top 10 + DevSecOps, ordered into executable phases, with a Burp Suite pentest methodology. **Read this to know what's next.** |
 | [`vulnerable-lab.md`](vulnerable-lab.md) | Design of the deliberately-vulnerable `vulnerable-lab` branch and exploitation → remediation writeups. |
 | [`../devops/cicd-security.md`](../devops/cicd-security.md) | The DevSecOps pipeline: security gates in CI/CD and how to read the reports. |
 | [`../../SECURITY.md`](../../SECURITY.md) | Vulnerability disclosure policy (repository root). |
