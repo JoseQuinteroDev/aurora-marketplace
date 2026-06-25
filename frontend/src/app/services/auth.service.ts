@@ -59,6 +59,16 @@ export class AuthService {
     );
   }
 
+  /** Requests a password-reset email. Does NOT authenticate (no session is persisted). */
+  requestPasswordReset(email: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/forgot-password', { email });
+  }
+
+  /** Sets a new password from a reset token. Does NOT authenticate — the user signs in after. */
+  resetPassword(token: string, newPassword: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/reset-password', { token, newPassword });
+  }
+
   /**
    * Clears the session. By default navigates home; pass `null` to clear without
    * navigating (used by the HTTP error interceptor, which redirects to /login itself).

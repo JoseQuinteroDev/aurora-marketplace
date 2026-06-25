@@ -109,4 +109,29 @@ describe('AuthService', () => {
     expect(service.getRefreshToken()).toBe('rid-456.secret');
     http.verify();
   });
+
+  it('requestPasswordReset posts the email and never touches the session', () => {
+    const { service, http } = setup();
+
+    service.requestPasswordReset('a@b.c').subscribe();
+    const req = http.expectOne('/api/auth/forgot-password');
+    expect(req.request.body).toEqual({ email: 'a@b.c' });
+    req.flush({ data: null });
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull(); // does not authenticate
+    http.verify();
+  });
+
+  it('resetPassword posts token + newPassword and does not authenticate', () => {
+    const { service, http } = setup();
+
+    service.resetPassword('rid.secret', 'Password123!').subscribe();
+    const req = http.expectOne('/api/auth/reset-password');
+    expect(req.request.body).toEqual({ token: 'rid.secret', newPassword: 'Password123!' });
+    req.flush({ data: null });
+
+    expect(service.getToken()).toBeNull();
+    expect(service.getRefreshToken()).toBeNull();
+    http.verify();
+  });
 });
