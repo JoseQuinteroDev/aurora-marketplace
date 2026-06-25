@@ -125,4 +125,11 @@ class AuthServiceTest {
 
         verify(refreshTokenService, never()).revokeFamilyOf(any());
     }
+
+    @Test
+    void revokeDelegatesToTheRefreshTokenFamilyRevoke() {
+        authService.revoke(new RefreshRequest("rid.secret"));
+
+        verify(refreshTokenService).revokeFamilyOf("rid.secret");
+    }
 }

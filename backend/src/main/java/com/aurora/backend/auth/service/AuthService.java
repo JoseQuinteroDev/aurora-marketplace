@@ -150,6 +150,15 @@ public class AuthService {
         log.info("Logout: access token revoked (email={}).", actor.getEmail());
     }
 
+    /**
+     * Revokes a refresh-token family without needing a live access token — lets an idle
+     * session (expired 15-min access token) still log out. Best-effort and idempotent;
+     * always succeeds regardless of whether the token matched (anti-enumeration).
+     */
+    public void revoke(RefreshRequest request) {
+        refreshTokenService.revokeFamilyOf(request.refreshToken());
+    }
+
     /** Rotates a refresh token: issues a fresh access + refresh token, with reuse detection. */
     public AuthResponse refresh(RefreshRequest request) {
         RefreshTokenService.RotationResult result = refreshTokenService.rotate(request.refreshToken());

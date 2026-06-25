@@ -51,6 +51,14 @@ public class AuthController {
         return ApiResponse.success("Token refreshed.", authService.refresh(request));
     }
 
+    @PostMapping("/revoke")
+    public ApiResponse<Void> revoke(@Valid @RequestBody RefreshRequest request) {
+        // Public + always 200 (anti-enumeration): lets an idle session revoke its
+        // refresh-token family without a live access token.
+        authService.revoke(request);
+        return ApiResponse.success("Token revoked.");
+    }
+
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,

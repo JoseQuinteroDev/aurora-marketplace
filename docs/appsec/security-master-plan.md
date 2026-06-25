@@ -65,11 +65,18 @@ Strong controls already in place — the plan *builds on* these, it does not red
 
 ### Phase 1 — Authentication & session hardening
 *OWASP: A07 (auth failures), A01.*
-- **Refresh-token rotation:** short-lived access token + rotating refresh token with
-  **reuse detection** (a replayed refresh revokes the family). Persist refresh-token
-  state; reuse the `jti` denylist machinery.
-- **Token storage:** offer `HttpOnly` + `Secure` + `SameSite=Strict` cookie storage
-  (with CSRF defense for cookie mode) as an alternative to `localStorage`.
+- ✅ **Refresh-token rotation — SHIPPED** (`feat/auth-hardening`). Opaque, single-use,
+  SHA-256-at-rest refresh tokens that rotate on every `POST /api/auth/refresh`;
+  **reuse detection** revokes the whole family + denylists its access tokens + audits
+  (`REFRESH_TOKEN_REUSED`), committed in a `REQUIRES_NEW` transaction so the 401 can't
+  roll it back; a benign double-submit within a grace window is idempotent. Access TTL
+  cut 60→15 min; added public `POST /api/auth/revoke` for idle-session logout. Designed
+  and adversarially reviewed via multi-agent workflows; backend + frontend tests green.
+- **Token storage:** today both tokens live in `localStorage` (deliberate SPA
+  tradeoff; the **residual XSS risk is accepted**, with rotation + reuse detection +
+  15-min access TTL as compensating controls). Future upgrade: deliver the refresh
+  token as an `HttpOnly` + `Secure` + `SameSite` cookie scoped to the refresh/revoke
+  paths (needs the gateway/SPA CORS + per-env origin work from Phase 2).
 - **Account recovery:** password reset + email verification using single-use,
   time-boxed, hashed tokens (never log or email the raw token twice).
 - **Credential hygiene:** breached-password check (HIBP range/k-anonymity API) at

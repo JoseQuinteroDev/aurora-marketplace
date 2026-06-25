@@ -121,6 +121,16 @@ class AuthValidationTest {
     }
 
     @Test
+    void revokeIsPublicAndAlwaysSucceeds() throws Exception {
+        // permitAll + anti-enumeration: anonymous, well-formed revoke returns 200.
+        mvc.perform(post("/api/auth/revoke").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"rid.secret\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).revoke(any());
+    }
+
+    @Test
     void logoutStillRequiresAuthentication() throws Exception {
         mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isUnauthorized());

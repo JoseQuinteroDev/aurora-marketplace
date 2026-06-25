@@ -4,12 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.aurora.backend.audit.entity.AuditEventType;
-import com.aurora.backend.audit.service.AuditLogService;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.security.jwt.JwtService;
 import com.aurora.backend.user.entity.User;
@@ -31,9 +28,10 @@ import static org.mockito.Mockito.when;
 /**
  * Unit tests for {@link RefreshTokenService} — the heart of refresh-token rotation
  * (OWASP A07). Covers: opaque-token issuance with SHA-256-at-rest, single-use
- * rotation, anti-enumeration rejections, REUSE DETECTION (family revoke + access
- * denylist + audit), and the benign double-submit grace path that must NOT log a
- * legitimate user out.
+ * rotation, anti-enumeration rejections, the benign double-submit grace path (must
+ * NOT log a legitimate user out), and that reuse/logout delegate the family-wide
+ * response to {@link RefreshTokenReuseResponder} (whose own transaction survives the
+ * 401 — see RefreshTokenReuseResponderTest).
  */
 class RefreshTokenServiceTest {
 
@@ -42,12 +40,11 @@ class RefreshTokenServiceTest {
 
     private final RefreshTokenRepository repository = mock(RefreshTokenRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final TokenDenylistService tokenDenylistService = mock(TokenDenylistService.class);
     private final JwtService jwtService = mock(JwtService.class);
-    private final AuditLogService auditLogService = mock(AuditLogService.class);
+    private final RefreshTokenReuseResponder reuseResponder = mock(RefreshTokenReuseResponder.class);
 
     private final RefreshTokenService service = new RefreshTokenService(
-            repository, userRepository, tokenDenylistService, jwtService, auditLogService, 30L, 10L);
+            repository, userRepository, jwtService, reuseResponder, 30L, 10L);
 
     private User user() {
         User user = mock(User.class);
@@ -68,7 +65,6 @@ class RefreshTokenServiceTest {
         }
     }
 
-    /** Builds a persisted-looking parent row with a known secret so rotate() can validate it. */
     private RefreshToken row(UUID id, String secret, RefreshTokenStatus status, Instant expiresAt, UUID accessJti) {
         RefreshToken token = new RefreshToken(id, FAMILY_ID, USER_ID, sha256Hex(secret), null, accessJti, expiresAt);
         ReflectionTestUtils.setField(token, "status", status);
@@ -89,7 +85,6 @@ class RefreshTokenServiceTest {
         String[] parts = raw.split("\\.", 2);
         assertThat(parts).hasSize(2);
         assertThat(parts[0]).isEqualTo(saved.getId().toString());
-        // Stored value is the SHA-256 hash of the secret — never the secret itself.
         assertThat(saved.getTokenHash()).isEqualTo(sha256Hex(parts[1]));
         assertThat(saved.getTokenHash()).isNotEqualTo(parts[1]);
         assertThat(saved.getStatus()).isEqualTo(RefreshTokenStatus.ACTIVE);
@@ -126,6 +121,7 @@ class RefreshTokenServiceTest {
         assertThat(child.getStatus()).isEqualTo(RefreshTokenStatus.ACTIVE);
         assertThat(child.getIssuedAccessJti()).isEqualTo(newJti);
         assertThat(result.rawRefreshToken()).startsWith(child.getId().toString() + ".");
+        verify(reuseResponder, never()).respondToReuse(any(), any());
     }
 
     @Test
@@ -164,7 +160,7 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    void rotateRejectsAnAlreadyRevokedTokenWithoutReRevoking() {
+    void rotateRejectsAnAlreadyRevokedTokenWithoutRespondingToReuse() {
         UUID rowId = UUID.randomUUID();
         String secret = "s";
         RefreshToken parent = row(rowId, secret, RefreshTokenStatus.REVOKED, future(), null);
@@ -172,33 +168,26 @@ class RefreshTokenServiceTest {
 
         assertThatThrownBy(() -> service.rotate(rowId + "." + secret))
                 .isInstanceOf(BusinessException.class);
-        verify(repository, never()).revokeFamily(any(), any());
-        verify(auditLogService, never()).log(any(), any(), any(), any(), any());
+        verify(reuseResponder, never()).respondToReuse(any(), any());
     }
 
     @Test
-    void rotateDetectsReuseOnAReplayedRotatedTokenAndRevokesTheFamily() {
+    void rotateDetectsReuseOnAReplayedRotatedTokenAndDelegatesTheFamilyResponse() {
         UUID rowId = UUID.randomUUID();
         String secret = "s";
-        UUID accessJti = UUID.randomUUID();
-        RefreshToken parent = row(rowId, secret, RefreshTokenStatus.ROTATED, future(), accessJti);
+        RefreshToken parent = row(rowId, secret, RefreshTokenStatus.ROTATED, future(), UUID.randomUUID());
         when(repository.findById(rowId)).thenReturn(Optional.of(parent));
-        when(repository.findByFamilyId(FAMILY_ID)).thenReturn(List.of(parent));
-        User authUser = user();
-        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(authUser));
-        when(jwtService.getExpirationMinutes()).thenReturn(15L);
 
         assertThatThrownBy(() -> service.rotate(rowId + "." + secret))
                 .isInstanceOfSatisfying(BusinessException.class,
                         ex -> assertThat(ex.getCode()).isEqualTo("INVALID_REFRESH_TOKEN"));
 
-        verify(repository).revokeFamily(eq(FAMILY_ID), any());
-        verify(tokenDenylistService).revoke(eq(accessJti.toString()), any());
-        verify(auditLogService).log(eq(AuditEventType.REFRESH_TOKEN_REUSED), any(), any(), any(), any());
+        // The theft response is delegated to the responder (separate REQUIRES_NEW tx).
+        verify(reuseResponder).respondToReuse(eq(FAMILY_ID), eq(USER_ID));
     }
 
     @Test
-    void benignDoubleSubmitWithinGraceReturnsTheSameTokensWithoutRevoking() {
+    void benignDoubleSubmitWithinGraceReturnsTheSameTokensWithoutRespondingToReuse() {
         UUID rowId = UUID.randomUUID();
         String secret = "s";
         RefreshToken parent = row(rowId, secret, RefreshTokenStatus.ACTIVE, future(), UUID.randomUUID());
@@ -216,19 +205,29 @@ class RefreshTokenServiceTest {
 
         assertThat(second.accessToken()).isEqualTo(first.accessToken());
         assertThat(second.rawRefreshToken()).isEqualTo(first.rawRefreshToken());
-        verify(repository, never()).revokeFamily(any(), any());        // never a false-positive logout
-        verify(auditLogService, never()).log(any(), any(), any(), any(), any());
+        verify(reuseResponder, never()).respondToReuse(any(), any()); // never a false-positive logout
     }
 
     @Test
-    void revokeFamilyOfNeverThrowsOnAGarbageOrUnknownToken() {
+    void revokeFamilyOfDelegatesToTheResponderForAKnownToken() {
+        UUID rowId = UUID.randomUUID();
+        RefreshToken row = row(rowId, "s", RefreshTokenStatus.ACTIVE, future(), UUID.randomUUID());
+        when(repository.findById(rowId)).thenReturn(Optional.of(row));
+
+        service.revokeFamilyOf(rowId + ".s");
+
+        verify(reuseResponder).revokeFamily(FAMILY_ID);
+    }
+
+    @Test
+    void revokeFamilyOfNeverThrowsAndDoesNothingForAGarbageOrUnknownToken() {
         service.revokeFamilyOf("not-a-token");                          // unparseable → no-op
 
         UUID unknown = UUID.randomUUID();
         when(repository.findById(unknown)).thenReturn(Optional.empty());
         service.revokeFamilyOf(unknown + ".secret");                    // unknown → no-op
 
-        verify(repository, never()).revokeFamily(any(), any());
+        verify(reuseResponder, never()).revokeFamily(any());
     }
 
     private static Instant future() {

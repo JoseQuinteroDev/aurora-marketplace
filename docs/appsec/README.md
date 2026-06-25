@@ -86,6 +86,10 @@ that is the point of an AppSec program.
   when the bypassable gateway limiter is sidestepped.
 - **Token revocation & server-side logout** — `POST /api/auth/logout` revokes the
   current token via a `jti` denylist that the auth filter checks on each request.
+- **Refresh-token rotation with reuse detection** — opaque, single-use, SHA-256-at-rest
+  refresh tokens rotate on `POST /api/auth/refresh`; a replayed token revokes the whole
+  family + denylists its access tokens + audits, in a `REQUIRES_NEW` transaction
+  (`RefreshTokenService` / `RefreshTokenReuseResponder`). Access TTL is 15 min.
 - **Startup secret guard** — the app refuses to boot under the `prod` profile with
   a placeholder JWT secret (`JwtSecretValidator`).
 - **Security-event logging** — authentication outcomes, JWT rejections, 401/403
@@ -102,16 +106,19 @@ that is the point of an AppSec program.
   environment before production.
 - **Secrets management** — externalized via environment variables, but the local
   compose stack ships development defaults inline (see `.env.example`).
-- **Token lifecycle** — short-lived access tokens with server-side revocation
-  (logout) now in place; refresh-token rotation is still pending.
+- **Token lifecycle** — short-lived (15-min) access tokens with server-side
+  revocation (logout) **and refresh-token rotation with reuse detection** now in
+  place; breached-password/MFA and `HttpOnly`-cookie storage are still pending.
 
 ### Gaps ❌ (tracked)
 
 - **Transport encryption in the stack** — Postgres, Redis, Kafka and SMTP run
   plaintext in compose; TLS is delegated to the deployment environment.
-- **Token lifecycle (remaining)** — revocation/logout and per-account lockout now
-  ship; refresh-token rotation, breached-password/MFA, and `HttpOnly`-cookie token
-  storage are still open. See [`owasp-top-10.md`](owasp-top-10.md) A07.
+- **Token lifecycle (remaining)** — revocation/logout, per-account lockout and
+  refresh-token rotation with reuse detection now ship; breached-password/MFA,
+  `HttpOnly`-cookie token storage (the localStorage residual XSS risk is accepted
+  for now), and email verification / password reset are still open. See
+  [`owasp-top-10.md`](owasp-top-10.md) A07.
 - **Account-recovery & verification flows** — email verification and password
   reset are not yet implemented.
 - **Supply-chain hardening** — base-image digest pinning, GitHub Actions SHA

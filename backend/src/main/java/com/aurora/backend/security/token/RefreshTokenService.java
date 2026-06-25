@@ -11,8 +11,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.aurora.backend.audit.entity.AuditEventType;
-import com.aurora.backend.audit.service.AuditLogService;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.security.jwt.JwtService;
 import com.aurora.backend.user.entity.User;
@@ -33,11 +31,13 @@ import org.springframework.transaction.annotation.Transactional;
  * Each {@code POST /api/auth/refresh} rotates the presented token to a child in the
  * same family. Replaying an already-rotated token outside a short grace window is
  * treated as theft: the whole family is revoked and its outstanding access tokens
- * are denylisted. A near-simultaneous double-submit within the grace window is
- * idempotent (an in-memory cache returns the same freshly-minted tokens), so a
- * legitimate user is never logged out by a race. The single-use guarantee itself
- * does not depend on that cache — it rests on the conditional {@code claimForRotation}
- * UPDATE plus the {@code uk_refresh_tokens_active_family} partial unique index.
+ * are denylisted (delegated to {@link RefreshTokenReuseResponder}, which commits
+ * that response in its OWN transaction so the 401 thrown here cannot roll it back).
+ * A near-simultaneous double-submit within the grace window is idempotent (an
+ * in-memory cache returns the same freshly-minted tokens), so a legitimate user is
+ * never logged out by a race. The single-use guarantee itself does not depend on
+ * that cache — it rests on the conditional {@code claimForRotation} UPDATE plus the
+ * {@code uk_refresh_tokens_active_family} partial unique index.
  *
  * <p>Security-logging rule: never log the raw token or secret — only familyId,
  * userId and exception class names.
@@ -50,9 +50,8 @@ public class RefreshTokenService {
 
     private final RefreshTokenRepository repository;
     private final UserRepository userRepository;
-    private final TokenDenylistService tokenDenylistService;
     private final JwtService jwtService;
-    private final AuditLogService auditLogService;
+    private final RefreshTokenReuseResponder reuseResponder;
 
     private final long expirationDays;
     private final long graceSeconds;
@@ -66,17 +65,15 @@ public class RefreshTokenService {
     public RefreshTokenService(
             RefreshTokenRepository repository,
             UserRepository userRepository,
-            TokenDenylistService tokenDenylistService,
             JwtService jwtService,
-            AuditLogService auditLogService,
+            RefreshTokenReuseResponder reuseResponder,
             @Value("${app.security.refresh-token.expiration-days:30}") long expirationDays,
             @Value("${app.security.refresh-token.grace-seconds:10}") long graceSeconds
     ) {
         this.repository = repository;
         this.userRepository = userRepository;
-        this.tokenDenylistService = tokenDenylistService;
         this.jwtService = jwtService;
-        this.auditLogService = auditLogService;
+        this.reuseResponder = reuseResponder;
         this.expirationDays = expirationDays;
         this.graceSeconds = graceSeconds;
     }
@@ -138,12 +135,11 @@ public class RefreshTokenService {
     }
 
     /** Best-effort family revoke for logout. Never throws on a junk/unknown token. */
-    @Transactional
     public void revokeFamilyOf(String rawRefreshToken) {
         try {
             ParsedToken parsed = parse(rawRefreshToken);
             repository.findById(parsed.id())
-                    .ifPresent(row -> repository.revokeFamily(row.getFamilyId(), Instant.now()));
+                    .ifPresent(row -> reuseResponder.revokeFamily(row.getFamilyId()));
         } catch (RuntimeException exception) {
             log.debug("Logout: refresh token not usable for family revoke ({}).",
                     exception.getClass().getSimpleName());
@@ -198,28 +194,11 @@ public class RefreshTokenService {
         if (cached != null) {
             return toResult(cached); // benign double-submit within the grace window
         }
-        detectReuse(row, now);
+        // Theft: a genuinely old, already-rotated token replayed. The responder commits
+        // the family revoke + access denylist + audit in its OWN transaction, so the
+        // 401 we throw next cannot roll it back.
+        reuseResponder.respondToReuse(row.getFamilyId(), row.getUserId());
         throw invalidToken();
-    }
-
-    private void detectReuse(RefreshToken row, Instant now) {
-        repository.revokeFamily(row.getFamilyId(), now);
-
-        // Denylist the family's still-living access tokens (15-min TTL means most are
-        // already expired; this closes the window where one is still valid).
-        Duration accessTtl = Duration.ofMinutes(jwtService.getExpirationMinutes());
-        for (RefreshToken familyRow : repository.findByFamilyId(row.getFamilyId())) {
-            if (familyRow.getIssuedAccessJti() != null && familyRow.getCreatedAt() != null) {
-                tokenDenylistService.revoke(
-                        familyRow.getIssuedAccessJti().toString(),
-                        familyRow.getCreatedAt().plus(accessTtl));
-            }
-        }
-
-        userRepository.findById(row.getUserId()).ifPresent(user -> auditLogService.log(
-                AuditEventType.REFRESH_TOKEN_REUSED, user, "REFRESH_TOKEN", row.getFamilyId(),
-                "Refresh-token reuse detected; token family revoked."));
-        log.warn("Refresh-token reuse detected; family {} revoked.", row.getFamilyId());
     }
 
     private RotationResult toResult(CachedRotation cached) {
