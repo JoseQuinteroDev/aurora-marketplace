@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.aurora.notification.email.EmailService;
 import com.aurora.notification.event.OrderCreatedEvent;
+import com.aurora.notification.event.PasswordResetRequestedEvent;
 import com.aurora.notification.event.PaymentConfirmedEvent;
 import com.aurora.notification.event.PaymentFailedEvent;
 import com.aurora.notification.sms.SmsService;
@@ -14,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -40,20 +42,27 @@ public class NotificationListener {
     private static final String TOPIC_ORDER_CREATED = "aurora.orders.created";
     private static final String TOPIC_PAYMENT_CONFIRMED = "aurora.payments.confirmed";
     private static final String TOPIC_PAYMENT_FAILED = "aurora.payments.failed";
+    private static final String TOPIC_PASSWORD_RESET_REQUESTED = "aurora.auth.password-reset-requested";
 
     private final ObjectMapper objectMapper;
     private final EmailService emailService;
     private final SmsService smsService;
     private final NotificationStore store;
     private final ProcessedEventTracker processedEvents;
+    // Storefront base for the reset link — composed HERE from config so the core event
+    // (and thus event_outbox / Kafka / the DLT) only ever carries the bare token.
+    private final String resetBaseUrl;
 
     public NotificationListener(ObjectMapper objectMapper, EmailService emailService, SmsService smsService,
-                                NotificationStore store, ProcessedEventTracker processedEvents) {
+                                NotificationStore store, ProcessedEventTracker processedEvents,
+                                @Value("${app.notification.reset-base-url:http://localhost:4200/reset-password}")
+                                String resetBaseUrl) {
         this.objectMapper = objectMapper;
         this.emailService = emailService;
         this.smsService = smsService;
         this.store = store;
         this.processedEvents = processedEvents;
+        this.resetBaseUrl = resetBaseUrl;
     }
 
     @KafkaListener(topics = TOPIC_ORDER_CREATED)
@@ -145,6 +154,37 @@ public class NotificationListener {
         );
 
         deliver(event.eventId(), "PAYMENT_FAILED", event.customerEmail(), subject, event.orderNumber(), body);
+    }
+
+    @KafkaListener(topics = TOPIC_PASSWORD_RESET_REQUESTED)
+    public void onPasswordResetRequested(String payload) {
+        PasswordResetRequestedEvent event =
+                parse(payload, PasswordResetRequestedEvent.class, TOPIC_PASSWORD_RESET_REQUESTED);
+        if (isDuplicate(event.eventId(), TOPIC_PASSWORD_RESET_REQUESTED)) {
+            return;
+        }
+
+        // CRLF-safe by construction: the subject is a static literal and the recipient is the
+        // validated address; the token (URL-safe Base64, no CR/LF) and the link appear ONLY in
+        // the body. Email-only — no SMS for a password reset.
+        String link = resetBaseUrl + "?token=" + event.resetToken();
+        String subject = "Reset your Aurora Marketplace password";
+        String body = """
+                Hi %s,
+
+                We received a request to reset your Aurora Marketplace password.
+                Click the link below to choose a new one. This link expires in %d minutes
+                and can be used once:
+
+                %s
+
+                If you didn't request this, you can safely ignore this email — your
+                password stays the same.
+
+                — The Aurora Marketplace team
+                """.formatted(event.customerName(), event.expiresInMinutes(), link);
+
+        deliver(event.eventId(), "PASSWORD_RESET", event.customerEmail(), subject, null, body);
     }
 
     private void sendOrderSms(OrderCreatedEvent event) {
