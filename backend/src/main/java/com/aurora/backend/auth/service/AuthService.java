@@ -63,6 +63,7 @@ public class AuthService {
     private final RefreshTokenReuseResponder reuseResponder;
     private final int resetExpiryMinutes;
     private final long resetMinIntervalSeconds;
+    private final long resetLatencyFloorMs;
 
     // Per-account throttle for forgot-password, so a known address can't be email-bombed
     // even if the gateway rate-limit is bypassed. Bounded, best-effort (single instance).
@@ -82,7 +83,8 @@ public class AuthService {
             RefreshTokenRepository refreshTokenRepository,
             RefreshTokenReuseResponder reuseResponder,
             @Value("${app.security.password-reset-token.expiration-minutes:30}") int resetExpiryMinutes,
-            @Value("${app.security.password-reset.min-interval-seconds:60}") long resetMinIntervalSeconds
+            @Value("${app.security.password-reset.min-interval-seconds:60}") long resetMinIntervalSeconds,
+            @Value("${app.security.password-reset.latency-floor-ms:350}") long resetLatencyFloorMs
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -98,6 +100,7 @@ public class AuthService {
         this.reuseResponder = reuseResponder;
         this.resetExpiryMinutes = resetExpiryMinutes;
         this.resetMinIntervalSeconds = resetMinIntervalSeconds;
+        this.resetLatencyFloorMs = resetLatencyFloorMs;
     }
 
     @Transactional
@@ -208,19 +211,28 @@ public class AuthService {
 
     /**
      * Requests a password reset. ALWAYS succeeds from the caller's view (the controller
-     * returns one generic 200) — known, unknown and disabled accounts are indistinguishable,
-     * both in the response body and (via {@code burnEquivalentWork}) in timing. Only an
-     * enabled, existing, non-throttled account actually mints a token and emails it.
+     * returns one generic 200): known, unknown and disabled accounts are indistinguishable
+     * in the response body, and a fixed latency floor makes them indistinguishable in timing
+     * too (so the positive branch's extra DB writes are not an enumeration oracle). The
+     * per-account throttle is evaluated for EVERY email so it cannot itself become a
+     * fast/slow side-channel. Only an enabled, existing, non-throttled account mints a token.
+     *
+     * <p>Deliberately not {@code @Transactional}: the mint runs in its own (REQUIRES_NEW)
+     * transaction and the outbox/audit writes are each atomic, so the latency-floor sleep
+     * never holds a DB transaction or connection open.
      */
-    @Transactional
     public void requestPasswordReset(ForgotPasswordRequest request) {
+        long startNanos = System.nanoTime();
         String email = normalizeEmail(request.email());
+        // Throttle EVERY email (known or not) so a probe is throttled identically either way.
+        boolean throttled = !resetThrottle.allow(email, Instant.now(), resetMinIntervalSeconds);
         Optional<User> maybeUser = userRepository.findByEmail(email);
 
-        if (maybeUser.isPresent() && maybeUser.get().isEnabled()
-                && resetThrottle.allow(email, Instant.now(), resetMinIntervalSeconds)) {
+        if (!throttled && maybeUser.isPresent() && maybeUser.get().isEnabled()) {
             User user = maybeUser.get();
             try {
+                // issue() is REQUIRES_NEW, so a partial-unique-index collision rolls back only
+                // its own tx and is catchable here as a clean generic success (never a 500).
                 String rawToken = passwordResetTokenService.issue(user);
                 outboxRecorder.record(
                         "USER",
@@ -235,14 +247,26 @@ public class AuthService {
                 auditLogService.log(AuditEventType.PASSWORD_RESET_REQUESTED, user, "USER",
                         user.getId(), "Password reset requested.");
             } catch (DataIntegrityViolationException race) {
-                // Concurrent same-user requests can collide on the partial unique index —
-                // collapse to the generic success path rather than leaking a 500.
                 log.debug("Concurrent reset-token race for a user ({}).",
                         race.getClass().getSimpleName());
             }
         } else {
-            // No account / disabled / throttled: pay the same CPU cost, write nothing.
+            // No account / disabled / throttled: pay the same CPU hash cost, write nothing.
             passwordResetTokenService.burnEquivalentWork();
+        }
+
+        equalizeLatency(startNanos);
+    }
+
+    /** Sleeps until a fixed floor so every forgot-password response takes the same minimum time. */
+    private void equalizeLatency(long startNanos) {
+        long remainingMs = resetLatencyFloorMs - (System.nanoTime() - startNanos) / 1_000_000L;
+        if (remainingMs > 0) {
+            try {
+                Thread.sleep(remainingMs);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 

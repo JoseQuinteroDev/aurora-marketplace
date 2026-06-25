@@ -69,7 +69,7 @@ class AuthServiceTest {
             userRepository, passwordEncoder, authenticationManager, jwtService,
             loginAttemptService, tokenDenylistService, auditLogService, refreshTokenService,
             passwordResetTokenService, outboxRecorder, refreshTokenRepository, reuseResponder,
-            30, 60L);
+            30, 60L, 0L); // latency-floor 0 in tests (no sleep)
 
     private User user() {
         return new User("ada@aurora.test", "hash", "Ada", "Lovelace", Role.CUSTOMER, true);

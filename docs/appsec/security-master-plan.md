@@ -77,8 +77,15 @@ Strong controls already in place — the plan *builds on* these, it does not red
   15-min access TTL as compensating controls). Future upgrade: deliver the refresh
   token as an `HttpOnly` + `Secure` + `SameSite` cookie scoped to the refresh/revoke
   paths (needs the gateway/SPA CORS + per-env origin work from Phase 2).
-- **Account recovery:** password reset + email verification using single-use,
-  time-boxed, hashed tokens (never log or email the raw token twice).
+- ✅ **Password reset — SHIPPED** (`feat/auth-hardening`). Single-use, time-boxed,
+  SHA-256-at-rest token; anti-enumeration request (identical 200 + per-email throttle +
+  fixed latency floor) with a gateway rate-limit route; a successful reset re-hashes and
+  invalidates every session; emailed via the outbox→notification path (token-only event,
+  link composed downstream). Adversarially reviewed (6 findings fixed; 0 high/critical).
+  *Tracked residual (low):* the raw token sits in `event_outbox`/`.DLT` cleartext until
+  expiry — follow-ups: purge PUBLISHED outbox rows, redact the DLT record + short TTL.
+- **Email verification:** still to do — reuses the same single-use-token + outbox→email
+  machinery as password reset.
 - **Credential hygiene:** breached-password check (HIBP range/k-anonymity API) at
   register/reset; optional **TOTP MFA** for admins.
 - **Exit:** auth-lifecycle gaps in `README.md` move from ❌/⚠️ to ✅; each flow has a

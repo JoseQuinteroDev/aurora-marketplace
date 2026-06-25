@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -50,8 +51,13 @@ public class PasswordResetTokenService {
      * Mints a single ACTIVE token (revoking any prior ACTIVE one first to satisfy the
      * partial unique index). Returns the raw {@code rowId.secret} — the only place it
      * ever exists in the core; the hash is what is stored.
+     *
+     * <p>Runs in its OWN transaction (REQUIRES_NEW): if two concurrent requests for the
+     * same user collide on the partial unique index, the violation rolls back only this
+     * inner tx and surfaces a {@code DataIntegrityViolationException} the caller can catch
+     * cleanly — without poisoning the caller's transaction.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public String issue(User user) {
         Instant now = Instant.now();
         repository.revokeActiveForUser(user.getId(), now);
@@ -87,9 +93,10 @@ public class PasswordResetTokenService {
     }
 
     /**
-     * Performs the same CPU work as {@link #issue} (a SHA-256 of a fresh secret) WITHOUT
-     * touching the database, so the no-account / disabled-account branch of a forgot-password
-     * request takes equivalent time — closing the timing oracle.
+     * Pays the hashing cost of {@link #issue} (a SHA-256 of a fresh secret) on the
+     * no-account / disabled / throttled branch. This equalizes the CPU hash cost only —
+     * it does NOT mask {@code issue}'s DB writes, so the caller additionally applies a
+     * fixed response-latency floor to close the user-enumeration timing oracle.
      */
     public void burnEquivalentWork() {
         hash(newSecret());

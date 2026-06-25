@@ -90,6 +90,10 @@ that is the point of an AppSec program.
   refresh tokens rotate on `POST /api/auth/refresh`; a replayed token revokes the whole
   family + denylists its access tokens + audits, in a `REQUIRES_NEW` transaction
   (`RefreshTokenService` / `RefreshTokenReuseResponder`). Access TTL is 15 min.
+- **Self-service password reset** — opaque single-use SHA-256-at-rest reset token; the
+  request is anti-enumeration (identical response, per-email throttle, fixed latency
+  floor) and gateway rate-limited; a successful reset re-hashes the password and revokes
+  every session. Emailed via the outbox→notification path (link composed downstream).
 - **Startup secret guard** — the app refuses to boot under the `prod` profile with
   a placeholder JWT secret (`JwtSecretValidator`).
 - **Security-event logging** — authentication outcomes, JWT rejections, 401/403
@@ -114,10 +118,10 @@ that is the point of an AppSec program.
 
 - **Transport encryption in the stack** — Postgres, Redis, Kafka and SMTP run
   plaintext in compose; TLS is delegated to the deployment environment.
-- **Token lifecycle (remaining)** — revocation/logout, per-account lockout and
-  refresh-token rotation with reuse detection now ship; breached-password/MFA,
-  `HttpOnly`-cookie token storage (the localStorage residual XSS risk is accepted
-  for now), and email verification / password reset are still open. See
+- **Token lifecycle (remaining)** — revocation/logout, per-account lockout,
+  refresh-token rotation with reuse detection and self-service password reset now ship;
+  breached-password/MFA, `HttpOnly`-cookie token storage (the localStorage residual XSS
+  risk is accepted for now), and email verification are still open. See
   [`owasp-top-10.md`](owasp-top-10.md) A07.
 - **Account-recovery & verification flows** — email verification and password
   reset are not yet implemented.

@@ -39,10 +39,14 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.reset.passwordLabel' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="controlInvalid('newPassword')">
                   <lucide-icon class="text-stone-400" [img]="LockKeyhole" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="newPassword" type="password" autocomplete="new-password" [placeholder]="'auth.placeholder.password' | t" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="newPassword" type="password" autocomplete="new-password" [placeholder]="'auth.placeholder.passwordNew' | t" />
                 </span>
                 @if (controlInvalid('newPassword')) {
-                  <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
+                  @if (form.controls.newPassword.hasError('required')) {
+                    <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
+                  } @else {
+                    <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordLength' | t }}</span>
+                  }
                 }
               </label>
 
