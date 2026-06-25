@@ -18,6 +18,7 @@ where and how.
 | [`owasp-top-10.md`](owasp-top-10.md) | OWASP Top 10 (2021) mapped to concrete controls, file references, and remediation status. |
 | [`security-controls.md`](security-controls.md) | Catalog of implemented security controls and where each lives in the codebase. |
 | [`security-testing.md`](security-testing.md) | Security test strategy: SAST, SCA, secret scanning, DAST, and a manual pentest checklist. |
+| [`security-master-plan.md`](security-master-plan.md) | **The hardening roadmap** — OWASP Top 10 + DevSecOps, ordered into executable phases, with a Burp Suite pentest methodology. **Read this to know what's next.** |
 | [`vulnerable-lab.md`](vulnerable-lab.md) | Design of the deliberately-vulnerable `vulnerable-lab` branch and exploitation → remediation writeups. |
 | [`../devops/cicd-security.md`](../devops/cicd-security.md) | The DevSecOps pipeline: security gates in CI/CD and how to read the reports. |
 | [`../../SECURITY.md`](../../SECURITY.md) | Vulnerability disclosure policy (repository root). |
@@ -89,6 +90,11 @@ that is the point of an AppSec program.
   a placeholder JWT secret (`JwtSecretValidator`).
 - **Security-event logging** — authentication outcomes, JWT rejections, 401/403
   denials and unexpected 500s are logged; lockouts/logouts are audited.
+- **HTTP security headers** — the core sets a lock-everything CSP
+  (`default-src 'none'; frame-ancestors 'none'`), `Referrer-Policy: no-referrer`,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Permissions-Policy`
+  and HSTS via Spring Security (`config/SecurityConfig.java`). Appropriate for a
+  JSON API that never serves HTML. HSTS only engages over HTTPS (TLS at the edge).
 
 ### Partial ⚠️
 
@@ -101,9 +107,6 @@ that is the point of an AppSec program.
 
 ### Gaps ❌ (tracked)
 
-- **HTTP security headers** — no HSTS / CSP / `X-Content-Type-Options` /
-  `X-Frame-Options` set by the app (expected at the gateway/edge; the
-  [DAST workflow](../../.github/workflows/dast.yml) flags these automatically).
 - **Transport encryption in the stack** — Postgres, Redis, Kafka and SMTP run
   plaintext in compose; TLS is delegated to the deployment environment.
 - **Token lifecycle (remaining)** — revocation/logout and per-account lockout now

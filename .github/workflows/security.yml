@@ -93,6 +93,29 @@ jobs:
           category: trivy-dependencies
 
   # ---------------------------------------------------------------------------
+  # Dependency review — PR-scoped, BLOCKING gate on newly-introduced CVEs.
+  # Complements the report-only Trivy SCA and after-the-fact Dependabot: it fails
+  # the PR that *adds* a CRITICAL/HIGH-vulnerable (or disallowed-license)
+  # dependency, before it ever reaches main. Only meaningful on pull_request.
+  # ---------------------------------------------------------------------------
+  dependency-review:
+    name: Dependency review (PR gate)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # post the review summary as a PR comment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  # ---------------------------------------------------------------------------
   # Secret scanning — committed credentials. This is a HARD GATE.
   # ---------------------------------------------------------------------------
   secret-scan:

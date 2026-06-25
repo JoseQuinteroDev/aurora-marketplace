@@ -16,7 +16,7 @@ the risks in [`threat-model.md`](threat-model.md) and [`owasp-top-10.md`](owasp-
         │   ├───────────────────────────────┤
         │   │  Integration / API tests      │   ← planned (see §2)
         │   ├───────────────────────────────┤
-        │   │  Security unit tests          │   ← shipped: JwtService, auth filter
+        │   │  Security unit tests          │   ← shipped: JWT, order IDOR, checkout pricing
         │   ├───────────────────────────────┤
         │   │  SAST · SCA · secrets (CI)    │   ← every push/PR, see cicd-security
         ▼   └───────────────────────────────┘
@@ -43,13 +43,25 @@ These run in [`security.yml`](../../.github/workflows/security.yml) — see
 
 ## 2. Security unit tests (shipped in the repo)
 
-The authentication core is tested directly, with no database or Spring context,
-so the tests are fast and reliable in CI.
+The security-critical core is tested directly — mostly with no Spring context at
+all (pure Mockito), plus one fast web slice for the authorization wiring. None
+need a database, so they are fast and reliable in CI.
 
 | Test | File | Asserts |
 |---|---|---|
 | `JwtServiceTest` | `backend/src/test/java/com/aurora/backend/security/jwt/JwtServiceTest.java` | A valid token round-trips; a **tampered payload** is rejected; a token **signed with another secret** is rejected; an **expired token** is rejected. (OWASP A02/A07) |
 | `JwtAuthenticationFilterTest` | `backend/.../security/jwt/JwtAuthenticationFilterTest.java` | No header → stays anonymous; valid token → authenticated with **authorities loaded from the database, not the token**; invalid token → fails closed but the chain proceeds. (OWASP A01) |
+| `OrderServiceTest` | `backend/.../order/service/OrderServiceTest.java` | `getUserOrder` resolves only via the **owner-scoped** `findByIdAndUserId` (never the unscoped `findById`), so a customer cannot read another customer's order (**IDOR**, A01); admin `updateStatus` changes status + audits the change, unknown order → 404, and list scoping holds. |
+| `CheckoutServiceTest` | `backend/.../checkout/service/CheckoutServiceTest.java` | Order + payment money is **recomputed server-side** from the cart/catalog (client cannot influence price/total); empty cart, inactive variant and insufficient stock are rejected. Locks the **client-trusted-pricing** control. (OWASP A04) |
+| `CouponServiceTest` | `backend/.../promotion/service/CouponServiceTest.java` | Percentage/fixed discount math, discount **capped at subtotal** (no negative orders), inactive/expired coupons contribute nothing, and **global + per-user use limits** are enforced (no reuse beyond limit). (OWASP A04) |
+| `AdminAuthorizationTest` | `backend/.../config/AdminAuthorizationTest.java` | **Web-slice** test of the real `SecurityConfig` filter chain: `/api/admin/**` returns **401 anonymous, 403 for `ROLE_CUSTOMER`, 200 for `ROLE_ADMIN`**. Covers the RBAC *wiring*, not just the logic. (OWASP A01) |
+| `ReviewServiceTest` | `backend/.../review/service/ReviewServiceTest.java` | One review per user per product (no duplicates); reviews can only be created/listed for an **active** product (a hidden product leaks nothing); a new review is never auto-`verifiedPurchase`. (OWASP A04) |
+| `CartServiceTest` | `backend/.../cart/service/CartServiceTest.java` | Add-to-cart prices from the **catalog** (not the client) and rejects inactive variants / insufficient stock; cart items are **owner-scoped** (`findByIdAndCartUserId`), so a customer cannot update/remove another's item by id. (OWASP A04 + A01/IDOR) |
+| `InventoryServiceTest` | `backend/.../inventory/service/InventoryServiceTest.java` | Stock invariants: quantities must be positive, available stock can never go negative (no overselling), and reserve/release keep the available/reserved split consistent. (integrity / A04) |
+| `AuthValidationTest` | `backend/.../auth/controller/AuthValidationTest.java` | **Web-slice**: blank/invalid/malformed register bodies return a clean **400 `VALIDATION_ERROR`** (malformed JSON → `400 BAD_REQUEST`) via `GlobalExceptionHandler`, never a 500, and the service is not invoked with bad input. (OWASP A03) |
+| `WishlistServiceTest` | `backend/.../wishlist/service/WishlistServiceTest.java` | Wishlist entries require an active product, are de-duplicated per user, and are removed via a **user-scoped** lookup (no cross-user deletes). (OWASP A04 + A01) |
+| `ProductServiceTest` | `backend/.../catalog/product/service/ProductServiceTest.java` | Search input validation; an empty product list **skips the rating query** (guards the no-N+1 aggregation); unknown slug → 404. |
+| `PaymentServiceTest` | `backend/.../payment/service/PaymentServiceTest.java` | Order fetched **owner-scoped** (IDOR); charged amount is the **server order total** (request carries no amount, A04); already-paid/cancelled orders are rejected; correct `PAYMENT_CONFIRMED`/`PAYMENT_FAILED` event per outcome. (A01 + A04) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -62,17 +74,36 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **7 tests, all passing.**
+> Current status: **60 security-focused tests, all passing.** (JWT ×7,
+> `OrderServiceTest` ×6, `CheckoutServiceTest` ×4, `CouponServiceTest` ×9,
+> `AdminAuthorizationTest` ×3, `ReviewServiceTest` ×4, `CartServiceTest` ×5,
+> `InventoryServiceTest` ×6, `AuthValidationTest` ×4, `WishlistServiceTest` ×3,
+> `ProductServiceTest` ×4, `PaymentServiceTest` ×5.)
+> Beyond these security-focused tests, the full Docker-free backend suite is **70
+> tests**. A parallel **frontend** suite (Vitest) covers the auth service, route
+> guards, the HTTP interceptor, cart/toast services, i18n parity and utilities
+> (**45 tests**), and the **notification-service** covers its listener +
+> idempotency tracker (**13 tests**) — ~119 fast tests green across the stack.
+> The JWT and service tests need no Spring context; `AdminAuthorizationTest` is a
+> web slice (Spring context, still no database/Docker).
 
 ### Where to add the next ones
 
-- **Authorization (integration):** with a test database (Testcontainers
-  PostgreSQL), assert `/api/admin/**` returns `403` for a `ROLE_CUSTOMER` token
-  and `200` for `ROLE_ADMIN`, using `spring-security-test` (`@WithMockUser`).
-- **IDOR (the P1 residual risk):** assert customer A cannot read/modify customer
-  B's cart/order/review by id. This is the single most valuable test class to
-  add next — see the threat model (A01).
-- **Validation:** assert oversized/blank/negative inputs yield `400`, not `500`.
+The highest-value controls are now locked: **IDOR** on orders and
+**client-trusted pricing** at checkout at the service layer, **coupon abuse** in
+`CouponService`, and the **`/api/admin/**` RBAC wiring** end-to-end through the
+real filter chain (`AdminAuthorizationTest`). Remaining gaps:
+
+- **Full-stack authz (integration):** with a test database (Testcontainers
+  PostgreSQL), drive the same checks through a real JWT issued by `/api/auth/login`
+  and the running security chain end-to-end. (Needs Docker — runs in CI, not in a
+  Docker-less dev shell.)
+- **IDOR breadth:** orders and cart items are now covered (`OrderServiceTest`,
+  `CartServiceTest`); the remaining surfaces are admin-only resources, already
+  gated by the `/api/admin/**` rule (`AdminAuthorizationTest`).
+- **Validation:** the auth endpoints are covered (`AuthValidationTest`); the same
+  `@WebMvcTest` pattern can be extended to the other validated controllers
+  (checkout/cart/review request bodies).
 
 ## 3. DAST — dynamic testing (the running app)
 

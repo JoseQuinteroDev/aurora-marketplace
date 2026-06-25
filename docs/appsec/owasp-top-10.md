@@ -258,9 +258,12 @@ permissive CORS, default credentials.
   reactive Spring Security in front of the rest is the further hardening step.
 - **✅ Remediated (HIGH) — default JWT secret fail-fast** under the `prod` profile
   (`JwtSecretValidator`); see A02. DB/MinIO compose defaults remain a deploy-time concern.
-- **No HTTP security headers** anywhere (HSTS, CSP, `X-Content-Type-Options`,
-  `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`) — the storefront is
-  served without clickjacking/MIME-sniffing/transport-pinning protections (medium).
+- **✅ Remediated (MEDIUM) — HTTP security headers on the core.** `SecurityConfig`
+  now sets CSP (`default-src 'none'; frame-ancestors 'none'; base-uri 'none';
+  form-action 'none'`), `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Permissions-Policy` and HSTS. Mirroring them
+  in a gateway-edge response filter (so non-core/error paths are covered too)
+  remains a follow-up.
 - **CORS** is permissive and hardcoded (`http://localhost:*` + `allow-credentials:
   true`, no per-env allow-list) (medium).
 - `management.endpoint.health.show-details: always` on all three services exposes
@@ -271,9 +274,9 @@ permissive CORS, default credentials.
 **Remediation**
 - Add Spring Security (reactive) to the gateway and bind management to a separate,
   non-routable port — or at least drop `gateway`/`metrics` from public exposure.
-- Add a **security-header response filter at the gateway** (HSTS/CSP/nosniff/
-  frame-ancestors/Referrer-Policy) and enable Spring Security header defaults on
-  the core. *(The new DAST workflow flags missing headers automatically — see below.)*
+- ✅ Security headers are set on the core (`SecurityConfig`); the remaining step is
+  to **mirror them in a gateway-edge response filter** so non-core and error
+  paths carry them too. *(The DAST workflow flags missing headers automatically.)*
 - Per-environment CORS allow-list; fail fast on default secrets; profile-specific
   logging; a hardened compose overlay for non-local use.
 
@@ -486,7 +489,7 @@ deserialization, broken event integrity, unverified pipeline artifacts.
 | A07 lockout + revocation | ✅ Remediated | Per-account lockout (core-side) + token revocation + `/api/auth/logout` shipped |
 | A09 auth/500 logging | ✅ Remediated | Auth events, 500s, authz denials, JWT failures logged; lockout/logout audited |
 | A01 Access Control | ⚠️ | IDOR ownership integration tests on every resource — **P1** |
-| A05 Misconfig | ⚠️ | HTTP security headers + per-env CORS — **P2** |
+| A05 Misconfig | ⚠️ | Core security headers ✅; gateway-edge header filter + per-env CORS — **P2** |
 | A04 Insecure Design | ⚠️ | Locking/`@Version` + coupon unique constraint + checkout idempotency key — **P2** |
 | A08 Integrity | ⚠️ | SHA-pin Actions + image signing/provenance — **P2** |
 | A07 AuthN (remaining) | ⚠️ | Refresh-token rotation, breached-password/MFA, cookie storage — **P3** |

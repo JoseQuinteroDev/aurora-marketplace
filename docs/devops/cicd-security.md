@@ -36,7 +36,7 @@ every commit.
 | Workflow | File | Trigger | Purpose |
 |---|---|---|---|
 | CI | [`ci.yml`](../../.github/workflows/ci.yml) | push / PR | Build + test the 3 Java modules (matrix) and build the Angular frontend. |
-| Security | [`security.yml`](../../.github/workflows/security.yml) | push / PR / weekly | SAST, SCA, secret scanning, IaC/image scanning, SBOM. |
+| Security | [`security.yml`](../../.github/workflows/security.yml) | push / PR / weekly | SAST, SCA, secret scanning, IaC/image scanning, SBOM, **dependency review** (PR gate). |
 | DAST | [`dast.yml`](../../.github/workflows/dast.yml) | weekly / manual | NightVision dynamic scan of the running API (opt-in). |
 | Dependabot | [`dependabot.yml`](../../.github/dependabot.yml) | weekly / on-advisory | Automated dependency-update PRs across all ecosystems. |
 
@@ -153,6 +153,7 @@ step. NightVision's agent skills (`/scan-configuration`, `/scan-triage`,
 | Finding type | Action | Rationale |
 |---|---|---|
 | Committed secret | **Fail run** | Irreversible once pushed; must be caught pre-merge. |
+| New CRITICAL/HIGH dep CVE in a PR | **Fail PR** (dependency review) | High-confidence, PR-scoped; cheaper to reject than to remediate post-merge. |
 | Dockerfile lint (Hadolint ≥ warning) | **Fail job** | Cheap, deterministic, fixed at source. |
 | Dependency / image CVE (Trivy) | Report → triage | Noisy by nature; track and remediate via Dependabot. |
 | Code scanning (CodeQL) | Report; review high-severity | Real bugs, but need human triage for exploitability. |
@@ -170,10 +171,10 @@ bypass the pipeline; under-gating lets real risk through.
 - **Backend (gates):** `mvnw clean verify` across `backend`, `gateway`,
   `services/notification-service` (matrix) — a real failure fails CI.
 - **Frontend build (gate):** `npm run build` must succeed.
-- **Frontend unit tests (NOT a gate):** the Karma/headless test step is
-  `continue-on-error: true`, so Angular test failures **do not** fail CI today.
-  This is called out so the diagram isn't read as "the frontend is test-gated" —
-  it isn't yet. See the *Hardening backlog*.
+- **Frontend unit tests (gate):** `npm test` runs the Vitest suite (jsdom, no
+  browser) via the Angular builder and **fails CI on any test failure**. This was
+  previously non-gating (`continue-on-error`, legacy Karma flag); it is now a real
+  gate.
 
 ## How to read the results
 
@@ -217,8 +218,8 @@ adversarial review of the pipeline itself.
 |---|---|---|
 | **P1** | **Pin every Action to a full commit SHA** (e.g. `actions/checkout@<sha> # v4`) and let the `github-actions` Dependabot ecosystem bump the SHAs. | Mutable tags are a real supply-chain risk — and the security pipeline is the *worst* place to run an attacker-re-tagged action. Today **nothing is SHA-pinned** (all `@v4`/`@v3`/`@v0`…). |
 | **P1** | **Enable branch protection on `main`** requiring CI + `secret-scan` to pass before merge, plus PR review. | Converts the documented "hard gate" into an *enforced* one — today a red `secret-scan` can still be merged. |
-| **P2** | **Add `actions/dependency-review-action`** on `pull_request`. | A focused, PR-scoped, *blocking* check on newly-introduced CRITICAL/HIGH CVEs (and disallowed licenses) — complements report-only Trivy and after-the-fact Dependabot. |
-| **P2** | **Make the frontend test step a gate** (drop `continue-on-error`, fix any flakiness). | The frontend has no enforced test gate today. |
+| ~~P2~~ ✅ | ~~**Add `actions/dependency-review-action`** on `pull_request`.~~ **Done** (`security.yml` → `dependency-review` job, `fail-on-severity: high`). | A focused, PR-scoped, *blocking* check on newly-introduced CRITICAL/HIGH CVEs (and disallowed licenses) — complements report-only Trivy and after-the-fact Dependabot. |
+| ~~P2~~ ✅ | ~~**Make the frontend test step a gate** (drop `continue-on-error`, fix any flakiness).~~ **Done** (`ci.yml` now runs `npm test` / Vitest as a gate). | The frontend had no enforced test gate. |
 | **P2** | **Scan the built image** (`trivy image` on each built Dockerfile tag), not just the filesystem/Dockerfile. | Catches base-image / OS-package CVEs that manifest-only scanning misses. |
 | **P2** | **Sign images + provenance** (cosign + SLSA build-provenance / attest the SBOM). | Lets consumers verify a deployed image is the genuine CI output (A08). |
 | **P3** | **Pin Docker base images by digest** (`eclipse-temurin:21-jre@sha256:…`). | Reproducible builds; closes the floating-tag substitution risk. Dependabot can update the digest. |
