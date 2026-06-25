@@ -8,9 +8,11 @@ import com.aurora.backend.audit.service.AuditLogService;
 import com.aurora.backend.auth.dto.AuthResponse;
 import com.aurora.backend.auth.dto.AuthUserResponse;
 import com.aurora.backend.auth.dto.LoginRequest;
+import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.security.jwt.JwtService;
+import com.aurora.backend.security.token.RefreshTokenService;
 import com.aurora.backend.security.token.TokenDenylistService;
 import com.aurora.backend.user.entity.User;
 import com.aurora.backend.user.repository.UserRepository;
@@ -40,6 +42,7 @@ public class AuthService {
     private final LoginAttemptService loginAttemptService;
     private final TokenDenylistService tokenDenylistService;
     private final AuditLogService auditLogService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService(
             UserRepository userRepository,
@@ -48,7 +51,8 @@ public class AuthService {
             JwtService jwtService,
             LoginAttemptService loginAttemptService,
             TokenDenylistService tokenDenylistService,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            RefreshTokenService refreshTokenService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -57,6 +61,7 @@ public class AuthService {
         this.loginAttemptService = loginAttemptService;
         this.tokenDenylistService = tokenDenylistService;
         this.auditLogService = auditLogService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional
@@ -121,7 +126,12 @@ public class AuthService {
      * rejected for the remainder of its lifetime (OWASP A07). Best-effort —
      * a token that can't be parsed leaves nothing to revoke.
      */
+    /** Backward-compatible overload (revokes only the access token). */
     public void logout(String authorizationHeader, User actor) {
+        logout(authorizationHeader, actor, null);
+    }
+
+    public void logout(String authorizationHeader, User actor, String refreshToken) {
         if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PREFIX)) {
             String token = authorizationHeader.substring(BEARER_PREFIX.length());
             try {
@@ -131,15 +141,33 @@ public class AuthService {
                         exception.getClass().getSimpleName());
             }
         }
+        // Additionally kill the whole refresh-token family if one was supplied (best-effort).
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            refreshTokenService.revokeFamilyOf(refreshToken);
+        }
         auditLogService.log(AuditEventType.LOGOUT, actor, "User", actor.getId(),
                 "User logged out; access token revoked.");
         log.info("Logout: access token revoked (email={}).", actor.getEmail());
     }
 
+    /** Rotates a refresh token: issues a fresh access + refresh token, with reuse detection. */
+    public AuthResponse refresh(RefreshRequest request) {
+        RefreshTokenService.RotationResult result = refreshTokenService.rotate(request.refreshToken());
+        return AuthResponse.bearer(
+                result.accessToken(),
+                result.rawRefreshToken(),
+                jwtService.getExpirationMinutes(),
+                AuthUserResponse.from(result.user())
+        );
+    }
+
     private AuthResponse buildAuthResponse(User user) {
         String accessToken = jwtService.generateToken(user);
+        String accessJti = jwtService.extractJti(accessToken);
+        String refreshToken = refreshTokenService.issue(user, accessJti);
         return AuthResponse.bearer(
                 accessToken,
+                refreshToken,
                 jwtService.getExpirationMinutes(),
                 AuthUserResponse.from(user)
         );

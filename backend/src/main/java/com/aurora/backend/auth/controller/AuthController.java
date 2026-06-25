@@ -2,6 +2,8 @@ package com.aurora.backend.auth.controller;
 
 import com.aurora.backend.auth.dto.AuthResponse;
 import com.aurora.backend.auth.dto.LoginRequest;
+import com.aurora.backend.auth.dto.LogoutRequest;
+import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
 import com.aurora.backend.auth.service.AuthService;
 import com.aurora.backend.common.api.ApiResponse;
@@ -44,13 +46,19 @@ public class AuthController {
         return ApiResponse.success("Login successful.", authService.login(request));
     }
 
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.success("Token refreshed.", authService.refresh(request));
+    }
+
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @RequestBody(required = false) LogoutRequest body,
             Authentication authentication
     ) {
         User actor = currentUserService.getCurrentUser(authentication);
-        authService.logout(authorizationHeader, actor);
+        authService.logout(authorizationHeader, actor, body != null ? body.refreshToken() : null);
         return ApiResponse.success("Logout successful.");
     }
 }

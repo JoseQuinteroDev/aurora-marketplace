@@ -7,5 +7,6 @@ public enum AuditEventType {
     PAYMENT_SIMULATED_FAILED,
     COUPON_USED,
     ACCOUNT_LOCKED,
-    LOGOUT
+    LOGOUT,
+    REFRESH_TOKEN_REUSED
 }

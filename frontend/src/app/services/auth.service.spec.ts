@@ -12,6 +12,7 @@ function payload(role: 'CUSTOMER' | 'ADMIN' = 'CUSTOMER', minutes = 60): AuthPay
   return {
     tokenType: 'Bearer',
     accessToken: 'tok-123',
+    refreshToken: 'rid-123.secret',
     expiresInMinutes: minutes,
     user: { id: 'u1', email: 'a@b.c', firstName: 'A', lastName: 'B', role },
   };
@@ -82,11 +83,30 @@ describe('AuthService', () => {
     http.expectOne('/api/auth/login').flush({ data: payload() });
 
     service.logout();
-    http.expectOne('/api/auth/logout').flush({});   // best-effort server revoke
+    const logoutReq = http.expectOne('/api/auth/logout');
+    expect(logoutReq.request.body.refreshToken).toBe('rid-123.secret'); // family revoke
+    logoutReq.flush({});
 
     expect(service.getToken()).toBeNull();
+    expect(service.getRefreshToken()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
     expect(navigations).toContain('/');
+    http.verify();
+  });
+
+  it('refresh rotates the stored access + refresh tokens in place', () => {
+    const { service, http } = setup();
+    service.login({ email: 'a@b.c', password: 'secret12' }).subscribe();
+    http.expectOne('/api/auth/login').flush({ data: payload() });
+    expect(service.getRefreshToken()).toBe('rid-123.secret');
+
+    service.refresh().subscribe();
+    const req = http.expectOne('/api/auth/refresh');
+    expect(req.request.body.refreshToken).toBe('rid-123.secret');
+    req.flush({ data: { ...payload(), accessToken: 'tok-456', refreshToken: 'rid-456.secret' } });
+
+    expect(service.getToken()).toBe('tok-456');
+    expect(service.getRefreshToken()).toBe('rid-456.secret');
     http.verify();
   });
 });

@@ -10,8 +10,13 @@ export interface AuthUser {
 export interface AuthPayload {
   tokenType: 'Bearer';
   accessToken: string;
+  refreshToken: string;
   expiresInMinutes: number;
   user: AuthUser;
+}
+
+export interface RefreshRequest {
+  refreshToken: string;
 }
 
 export interface LoginRequest {

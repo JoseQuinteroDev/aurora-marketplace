@@ -6,6 +6,7 @@ import com.aurora.backend.security.CurrentUserService;
 import com.aurora.backend.security.jwt.JwtAuthenticationFilter;
 import com.aurora.backend.security.jwt.JwtService;
 import com.aurora.backend.security.token.TokenDenylistService;
+import com.aurora.backend.user.entity.User;
 import com.aurora.backend.user.repository.UserRepository;
 
 import org.junit.jupiter.api.Test;
@@ -18,9 +19,13 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,5 +98,42 @@ class AuthValidationTest {
                 .andExpect(status().isCreated());
 
         verify(authService).register(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void refreshIsPublicAndReachesTheServiceWithAValidBody() throws Exception {
+        // permitAll: an anonymous, well-formed refresh reaches the controller (not 401 from the chain).
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"rid.secret\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).refresh(any());
+    }
+
+    @Test
+    void refreshWithABlankTokenIs400AndDoesNotCallTheService() throws Exception {
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).refresh(any());
+    }
+
+    @Test
+    void logoutStillRequiresAuthentication() throws Exception {
+        mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutPassesTheRefreshTokenThroughForAnAuthenticatedUser() throws Exception {
+        when(currentUserService.getCurrentUser(any())).thenReturn(mock(User.class));
+
+        mvc.perform(post("/api/auth/logout").with(user("u").roles("CUSTOMER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\"rid.secret\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).logout(any(), any(), eq("rid.secret"));
     }
 }
