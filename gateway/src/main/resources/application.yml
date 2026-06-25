@@ -60,6 +60,25 @@ spring:
                 methods: GET
                 series: SERVER_ERROR
 
+        # Tighter throttle for the unauthenticated password-reset request, so a known
+        # address can't be email-bombed. Declared before the /api/** catch-all; the
+        # core also enforces a per-account interval as a gateway-bypass backstop.
+        - id: aurora-forgot-password
+          uri: ${BACKEND_URI:http://localhost:8080}
+          predicates:
+            - Path=/api/auth/forgot-password
+          filters:
+            - name: RequestRateLimiter
+              args:
+                key-resolver: "#{@clientIpKeyResolver}"
+                redis-rate-limiter.replenishRate: ${FORGOT_PASSWORD_RATE_REPLENISH:1}
+                redis-rate-limiter.burstCapacity: ${FORGOT_PASSWORD_RATE_BURST:3}
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: coreApiCircuitBreaker
+                fallbackUri: forward:/fallback/core
+
         # Core commerce service (catalog, cart, checkout, orders, payments, admin).
         - id: aurora-core-api
           uri: ${BACKEND_URI:http://localhost:8080}
