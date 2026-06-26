@@ -61,7 +61,7 @@ jobs:
       TARGET_URL: http://localhost:8088
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Secrets are not available in job-level `if`, so gate here and let every
       # downstream step key off this output. Keeps the workflow green-by-default
