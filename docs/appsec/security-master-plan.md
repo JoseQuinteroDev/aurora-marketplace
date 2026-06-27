@@ -124,23 +124,35 @@ Strong controls already in place — the plan *builds on* these, it does not red
 - **Exit:** a DAST scan reports no missing-header / permissive-CORS / unthrottled
   findings; management surface is not publicly routable.
 
-### Phase 3 — Data & business-logic integrity
+### Phase 3 — Data & business-logic integrity — ✅ SHIPPED (`feat/prod-hardening`)
 *OWASP: A04 (insecure design), A08.*
-- **Optimistic locking (`@Version`)** on `inventory`, `order`, `payment` to close
-  races beyond the current row-lock (concurrent checkout/refund).
-- **Checkout idempotency key:** client-supplied `Idempotency-Key` header → unique
-  constraint, so a double-submit/replay can't create two orders or double-charge.
-- **Coupon integrity:** DB unique constraint on code + atomic usage counting so
-  limits can't be beaten by concurrency.
-- **Exit:** new Testcontainers integration tests prove no oversell / no double-order
-  under concurrency.
+- ✅ **Optimistic locking (`@Version`)** on `inventory`, `order`, `payment` (V13). Closes
+  lost-update races beyond the checkout row lock (the admin/batch stock path, concurrent
+  order status changes, double payment submission). A lost race → `409
+  CONCURRENT_MODIFICATION`. Proven by `OrderOptimisticLockingTest` (Testcontainers).
+- ✅ **Checkout idempotency key.** Optional `Idempotency-Key` header → `(user_id, key)` unique
+  constraint (V14); a retry/double-submit replays the original order, a concurrent duplicate
+  rolls back (`409 DUPLICATE_CHECKOUT`). The SPA sends a stable per-intent UUID. Proven by
+  `CheckoutIdempotencyTest` (Testcontainers).
+- ✅ **Coupon integrity.** Code already had a DB unique constraint; redemption is now atomic —
+  `CouponService.redeem` takes a `PESSIMISTIC_WRITE` lock on the coupon row and re-checks the
+  usage limits under it (a unique constraint can't express `maxUses > 1`). Proven by
+  `CouponRedemptionConcurrencyTest` (Testcontainers).
+- **Exit:** ✅ Testcontainers integration tests prove no double-order and no coupon over-use
+  under concurrency, and that the optimistic lock prevents a lost update.
 
 ### Phase 4 — Injection, deserialization & SSRF sweep
 *OWASP: A03 (injection), A08, A10 (SSRF).*
 - **Injection audit:** confirm 100% parameterized JPA (no string-concatenated
   queries); add a CodeQL/grep gate flagging concatenated query strings.
-- **SSRF guard:** validate/allow-list any server-fetched URL (product image URLs,
-  future webhooks); block internal/link-local targets.
+- **SSRF guard:** ✅ *audited — no live sink.* A full-backend sweep found **no server-side
+  URL fetching** (RestTemplate/RestClient/WebClient/HttpClient/URL.openConnection): product
+  image URLs are stored and rendered by the browser, never fetched server-side. The one
+  outbound client is the HIBP breach check to a fixed, configured host. Added preventive input
+  hardening — stored image URLs must be absolute **http(s)** (blocks `javascript:`/`data:`/
+  `file:` scheme abuse), locked by `ProductImageRequestValidationTest`. *Remaining:* if a
+  server-side fetch is ever introduced (e.g. webhooks), add an allow-list that blocks
+  internal/link-local targets at that sink.
 - **Deserialization:** keep strict JSON mapping (`@JsonIgnoreProperties`); no generic
   polymorphic deserialization of untrusted input.
 - **Header/CRLF injection:** confirm email is built via structured API, not manual
