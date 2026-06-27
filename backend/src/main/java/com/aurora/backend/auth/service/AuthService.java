@@ -24,6 +24,7 @@ import com.aurora.backend.messaging.event.EmailVerificationRequestedEvent;
 import com.aurora.backend.messaging.event.PasswordResetRequestedEvent;
 import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.security.jwt.JwtService;
+import com.aurora.backend.security.password.PasswordBreachChecker;
 import com.aurora.backend.security.token.EmailVerificationTokenService;
 import com.aurora.backend.security.token.PasswordResetTokenService;
 import com.aurora.backend.security.token.RefreshTokenRepository;
@@ -66,6 +67,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenReuseResponder reuseResponder;
     private final EmailVerificationTokenService emailVerificationTokenService;
+    private final PasswordBreachChecker passwordBreachChecker;
     private final int resetExpiryMinutes;
     private final long resetMinIntervalSeconds;
     private final long resetLatencyFloorMs;
@@ -92,6 +94,7 @@ public class AuthService {
             OutboxEventRecorder outboxRecorder,
             RefreshTokenRepository refreshTokenRepository,
             RefreshTokenReuseResponder reuseResponder,
+            PasswordBreachChecker passwordBreachChecker,
             @Value("${app.security.password-reset-token.expiration-minutes:30}") int resetExpiryMinutes,
             @Value("${app.security.password-reset.min-interval-seconds:60}") long resetMinIntervalSeconds,
             @Value("${app.security.password-reset.latency-floor-ms:350}") long resetLatencyFloorMs,
@@ -112,6 +115,7 @@ public class AuthService {
         this.outboxRecorder = outboxRecorder;
         this.refreshTokenRepository = refreshTokenRepository;
         this.reuseResponder = reuseResponder;
+        this.passwordBreachChecker = passwordBreachChecker;
         this.resetExpiryMinutes = resetExpiryMinutes;
         this.resetMinIntervalSeconds = resetMinIntervalSeconds;
         this.resetLatencyFloorMs = resetLatencyFloorMs;
@@ -131,6 +135,8 @@ public class AuthService {
                     "Email is already registered."
             );
         }
+
+        assertPasswordNotBreached(request.password());
 
         User user = new User(
                 email,
@@ -317,6 +323,10 @@ public class AuthService {
      */
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
+        // Validate the chosen password BEFORE consuming the token, so a breached-password
+        // rejection never burns a valid reset token (the user can retry with the same link).
+        assertPasswordNotBreached(request.newPassword());
+
         UUID userId = passwordResetTokenService.consume(request.token());
         User user = userRepository.findById(userId)
                 .filter(User::isEnabled)
@@ -423,6 +433,22 @@ public class AuthService {
                 "INVALID_CREDENTIALS",
                 "Invalid email or password."
         );
+    }
+
+    /**
+     * Rejects a password known to have appeared in a public data breach (OWASP A07 —
+     * credential hygiene). Fail-open: a breach-corpus outage never blocks the user. Applied
+     * only where the user CHOOSES a password (register / reset), never on login — checking a
+     * login password would leak nothing useful and would couple sign-in to an external call.
+     */
+    private void assertPasswordNotBreached(String rawPassword) {
+        if (passwordBreachChecker.isBreached(rawPassword)) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "PASSWORD_BREACHED",
+                    "This password has appeared in a known data breach. Please choose a different one."
+            );
+        }
     }
 
     private String normalizeEmail(String email) {

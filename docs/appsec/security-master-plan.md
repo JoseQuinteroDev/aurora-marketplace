@@ -86,8 +86,13 @@ Strong controls already in place — the plan *builds on* these, it does not red
   expiry — follow-ups: purge PUBLISHED outbox rows, redact the DLT record + short TTL.
 - **Email verification:** still to do — reuses the same single-use-token + outbox→email
   machinery as password reset.
-- **Credential hygiene:** breached-password check (HIBP range/k-anonymity API) at
-  register/reset; optional **TOTP MFA** for admins.
+- ✅ **Breached-password check — SHIPPED** (`feat/auth-hardening`). At register/reset, a
+  chosen password is checked against the Have I Been Pwned "Pwned Passwords" corpus via the
+  **range API with k-anonymity** (only a 5-char SHA-1 prefix leaves the process); a match
+  returns `400 PASSWORD_BREACHED`. **Fails open** on corpus outage (availability > strictness)
+  and is env-toggleable for air-gapped deploys; the reset check runs *before* token
+  consumption so a rejection doesn't burn the link. Unit-tested with a faked range client.
+- **Credential hygiene (remaining):** optional **TOTP MFA** for admins.
 - **Exit:** auth-lifecycle gaps in `README.md` move from ❌/⚠️ to ✅; each flow has a
   regression test and an audit-log entry.
 

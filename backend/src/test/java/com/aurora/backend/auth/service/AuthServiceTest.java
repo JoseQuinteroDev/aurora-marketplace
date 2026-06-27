@@ -19,6 +19,7 @@ import com.aurora.backend.messaging.event.EmailVerificationRequestedEvent;
 import com.aurora.backend.messaging.event.PasswordResetRequestedEvent;
 import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.security.jwt.JwtService;
+import com.aurora.backend.security.password.PasswordBreachChecker;
 import com.aurora.backend.security.token.EmailVerificationTokenService;
 import com.aurora.backend.security.token.PasswordResetTokenService;
 import com.aurora.backend.security.token.RefreshTokenRepository;
@@ -70,12 +71,13 @@ class AuthServiceTest {
     private final OutboxEventRecorder outboxRecorder = mock(OutboxEventRecorder.class);
     private final RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
     private final RefreshTokenReuseResponder reuseResponder = mock(RefreshTokenReuseResponder.class);
+    private final PasswordBreachChecker passwordBreachChecker = mock(PasswordBreachChecker.class);
 
     private final AuthService authService = new AuthService(
             userRepository, passwordEncoder, authenticationManager, jwtService,
             loginAttemptService, tokenDenylistService, auditLogService, refreshTokenService,
             passwordResetTokenService, emailVerificationTokenService, outboxRecorder,
-            refreshTokenRepository, reuseResponder,
+            refreshTokenRepository, reuseResponder, passwordBreachChecker,
             30, 60L, 0L,        // password-reset: expiry, interval, latency-floor (0 = no sleep in tests)
             1440, 60L, 0L);     // email-verification: expiry, interval, latency-floor
 
@@ -342,5 +344,35 @@ class AuthServiceTest {
                 eq(AuroraTopics.EMAIL_VERIFICATION_REQUESTED), eq(USER_ID.toString()), payload.capture());
         assertThat(((EmailVerificationRequestedEvent) payload.getValue()).verificationToken()).isEqualTo("ev.secret");
         verify(auditLogService).log(eq(AuditEventType.EMAIL_VERIFICATION_REQUESTED), eq(unverified), any(), any(), any());
+    }
+
+    // --- breached-password check (OWASP A07 credential hygiene) ---
+
+    @Test
+    void registerWithABreachedPasswordIsRejectedAndPersistsNothing() {
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(passwordBreachChecker.isBreached("password123")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.register(new RegisterRequest(
+                "ada@aurora.test", "password123", "Ada", "Lovelace", null)))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("PASSWORD_BREACHED"));
+
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(outboxRecorder);
+    }
+
+    @Test
+    void resetPasswordWithABreachedPasswordIsRejectedWithoutConsumingTheToken() {
+        when(passwordBreachChecker.isBreached("Password123!")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.resetPassword(new ResetPasswordRequest("rid.secret", "Password123!")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("PASSWORD_BREACHED"));
+
+        // The breach check precedes token consumption, so a valid reset link is not burned.
+        verify(passwordResetTokenService, never()).consume(any());
+        verify(userRepository, never()).save(any());
+        verify(reuseResponder, never()).revokeFamily(any());
     }
 }

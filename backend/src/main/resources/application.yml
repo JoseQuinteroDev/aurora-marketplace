@@ -86,6 +86,14 @@ app:
       # in the core (not just the gateway), so it holds regardless of ingress.
       max-failed-attempts: ${APP_SECURITY_LOGIN_MAX_FAILED_ATTEMPTS:5}
       lock-duration-minutes: ${APP_SECURITY_LOGIN_LOCK_DURATION_MINUTES:15}
+    breached-password:
+      # Credential hygiene (OWASP A07): reject a chosen password (register / reset) that
+      # appears in the Have I Been Pwned "Pwned Passwords" corpus. Uses k-anonymity — only
+      # the first 5 hex chars of the password's SHA-1 leave the process. Fails OPEN if the
+      # corpus is unreachable (availability > strictness). Disable for air-gapped envs.
+      enabled: ${APP_SECURITY_BREACHED_PASSWORD_ENABLED:true}
+      api-base-url: ${APP_SECURITY_BREACHED_PASSWORD_API_BASE_URL:https://api.pwnedpasswords.com}
+      timeout-ms: ${APP_SECURITY_BREACHED_PASSWORD_TIMEOUT_MS:2500}
     refresh-token:
       # Refresh-token rotation with reuse detection (OWASP A07). Opaque tokens,
       # SHA-256-at-rest, single-use; a benign double-submit within grace-seconds is
