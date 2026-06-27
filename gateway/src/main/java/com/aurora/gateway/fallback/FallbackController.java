@@ -6,7 +6,6 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,12 +19,15 @@ import reactor.core.publisher.Mono;
 @RequestMapping("/fallback")
 public class FallbackController {
 
-    @GetMapping("/core")
+    // Map ALL methods (not just GET): when the core is down, a POST checkout / PUT / DELETE
+    // must also degrade to the graceful 503 JSON below, not a confusing 405 from an
+    // unmatched handler. The circuit breaker forwards here for whatever method failed.
+    @RequestMapping("/core")
     public Mono<ResponseEntity<Map<String, Object>>> coreFallback() {
         return unavailable("The commerce service is temporarily unavailable. Please try again shortly.");
     }
 
-    @GetMapping("/notifications")
+    @RequestMapping("/notifications")
     public Mono<ResponseEntity<Map<String, Object>>> notificationsFallback() {
         return unavailable("The notification service is temporarily unavailable. Please try again shortly.");
     }

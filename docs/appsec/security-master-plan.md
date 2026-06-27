@@ -98,17 +98,29 @@ Strong controls already in place — the plan *builds on* these, it does not red
 
 ### Phase 2 — Edge & transport hardening
 *OWASP: A05 (misconfig), A07, A01.*
-- **CORS per environment:** replace the hardcoded `localhost:*` + credentials with an
-  env-driven allow-list; reject unexpected origins (test it).
-- **Rate limiting, tiered:** keep the per-IP gateway bucket; add a **stricter bucket
-  on `/api/auth/**`** and a per-authenticated-user bucket; document the per-account
-  lockout as the non-bypassable backstop. Return `429` with `Retry-After`.
-- **Gateway-edge security headers:** mirror the core's header set at the gateway so
-  non-core and error/fallback responses also carry them.
-- **Lock down the gateway:** reactive Spring Security in front of it; bind management
-  endpoints to a separate non-routable port; drop `show-details: always`.
+- ✅ **CORS per environment — SHIPPED** (`feat/prod-hardening`). The hardcoded
+  `localhost:*` + credentials is replaced by an env-driven allow-list
+  (`GATEWAY_ALLOWED_ORIGINS`, default the local ng-serve origin only); a credentialed
+  wildcard is impossible and the allowed headers/methods are an explicit list. Verified
+  live: an allowed origin gets `Access-Control-Allow-Origin`, `https://evil.example`
+  preflight is `403`.
+- ✅ **Tiered rate limiting — SHIPPED (partial)** (`feat/prod-hardening`). Added a stricter
+  per-IP bucket on the rest of `/api/auth/**` (login/register/refresh/…; replenish 5 /
+  burst 20) on top of the email-bomb buckets and the global bucket; `429` now carries
+  `Retry-After`. The per-account lockout (core) remains the non-bypassable backstop. Verified
+  live (burst → `429` + `Retry-After: 1`). *Remaining:* a per-authenticated-user bucket
+  (needs JWT-subject key resolution at the gateway).
+- ✅ **Gateway-edge security headers — SHIPPED** (`feat/prod-hardening`). A reactive
+  `ResponseHardeningWebFilter` mirrors the core's header set (CSP/Referrer-Policy/HSTS/
+  X-Frame/X-Content-Type/Permissions-Policy) onto gateway-originated responses (fallbacks,
+  429s, preflights) via `putIfAbsent` (no dup over proxied core headers). Unit-tested +
+  verified live on the fallback response. Also fixed: the fallback now degrades **all
+  methods** (a POST to a downed core was 405, now the graceful 503 JSON).
+- **Lock down the gateway (partial):** ✅ dropped `show-details: always` → `when-authorized`
+  (gateway + core; core also restricted to `ADMIN`). *Remaining:* reactive Spring Security
+  in front of the gateway; bind management endpoints to a separate non-routable port.
 - **TLS everywhere:** HTTPS at the edge (so HSTS engages) and TLS for
-  Postgres/Redis/Kafka/SMTP via a hardened compose/deploy overlay.
+  Postgres/Redis/Kafka/SMTP via a hardened compose/deploy overlay. *(pending)*
 - **Exit:** a DAST scan reports no missing-header / permissive-CORS / unthrottled
   findings; management surface is not publicly routable.
 

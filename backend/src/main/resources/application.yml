@@ -54,7 +54,11 @@ management:
         include: health,info,prometheus,metrics
   endpoint:
     health:
-      show-details: always
+      # Don't disclose per-component health (DB/disk/etc.) to anonymous callers — the
+      # gateway proxies /core-actuator/** unauthenticated. Status (UP/DOWN) is always
+      # shown; the component breakdown only to an authenticated ADMIN.
+      show-details: when-authorized
+      roles: ADMIN
       probes:
         enabled: true
   metrics:
