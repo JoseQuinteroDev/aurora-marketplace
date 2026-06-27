@@ -102,6 +102,23 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
+            org.springframework.orm.ObjectOptimisticLockingFailureException exception,
+            HttpServletRequest request
+    ) {
+        // A concurrent modification lost the optimistic-lock race (OWASP A04). This is a
+        // transient conflict, not a fault — surface a clean 409 the client can safely retry,
+        // never a 500. Logged at warn (a burst can indicate contention or an attack).
+        log.warn("Optimistic-lock conflict on {} {}", request.getMethod(), request.getRequestURI());
+        return buildErrorResponse(
+                HttpStatus.CONFLICT,
+                "CONCURRENT_MODIFICATION",
+                "The resource was modified concurrently. Please retry.",
+                request
+        );
+    }
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotAllowed(
             HttpRequestMethodNotSupportedException exception,

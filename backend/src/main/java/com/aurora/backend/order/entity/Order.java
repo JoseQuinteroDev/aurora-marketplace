@@ -23,6 +23,7 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "orders")
@@ -31,6 +32,13 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    // Optimistic lock (OWASP A04): guards concurrent status transitions on the same order
+    // (e.g. a payment confirmation racing an admin status change or a refund) — the losing
+    // writer gets a 409 rather than silently clobbering the other's state.
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     @Column(name = "order_number", nullable = false, unique = true, length = 40)
     private String orderNumber;
@@ -139,6 +147,10 @@ public class Order {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
     }
 
     public List<OrderItem> getItems() {

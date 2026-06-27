@@ -13,11 +13,11 @@ import org.testcontainers.utility.DockerImageName;
  * fresh container and {@code ddl-auto: validate} checks the schema against it.
  */
 @TestConfiguration(proxyBeanMethods = false)
-class TestcontainersConfiguration {
+public class TestcontainersConfiguration {
 
     @Bean
     @ServiceConnection
-    PostgreSQLContainer<?> postgresContainer() {
+    public PostgreSQLContainer<?> postgresContainer() {
         return new PostgreSQLContainer<>(DockerImageName.parse("postgres:16-alpine"));
     }
 }
