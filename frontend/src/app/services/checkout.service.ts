@@ -8,7 +8,16 @@ import { Order } from '../core/models/order.model';
 export class CheckoutService {
   constructor(private readonly http: HttpClient) {}
 
-  confirm() {
-    return this.http.post<ApiResponse<Order>>('/api/checkout/confirm', null).pipe(map((response) => response.data));
+  /**
+   * Confirms checkout. The caller passes a stable Idempotency-Key for the checkout intent
+   * (reused across retries) so a double-click or a retried request resolves to a single
+   * order server-side rather than creating duplicates.
+   */
+  confirm(idempotencyKey: string) {
+    return this.http
+      .post<ApiResponse<Order>>('/api/checkout/confirm', null, {
+        headers: { 'Idempotency-Key': idempotencyKey }
+      })
+      .pipe(map((response) => response.data));
   }
 }
