@@ -32,8 +32,6 @@ import com.aurora.backend.payment.entity.PaymentMethod;
 import com.aurora.backend.payment.entity.PaymentStatus;
 import com.aurora.backend.payment.repository.PaymentRepository;
 import com.aurora.backend.promotion.entity.Coupon;
-import com.aurora.backend.promotion.entity.CouponUsage;
-import com.aurora.backend.promotion.repository.CouponUsageRepository;
 import com.aurora.backend.promotion.service.CouponService;
 import com.aurora.backend.user.entity.User;
 
@@ -50,7 +48,6 @@ public class CheckoutService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final CouponService couponService;
-    private final CouponUsageRepository couponUsageRepository;
     private final AuditLogService auditLogService;
     private final OutboxEventRecorder outboxRecorder;
 
@@ -63,7 +60,6 @@ public class CheckoutService {
             OrderRepository orderRepository,
             PaymentRepository paymentRepository,
             CouponService couponService,
-            CouponUsageRepository couponUsageRepository,
             AuditLogService auditLogService,
             OutboxEventRecorder outboxRecorder
     ) {
@@ -73,7 +69,6 @@ public class CheckoutService {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.couponService = couponService;
-        this.couponUsageRepository = couponUsageRepository;
         this.auditLogService = auditLogService;
         this.outboxRecorder = outboxRecorder;
     }
@@ -152,7 +147,9 @@ public class CheckoutService {
         paymentRepository.save(new Payment(savedOrder, PaymentStatus.PENDING, PaymentMethod.SIMULATED_CARD, total));
 
         if (coupon != null) {
-            couponUsageRepository.save(new CouponUsage(coupon, user));
+            // Atomic, row-locked redemption (re-checks usage limits under the lock) so the
+            // global/per-user limits can't be beaten by concurrent checkouts (OWASP A04).
+            couponService.redeem(coupon, user);
             auditLogService.log(
                     AuditEventType.COUPON_USED,
                     user,

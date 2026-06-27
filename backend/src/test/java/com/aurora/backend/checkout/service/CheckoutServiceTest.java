@@ -18,7 +18,6 @@ import com.aurora.backend.order.dto.OrderResponse;
 import com.aurora.backend.order.repository.OrderRepository;
 import com.aurora.backend.payment.entity.Payment;
 import com.aurora.backend.payment.repository.PaymentRepository;
-import com.aurora.backend.promotion.repository.CouponUsageRepository;
 import com.aurora.backend.promotion.service.CouponService;
 import com.aurora.backend.user.entity.User;
 import com.aurora.backend.user.role.Role;
@@ -58,7 +57,6 @@ class CheckoutServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private PaymentRepository paymentRepository;
     @Mock private CouponService couponService;
-    @Mock private CouponUsageRepository couponUsageRepository;
     @Mock private AuditLogService auditLogService;
     @Mock private OutboxEventRecorder outboxRecorder;
 

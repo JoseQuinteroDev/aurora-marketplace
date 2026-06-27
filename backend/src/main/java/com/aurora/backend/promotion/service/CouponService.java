@@ -13,6 +13,7 @@ import com.aurora.backend.promotion.dto.CouponRequest;
 import com.aurora.backend.promotion.dto.CouponResponse;
 import com.aurora.backend.promotion.entity.Coupon;
 import com.aurora.backend.promotion.entity.CouponType;
+import com.aurora.backend.promotion.entity.CouponUsage;
 import com.aurora.backend.promotion.repository.CouponRepository;
 import com.aurora.backend.promotion.repository.CouponUsageRepository;
 import com.aurora.backend.user.entity.User;
@@ -156,6 +157,16 @@ public class CouponService {
             );
         }
 
+        checkUsageLimits(coupon, user);
+    }
+
+    /**
+     * Enforces the global and per-user usage limits by counting recorded redemptions. This is
+     * an oracle for a PREVIEW (validate/calculateDiscount); the binding enforcement happens in
+     * {@link #redeem} under a row lock, because counting outside a lock is a read-modify-write
+     * that two concurrent checkouts could both pass.
+     */
+    private void checkUsageLimits(Coupon coupon, User user) {
         if (coupon.getMaxUses() != null && couponUsageRepository.countByCouponId(coupon.getId()) >= coupon.getMaxUses()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "COUPON_MAX_USES_REACHED", "Coupon usage limit reached.");
         }
@@ -168,6 +179,22 @@ public class CouponService {
                     "Coupon usage limit reached for this user."
             );
         }
+    }
+
+    /**
+     * Atomically records a coupon redemption (OWASP A04 — concurrency integrity). Takes a
+     * PESSIMISTIC_WRITE lock on the coupon row, then RE-CHECKS the usage limits under that lock
+     * before writing the {@link CouponUsage}. Because the lock is held until the calling
+     * (checkout) transaction commits, a second concurrent checkout for the same coupon blocks on
+     * the lock and then sees the first redemption's committed count — so usage limits can't be
+     * beaten by concurrency. Must run inside the checkout transaction (joins it).
+     */
+    @Transactional
+    public void redeem(Coupon coupon, User user) {
+        Coupon locked = couponRepository.findByIdForUpdate(coupon.getId())
+                .orElseThrow(() -> new NotFoundException("Coupon", coupon.getId()));
+        checkUsageLimits(locked, user);
+        couponUsageRepository.save(new CouponUsage(locked, user));
     }
 
     private void validateCouponRequest(CouponRequest request) {
