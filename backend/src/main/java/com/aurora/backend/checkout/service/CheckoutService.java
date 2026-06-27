@@ -3,6 +3,7 @@ package com.aurora.backend.checkout.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import com.aurora.backend.audit.entity.AuditEventType;
@@ -10,6 +11,8 @@ import com.aurora.backend.audit.service.AuditLogService;
 import com.aurora.backend.cart.entity.Cart;
 import com.aurora.backend.cart.entity.CartItem;
 import com.aurora.backend.cart.repository.CartRepository;
+import com.aurora.backend.checkout.entity.CheckoutIdempotencyKey;
+import com.aurora.backend.checkout.repository.CheckoutIdempotencyKeyRepository;
 import com.aurora.backend.catalog.product.entity.Product;
 import com.aurora.backend.catalog.product.entity.ProductVariant;
 import com.aurora.backend.common.exception.BusinessException;
@@ -35,6 +38,7 @@ import com.aurora.backend.promotion.entity.Coupon;
 import com.aurora.backend.promotion.service.CouponService;
 import com.aurora.backend.user.entity.User;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,6 +52,7 @@ public class CheckoutService {
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final CouponService couponService;
+    private final CheckoutIdempotencyKeyRepository idempotencyRepository;
     private final AuditLogService auditLogService;
     private final OutboxEventRecorder outboxRecorder;
 
@@ -60,6 +65,7 @@ public class CheckoutService {
             OrderRepository orderRepository,
             PaymentRepository paymentRepository,
             CouponService couponService,
+            CheckoutIdempotencyKeyRepository idempotencyRepository,
             AuditLogService auditLogService,
             OutboxEventRecorder outboxRecorder
     ) {
@@ -69,12 +75,26 @@ public class CheckoutService {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.couponService = couponService;
+        this.idempotencyRepository = idempotencyRepository;
         this.auditLogService = auditLogService;
         this.outboxRecorder = outboxRecorder;
     }
 
     @Transactional
-    public OrderResponse confirmCheckout(User user) {
+    public OrderResponse confirmCheckout(User user, String idempotencyKey) {
+        // Idempotent retry (OWASP A04): if the client re-submits with an Idempotency-Key we've
+        // already fulfilled, replay the original order instead of creating a second one. A
+        // committed key always points at a real order (it's written together with the order),
+        // so this returns the identical result a double-click / network retry expects.
+        String key = normalizeKey(idempotencyKey);
+        if (key != null) {
+            Optional<CheckoutIdempotencyKey> seen =
+                    idempotencyRepository.findByUserIdAndIdempotencyKey(user.getId(), key);
+            if (seen.isPresent()) {
+                return OrderResponse.from(seen.get().getOrder());
+            }
+        }
+
         // Email-verification gate (OWASP A07): the sole order-creation path. The user is resolved
         // fresh per-request by CurrentUserService, so this reads live DB state — a stale/early JWT
         // can't bypass it. Verification is a soft per-action gate, not an authentication boundary.
@@ -146,6 +166,10 @@ public class CheckoutService {
         Order savedOrder = orderRepository.saveAndFlush(order);
         paymentRepository.save(new Payment(savedOrder, PaymentStatus.PENDING, PaymentMethod.SIMULATED_CARD, total));
 
+        if (key != null) {
+            recordIdempotencyKey(user, key, savedOrder);
+        }
+
         if (coupon != null) {
             // Atomic, row-locked redemption (re-checks usage limits under the lock) so the
             // global/per-user limits can't be beaten by concurrent checkouts (OWASP A04).
@@ -191,6 +215,32 @@ public class CheckoutService {
         );
 
         return OrderResponse.from(savedOrder);
+    }
+
+    /** Treats a missing/blank Idempotency-Key as "not supplied" (the flow is then non-idempotent). */
+    private String normalizeKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return null;
+        }
+        return idempotencyKey.trim();
+    }
+
+    /**
+     * Binds the key to the order it produced. The UNIQUE(user_id, key) constraint is the
+     * enforcement point: if a truly-concurrent request already inserted this key, the flush
+     * fails and the whole checkout transaction rolls back (no duplicate order/charge). The
+     * client's retry then takes the replay path above. A clean 409 lets it do so.
+     */
+    private void recordIdempotencyKey(User user, String key, Order order) {
+        try {
+            idempotencyRepository.saveAndFlush(new CheckoutIdempotencyKey(user, key, order));
+        } catch (DataIntegrityViolationException duplicate) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "DUPLICATE_CHECKOUT",
+                    "A checkout with this Idempotency-Key is already being processed. Please retry."
+            );
+        }
     }
 
     private void validateCartItems(Cart cart) {
