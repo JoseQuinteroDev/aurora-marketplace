@@ -1,9 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { LucideAngularModule, ArrowRight, LockKeyhole, Mail, ShieldCheck, Sparkles } from 'lucide-angular';
+import { LucideAngularModule, ArrowRight, KeyRound, LockKeyhole, Mail, ShieldCheck, Sparkles } from 'lucide-angular';
 import { LanguageService } from '../../core/i18n/language.service';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
+import { AuthPayload } from '../../core/models/auth.model';
+import { ApiResponse } from '../../core/models/api-response.model';
 import { safeInternalUrl } from '../../core/util/safe-internal-url';
 import { AuthService } from '../../services/auth.service';
 import { StatePanelComponent } from '../../shared/state-panel/state-panel.component';
@@ -34,6 +36,39 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       </div>
 
       <div class="mx-auto w-full max-w-md">
+        @if (mfaRequired()) {
+        <div class="surface-panel p-6 sm:p-8">
+          <p class="section-kicker">{{ 'mfa.challenge.kicker' | t }}</p>
+          <h1 class="mt-3 text-4xl font-semibold text-aurora-ink dark:text-white">{{ 'mfa.challenge.title' | t }}</h1>
+          <p class="mt-3 text-sm leading-6 text-aurora-muted dark:text-stone-300">{{ 'mfa.challenge.subtitle' | t }}</p>
+
+          <form class="mt-8 space-y-4" [formGroup]="mfaForm" (ngSubmit)="submitMfa()">
+            <label class="block">
+              <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'mfa.codeLabel' | t }}</span>
+              <span class="field-shell" [class.field-shell-invalid]="mfaCodeInvalid()">
+                <lucide-icon class="text-stone-400" [img]="KeyRound" size="17" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm tracking-[0.4em] outline-none dark:text-white" formControlName="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" [placeholder]="'mfa.codePlaceholder' | t" [attr.aria-invalid]="mfaCodeInvalid()" [attr.aria-describedby]="mfaCodeInvalid() ? 'mfa-code-error' : null" />
+              </span>
+              @if (mfaCodeInvalid()) {
+                <span id="mfa-code-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'mfa.codeInvalid' | t }}</span>
+              }
+            </label>
+
+            @if (error()) {
+              <app-state-panel mode="error" title="{{ 'mfa.challenge.failed' | t }}" [message]="error()!" />
+            }
+
+            <button class="ui-button ui-button-primary w-full" type="submit" [disabled]="mfaForm.invalid || loading()">
+              <lucide-icon [img]="ShieldCheck" size="18" />
+              {{ loading() ? ('mfa.challenge.loading' | t) : ('mfa.challenge.submit' | t) }}
+            </button>
+          </form>
+
+          <p class="mt-6 text-center text-sm text-aurora-muted dark:text-stone-300">
+            <button type="button" class="premium-link" (click)="backToLogin()">{{ 'mfa.challenge.back' | t }}</button>
+          </p>
+        </div>
+        } @else {
         <div class="surface-panel p-6 sm:p-8">
           <p class="section-kicker">{{ 'nav.signIn' | t }}</p>
           <h1 class="mt-3 text-4xl font-semibold text-aurora-ink dark:text-white">{{ 'auth.login.title' | t }}</h1>
@@ -80,6 +115,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
             <a routerLink="/register" queryParamsHandling="preserve" class="premium-link">{{ 'auth.create' | t }}</a>
           </p>
         </div>
+        }
 
         <a routerLink="/catalog" class="mt-5 flex cursor-pointer items-center justify-center gap-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:text-aurora-gold dark:text-stone-300">
           {{ 'auth.continue' | t }}
@@ -94,16 +130,26 @@ export class LoginPageComponent {
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+  // When the login response is an MFA challenge, the page swaps to the code-entry step.
+  readonly mfaRequired = signal(false);
   readonly ArrowRight = ArrowRight;
   readonly Mail = Mail;
   readonly LockKeyhole = LockKeyhole;
+  readonly KeyRound = KeyRound;
   readonly ShieldCheck = ShieldCheck;
   readonly Sparkles = Sparkles;
   readonly panelItems = ['auth.benefit.favorites', 'auth.benefit.checkout', 'auth.benefit.orders'];
 
+  // The opaque challenge token returned by /login; consumed by /mfa/verify. Single-use server-side.
+  private mfaToken: string | null = null;
+
   readonly form = this.formBuilder.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]]
+  });
+
+  readonly mfaForm = this.formBuilder.nonNullable.group({
+    code: ['', [Validators.required, Validators.pattern(/^\d{6}$/)]]
   });
 
   constructor(
@@ -123,6 +169,11 @@ export class LoginPageComponent {
     return control.invalid && (control.dirty || control.touched);
   }
 
+  mfaCodeInvalid(): boolean {
+    const control = this.mfaForm.controls.code;
+    return control.invalid && (control.dirty || control.touched);
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -132,14 +183,55 @@ export class LoginPageComponent {
     this.loading.set(true);
     this.error.set(null);
     this.authService.login(this.form.getRawValue()).subscribe({
-      next: () => {
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-        this.router.navigateByUrl(safeInternalUrl(returnUrl));
+      next: (response: ApiResponse<AuthPayload>) => {
+        // MFA-enrolled user: no session was established — switch to the code step instead of navigating.
+        if (response.data?.status === 'MFA_REQUIRED' && response.data.mfaToken) {
+          this.mfaToken = response.data.mfaToken;
+          this.mfaRequired.set(true);
+          this.loading.set(false);
+          return;
+        }
+        this.navigateAfterAuth();
       },
       error: () => {
         this.error.set(this.language.translate('auth.login.error'));
         this.loading.set(false);
       }
     });
+  }
+
+  submitMfa(): void {
+    if (this.mfaForm.invalid || !this.mfaToken) {
+      this.mfaForm.markAllAsTouched();
+      return;
+    }
+
+    this.loading.set(true);
+    this.error.set(null);
+    this.authService.mfaVerify(this.mfaToken, this.mfaForm.getRawValue().code).subscribe({
+      next: () => this.navigateAfterAuth(),
+      error: (err: { status?: number }) => {
+        // A 401 means the challenge is consumed/expired — a fresh login is required.
+        const key = err?.status === 401 ? 'mfa.challenge.expired' : 'mfa.challenge.error';
+        this.error.set(this.language.translate(key));
+        this.loading.set(false);
+      }
+    });
+  }
+
+  /** Abandons the MFA step and returns to the credentials form (e.g. challenge consumed). */
+  backToLogin(): void {
+    this.mfaRequired.set(false);
+    this.mfaToken = null;
+    this.mfaForm.reset();
+    this.form.controls.password.reset();
+    this.error.set(null);
+    this.loading.set(false);
+  }
+
+  /** Honors the same sanitized returnUrl logic the normal sign-in uses (open-redirect defense). */
+  private navigateAfterAuth(): void {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    this.router.navigateByUrl(safeInternalUrl(returnUrl));
   }
 }

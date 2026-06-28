@@ -70,6 +70,9 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
             <a routerLink="/" routerLinkActive="bg-stone-100 dark:bg-white/10" [routerLinkActiveOptions]="{ exact: true }" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.home' | t }}</a>
             <a routerLink="/catalog" routerLinkActive="bg-stone-100 dark:bg-white/10" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.catalog' | t }}</a>
             <a routerLink="/account/orders" routerLinkActive="bg-stone-100 dark:bg-white/10" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.orders' | t }}</a>
+            @if (auth.currentUser()) {
+              <a routerLink="/account/security" routerLinkActive="bg-stone-100 dark:bg-white/10" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.security' | t }}</a>
+            }
             @if (auth.isAdmin()) {
               <a routerLink="/admin" class="cursor-pointer rounded-ui px-3 py-2 text-sm font-bold text-aurora-muted transition-colors duration-200 hover:bg-stone-100 hover:text-aurora-ink dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white">{{ 'nav.admin' | t }}</a>
             }
@@ -172,6 +175,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
                 <a routerLink="/login" class="cursor-pointer hover:text-white">{{ 'nav.signIn' | t }}</a>
                 <a routerLink="/register" class="cursor-pointer hover:text-white">{{ 'auth.create' | t }}</a>
                 <a routerLink="/account/orders" class="cursor-pointer hover:text-white">{{ 'nav.orders' | t }}</a>
+                <a routerLink="/account/security" class="cursor-pointer hover:text-white">{{ 'nav.security' | t }}</a>
               </div>
             </div>
             <div>

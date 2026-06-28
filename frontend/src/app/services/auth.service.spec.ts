@@ -15,6 +15,20 @@ function payload(role: 'CUSTOMER' | 'ADMIN' = 'CUSTOMER', minutes = 60): AuthPay
     refreshToken: 'rid-123.secret',
     expiresInMinutes: minutes,
     user: { id: 'u1', email: 'a@b.c', firstName: 'A', lastName: 'B', role },
+    status: 'AUTHENTICATED',
+  };
+}
+
+// An MFA challenge response: NO tokens, just the opaque mfaToken.
+function mfaChallenge(): AuthPayload {
+  return {
+    tokenType: 'Bearer',
+    accessToken: null as unknown as string,
+    refreshToken: null as unknown as string,
+    expiresInMinutes: 0,
+    user: null as unknown as AuthPayload['user'],
+    status: 'MFA_REQUIRED',
+    mfaToken: 'mfa-opaque-token',
   };
 }
 
@@ -156,6 +170,92 @@ describe('AuthService', () => {
     req.flush({ data: null });
 
     expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    http.verify();
+  });
+
+  it('login with an MFA_REQUIRED response does NOT persist a session and returns the challenge', () => {
+    const { service, http } = setup();
+
+    let received: { status?: string; mfaToken?: string | null } | undefined;
+    service.login({ email: 'a@b.c', password: 'secret12' }).subscribe((r) => {
+      received = r.data;
+    });
+    http.expectOne('/api/auth/login').flush({ data: mfaChallenge() });
+
+    // No tokens stored, not authenticated — the session is established only after /mfa/verify.
+    expect(service.getToken()).toBeNull();
+    expect(service.getRefreshToken()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+    // The challenge is handed back so the login page can switch to the code step.
+    expect(received?.status).toBe('MFA_REQUIRED');
+    expect(received?.mfaToken).toBe('mfa-opaque-token');
+    http.verify();
+  });
+
+  it('mfaVerify posts {mfaToken, code} and persists the session exactly like a normal login', () => {
+    const { service, http } = setup();
+
+    service.mfaVerify('mfa-opaque-token', '123456').subscribe();
+    const req = http.expectOne('/api/auth/mfa/verify');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ mfaToken: 'mfa-opaque-token', code: '123456' });
+    req.flush({ data: payload('CUSTOMER') });
+
+    expect(service.isAuthenticated()).toBe(true);
+    expect(service.getToken()).toBe('tok-123');
+    expect(service.getRefreshToken()).toBe('rid-123.secret');
+    expect(service.currentUser()?.email).toBe('a@b.c');
+    http.verify();
+  });
+
+  it('enrollMfa POSTs to /api/auth/mfa/enroll with an empty body', () => {
+    const { service, http } = setup();
+
+    service.enrollMfa().subscribe();
+    const req = http.expectOne('/api/auth/mfa/enroll');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    req.flush({ data: { secret: 'BASE32SECRET', otpauthUri: 'otpauth://totp/Aurora:a@b.c' } });
+
+    expect(service.getToken()).toBeNull(); // enrollment does not change the session
+    http.verify();
+  });
+
+  it('confirmMfa POSTs {code} to /api/auth/mfa/confirm', () => {
+    const { service, http } = setup();
+
+    service.confirmMfa('123456').subscribe();
+    const req = http.expectOne('/api/auth/mfa/confirm');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ code: '123456' });
+    req.flush({ data: null });
+    http.verify();
+  });
+
+  it('disableMfa POSTs {code} to /api/auth/mfa/disable', () => {
+    const { service, http } = setup();
+
+    service.disableMfa('123456').subscribe();
+    const req = http.expectOne('/api/auth/mfa/disable');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ code: '123456' });
+    req.flush({ data: null });
+    http.verify();
+  });
+
+  it('mfaStatus GETs /api/auth/mfa/status', () => {
+    const { service, http } = setup();
+
+    let enabled: boolean | undefined;
+    service.mfaStatus().subscribe((r) => {
+      enabled = r.data.enabled;
+    });
+    const req = http.expectOne('/api/auth/mfa/status');
+    expect(req.request.method).toBe('GET');
+    req.flush({ data: { enabled: true } });
+
+    expect(enabled).toBe(true);
     http.verify();
   });
 });

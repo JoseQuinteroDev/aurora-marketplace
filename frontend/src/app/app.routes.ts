@@ -85,6 +85,12 @@ export const routes: Routes = [
         title: 'title.orders'
       },
       {
+        path: 'account/security',
+        loadComponent: () => import('./features/account/security-page.component').then((m) => m.SecurityPageComponent),
+        canActivate: [authGuard],
+        title: 'title.security'
+      },
+      {
         path: 'account/orders/:id',
         loadComponent: () => import('./features/orders/order-detail-page.component').then((m) => m.OrderDetailPageComponent),
         canActivate: [authGuard],
