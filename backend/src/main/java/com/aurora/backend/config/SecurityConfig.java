@@ -90,6 +90,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/categories", "/api/brands").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // MFA self-service (/api/auth/mfa/enroll|confirm|disable|status) is deliberately
+                        // absent from the permit-list above: it falls through to authenticated() so a user
+                        // can only manage their OWN second factor. (The public /mfa/verify login endpoint
+                        // is a separate later increment.)
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider)

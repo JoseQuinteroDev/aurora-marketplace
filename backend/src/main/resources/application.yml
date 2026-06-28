@@ -115,6 +115,14 @@ app:
       expiration-days: ${APP_SECURITY_REFRESH_TOKEN_EXPIRATION_DAYS:30}
       grace-seconds: ${APP_SECURITY_REFRESH_TOKEN_GRACE_SECONDS:10}
       purge-delay-ms: ${APP_SECURITY_REFRESH_TOKEN_PURGE_DELAY_MS:3600000}
+    mfa:
+      # Optional, opt-in TOTP second factor (OWASP A07). The encryption-key (base64 AES key,
+      # 16/24/32 bytes) encrypts each user's TOTP secret at rest. Development default ONLY —
+      # override APP_SECURITY_MFA_ENCRYPTION_KEY in production. MfaKeyValidator additionally
+      # refuses to start under the 'prod' profile on this known placeholder (like the JWT secret).
+      encryption-key: ${APP_SECURITY_MFA_ENCRYPTION_KEY:ZGV2LW9ubHktaW5zZWN1cmUtbWZhLWtleS0zMmJ5dGU=}
+      # Label shown in authenticator apps and embedded in the otpauth:// provisioning URI.
+      issuer: ${APP_SECURITY_MFA_ISSUER:Aurora Marketplace}
 
   events:
     # When true, domain events are recorded to the transactional outbox and then
