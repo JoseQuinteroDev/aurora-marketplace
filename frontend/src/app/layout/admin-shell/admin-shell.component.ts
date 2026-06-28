@@ -45,13 +45,15 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
             <lucide-icon [img]="TicketPercent" size="18" />
             {{ 'admin.nav.coupons' | t }}
           </a>
-          <span class="flex items-center justify-between gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted" aria-disabled="true">
-            <span class="flex items-center gap-3">
-              <lucide-icon [img]="Package" size="18" />
-              {{ 'nav.catalog' | t }}
-            </span>
-            <span class="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]">{{ 'admin.nav.soon' | t }}</span>
-          </span>
+          <a
+            routerLink="/admin/products"
+            routerLinkActive="bg-white/10"
+            ariaCurrentWhenActive="page"
+            class="flex cursor-pointer items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/[0.06]"
+          >
+            <lucide-icon [img]="Package" size="18" />
+            {{ 'admin.nav.products' | t }}
+          </a>
           <span class="flex items-center justify-between gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted" aria-disabled="true">
             <span class="flex items-center gap-3">
               <lucide-icon [img]="Boxes" size="18" />

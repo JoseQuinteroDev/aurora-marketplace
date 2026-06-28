@@ -64,6 +64,20 @@ public class ProductService {
         return mapWithRatings(productRepository.findByActiveTrueOrderByCreatedAtDesc());
     }
 
+    /** Admin: every product (active AND inactive) for the management list — unlike the public
+     *  list, which is active-only. Ratings are attached via the same no-N+1 grouped query. */
+    @Transactional(readOnly = true)
+    public List<ProductResponse> listAllProducts() {
+        return mapWithRatings(productRepository.findAllByOrderByCreatedAtDesc());
+    }
+
+    /** Admin: fetch a single product by id regardless of active state (the public read is by
+     *  slug + active-only), so the management UI can load/edit/reactivate an inactive product. */
+    @Transactional(readOnly = true)
+    public ProductResponse getProductById(UUID id) {
+        return ProductResponse.from(findProduct(id));
+    }
+
     @Transactional(readOnly = true)
     public ProductResponse getActiveProductBySlug(String slug) {
         return productRepository.findBySlugAndActiveTrue(SlugUtils.from(slug))

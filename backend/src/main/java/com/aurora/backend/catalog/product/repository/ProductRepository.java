@@ -14,6 +14,9 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
 
     List<Product> findByActiveTrueOrderByCreatedAtDesc();
 
+    /** All products, active and inactive, newest first — the admin management list. */
+    List<Product> findAllByOrderByCreatedAtDesc();
+
     Optional<Product> findBySlugAndActiveTrue(String slug);
 
     Optional<Product> findBySlug(String slug);
