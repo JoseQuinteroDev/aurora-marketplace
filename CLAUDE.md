@@ -107,7 +107,12 @@ Gateway 8088 · Core 8080 · notification-service 8082 · Frontend 4200 · Postg
 ## Production config to override
 
 ```powershell
+$env:SPRING_PROFILES_ACTIVE="prod"                  # REQUIRED — loads application-prod.yml and arms JwtSecretValidator's fail-fast (a missing/weak secret then refuses to start)
 $env:APP_SECURITY_JWT_SECRET="<>=32 char secret>"   # REQUIRED — the dev default is a known weak secret
+# Datasource — REQUIRED under the prod profile (no dev fallback there; an unset value fails startup):
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://<host>:5432/aurora_marketplace"
+$env:SPRING_DATASOURCE_USERNAME="<db user>"
+$env:SPRING_DATASOURCE_PASSWORD="<db password>"
 # Access tokens are intentionally short (15 min default); refresh-token rotation extends sessions. Override only if needed:
 $env:APP_SECURITY_JWT_EXPIRATION_MINUTES="15"
 ```
