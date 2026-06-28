@@ -310,7 +310,9 @@ Admin:
 - `/api/admin/dashboard/summary`
 - `/api/admin/batch/**`
 
-More detail: `docs/api/backend-endpoints.md`.
+Interactive API docs (OpenAPI 3): **Swagger UI** at http://localhost:8080/swagger-ui.html and the
+machine-readable spec at `/v3/api-docs` — use the **Authorize** button to paste a Bearer token and
+call protected endpoints. Endpoint cheat sheet: `docs/api/backend-endpoints.md`.
 
 ## Batch Jobs
 
