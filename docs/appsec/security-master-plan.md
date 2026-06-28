@@ -95,7 +95,10 @@ Strong controls already in place — the plan *builds on* these, it does not red
   returns `400 PASSWORD_BREACHED`. **Fails open** on corpus outage (availability > strictness)
   and is env-toggleable for air-gapped deploys; the reset check runs *before* token
   consumption so a rejection doesn't burn the link. Unit-tested with a faked range client.
-- **Credential hygiene (remaining):** optional **TOTP MFA** for admins.
+- **Credential hygiene (remaining):** optional **TOTP MFA** — fully specified in
+  [`mfa-design.md`](mfa-design.md) (schema, RFC-6238/4648 primitives, enrollment + login-gating
+  flow, endpoints, security checks, test plan). Deliberately NOT implemented overnight: it touches
+  the login/token-issuance path, so it gets a focused, TDD'd, adversarially-reviewed build.
 - **Exit:** auth-lifecycle gaps in `README.md` move from ❌/⚠️ to ✅; each flow has a
   regression test and an audit-log entry.
 
