@@ -134,6 +134,20 @@ public class MfaService {
         return new MfaStatusResponse(loadFresh(authenticatedUser).isMfaEnabled());
     }
 
+    /**
+     * Verifies a current TOTP {@code code} against the user's enrolled secret — the login-gating
+     * second-factor check (OWASP A07), used only by {@code AuthService.verifyMfa}. Returns false
+     * (never throws) when the user has no stored secret or the code is wrong, so the caller can
+     * collapse every failure to a single generic 401. Reuses the same decrypt + constant-time
+     * {@link TotpGenerator#verify} as enrollment confirm/disable — no duplicated TOTP logic.
+     */
+    public boolean verifyCode(User user, String code) {
+        if (user.getMfaSecret() == null) {
+            return false;
+        }
+        return verify(user.getMfaSecret(), code);
+    }
+
     /** Decrypts the stored Base32 secret and verifies the code in constant time (±1 step window). */
     private boolean verify(String encryptedSecret, String code) {
         byte[] secretBytes = Base32.decode(cipher.decrypt(encryptedSecret));

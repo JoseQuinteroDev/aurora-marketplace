@@ -1,6 +1,8 @@
 package com.aurora.backend.auth.controller;
 
+import com.aurora.backend.auth.dto.AuthResponse;
 import com.aurora.backend.auth.dto.MfaStatusResponse;
+import com.aurora.backend.auth.service.AuthService;
 import com.aurora.backend.auth.service.MfaService;
 import com.aurora.backend.config.SecurityConfig;
 import com.aurora.backend.security.CurrentUserService;
@@ -46,6 +48,7 @@ class MfaControllerTest {
     private MockMvc mvc;
 
     @MockitoBean private MfaService mfaService;
+    @MockitoBean private AuthService authService;
     @MockitoBean private CurrentUserService currentUserService;
     @MockitoBean private UserRepository userRepository;   // backs SecurityConfig#userDetailsService
 
@@ -118,5 +121,42 @@ class MfaControllerTest {
                 .andExpect(jsonPath("$.message").value("MFA enabled."));
 
         verify(mfaService).confirm(any(), any());
+    }
+
+    // --- /mfa/verify: the PUBLIC login-gating endpoint (OWASP A07) ---
+
+    @Test
+    void verifyIsPublicAndReachesTheServiceWithAValidBody() throws Exception {
+        // permitAll (like /refresh): an anonymous, well-formed verify reaches the controller.
+        when(authService.verifyMfa(any())).thenReturn(
+                AuthResponse.bearer("token", "rid.secret", 15L, null));
+
+        mvc.perform(post("/api/auth/mfa/verify").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mfaToken\":\"cid.secret\",\"code\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("AUTHENTICATED"))
+                .andExpect(jsonPath("$.data.accessToken").value("token"));
+
+        verify(authService).verifyMfa(any());
+    }
+
+    @Test
+    void verifyWithAMalformedCodeIs400AndDoesNotCallTheService() throws Exception {
+        mvc.perform(post("/api/auth/mfa/verify").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mfaToken\":\"cid.secret\",\"code\":\"12\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).verifyMfa(any());
+    }
+
+    @Test
+    void verifyWithABlankTokenIs400AndDoesNotCallTheService() throws Exception {
+        mvc.perform(post("/api/auth/mfa/verify").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mfaToken\":\"\",\"code\":\"123456\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).verifyMfa(any());
     }
 }

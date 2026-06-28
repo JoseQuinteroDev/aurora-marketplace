@@ -123,6 +123,15 @@ app:
       encryption-key: ${APP_SECURITY_MFA_ENCRYPTION_KEY:ZGV2LW9ubHktaW5zZWN1cmUtbWZhLWtleS0zMmJ5dGU=}
       # Label shown in authenticator apps and embedded in the otpauth:// provisioning URI.
       issuer: ${APP_SECURITY_MFA_ISSUER:Aurora Marketplace}
+      challenge:
+        # Single-use login challenge for an MFA-enabled user (OWASP A07). After the password step,
+        # login issues NO tokens — it mints a short-TTL challenge and returns MFA_REQUIRED; the only
+        # MFA-login token-issuing path is POST /api/auth/mfa/verify. The attempt cap bounds
+        # second-factor brute force within the TTL window (10^6 space ÷ ±1 step ⇒ a cap of 5 is
+        # negligible). The challenge is NOT a session: it is never accepted by the JWT/refresh path.
+        ttl-minutes: ${APP_SECURITY_MFA_CHALLENGE_TTL_MINUTES:5}
+        max-attempts: ${APP_SECURITY_MFA_CHALLENGE_MAX_ATTEMPTS:5}
+        purge-delay-ms: ${APP_SECURITY_MFA_CHALLENGE_PURGE_DELAY_MS:3600000}
 
   events:
     # When true, domain events are recorded to the transactional outbox and then

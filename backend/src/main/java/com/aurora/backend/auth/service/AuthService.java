@@ -18,6 +18,7 @@ import com.aurora.backend.auth.dto.RegisterRequest;
 import com.aurora.backend.auth.dto.ResendVerificationRequest;
 import com.aurora.backend.auth.dto.ResetPasswordRequest;
 import com.aurora.backend.auth.dto.VerifyEmailRequest;
+import com.aurora.backend.auth.dto.VerifyMfaRequest;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.messaging.AuroraTopics;
 import com.aurora.backend.messaging.event.EmailVerificationRequestedEvent;
@@ -26,6 +27,7 @@ import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.security.jwt.JwtService;
 import com.aurora.backend.security.password.PasswordBreachChecker;
 import com.aurora.backend.security.token.EmailVerificationTokenService;
+import com.aurora.backend.security.token.MfaChallengeService;
 import com.aurora.backend.security.token.PasswordResetTokenService;
 import com.aurora.backend.security.token.RefreshTokenRepository;
 import com.aurora.backend.security.token.RefreshTokenReuseResponder;
@@ -68,6 +70,8 @@ public class AuthService {
     private final RefreshTokenReuseResponder reuseResponder;
     private final EmailVerificationTokenService emailVerificationTokenService;
     private final PasswordBreachChecker passwordBreachChecker;
+    private final MfaService mfaService;
+    private final MfaChallengeService mfaChallengeService;
     private final int resetExpiryMinutes;
     private final long resetMinIntervalSeconds;
     private final long resetLatencyFloorMs;
@@ -95,6 +99,8 @@ public class AuthService {
             RefreshTokenRepository refreshTokenRepository,
             RefreshTokenReuseResponder reuseResponder,
             PasswordBreachChecker passwordBreachChecker,
+            MfaService mfaService,
+            MfaChallengeService mfaChallengeService,
             @Value("${app.security.password-reset-token.expiration-minutes:30}") int resetExpiryMinutes,
             @Value("${app.security.password-reset.min-interval-seconds:60}") long resetMinIntervalSeconds,
             @Value("${app.security.password-reset.latency-floor-ms:350}") long resetLatencyFloorMs,
@@ -116,6 +122,8 @@ public class AuthService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.reuseResponder = reuseResponder;
         this.passwordBreachChecker = passwordBreachChecker;
+        this.mfaService = mfaService;
+        this.mfaChallengeService = mfaChallengeService;
         this.resetExpiryMinutes = resetExpiryMinutes;
         this.resetMinIntervalSeconds = resetMinIntervalSeconds;
         this.resetLatencyFloorMs = resetLatencyFloorMs;
@@ -203,11 +211,81 @@ public class AuthService {
             throw invalidCredentials();
         }
 
-        loginAttemptService.recordSuccess(email);
-
         User user = userRepository.findByEmail(email).orElseThrow(this::invalidCredentials);
+
+        // Second-factor gate (OWASP A07). The PASSWORD step has succeeded, but for an MFA-enrolled
+        // user the login is NOT complete: we issue NO access/refresh tokens AND deliberately do NOT
+        // reset the per-account failure counter yet — so wrong second-factor codes keep accruing
+        // toward the lockout (verifyMfa records them) and an attacker who holds the password cannot
+        // mint endless fresh challenges to brute-force the code. We mint a single-use, short-TTL
+        // challenge and return MFA_REQUIRED; the only MFA-login token-issuing path is verifyMfa().
+        // For every non-MFA user this branch is skipped and login is byte-identical to before.
+        if (user.isMfaEnabled()) {
+            String mfaToken = mfaChallengeService.issue(user);
+            auditLogService.log(AuditEventType.MFA_CHALLENGE_ISSUED, user, "USER", user.getId(),
+                    "MFA challenge issued at login (second factor required).");
+            log.info("Login password step succeeded; MFA challenge required (email={}).", email);
+            return AuthResponse.mfaRequired(mfaToken);
+        }
+
+        // Non-MFA: login is complete now, so reset the per-account failure counter and issue tokens.
+        loginAttemptService.recordSuccess(email);
         log.info("Login succeeded (email={}).", email);
         return buildAuthResponse(user);
+    }
+
+    /**
+     * Completes an MFA login: the SECOND of the two token-issuing paths (the other is the non-MFA
+     * branch of {@link #login}). Validates the single-use challenge, verifies the TOTP code, and only
+     * then issues the real access + refresh tokens via {@link #buildAuthResponse}. Every failure mode
+     * — unknown/expired/consumed/over-cap challenge, a user who is somehow no longer MFA-enabled, or
+     * a wrong code — collapses to one generic {@code 401 MFA_CHALLENGE_INVALID}, so a wrong code is
+     * indistinguishable from a bad token. A wrong code additionally burns one bounded attempt.
+     *
+     * <p>Not {@code @Transactional} at this level on purpose: the failed-attempt increment must
+     * commit even though we then throw, exactly like the login-failure accounting. The challenge
+     * validate/consume/charge each run in {@link MfaChallengeService}'s own transactions.
+     */
+    public AuthResponse verifyMfa(VerifyMfaRequest request) {
+        Instant now = Instant.now();
+        MfaChallengeService.ValidChallenge challenge = mfaChallengeService.validate(request.mfaToken());
+
+        User user = userRepository.findById(challenge.userId())
+                .filter(User::isMfaEnabled)
+                .orElseThrow(this::invalidMfaChallenge);
+
+        // The per-account lockout bounds the SECOND factor too. A wrong code below calls
+        // recordFailure, and recordSuccess only fires on a fully-completed login — so repeated 2FA
+        // failures (even across freshly re-issued challenges) lock the account just like password
+        // failures, instead of the bound being only the per-challenge cap. A locked account is
+        // rejected here as well, generically.
+        if (loginAttemptService.isLocked(user.getEmail(), now)) {
+            throw invalidMfaChallenge();
+        }
+
+        if (!mfaService.verifyCode(user, request.code())) {
+            // Wrong code: charge the per-challenge cap AND the per-account failure counter, then fail
+            // generically — no oracle distinguishing a wrong code from a bad token.
+            mfaChallengeService.recordFailedAttempt(challenge.challengeId());
+            loginAttemptService.recordFailure(user.getEmail(), now);
+            log.warn("MFA verify failed: wrong code (userId={}).", user.getId());
+            throw invalidMfaChallenge();
+        }
+
+        // Correct code: atomically single-use the challenge BEFORE issuing tokens. If the atomic
+        // claim loses (concurrent/replayed verify), no tokens are issued. Both factors have now
+        // passed, so the login is complete — reset the per-account failure counter.
+        mfaChallengeService.consume(challenge.challengeId());
+        loginAttemptService.recordSuccess(user.getEmail());
+        auditLogService.log(AuditEventType.MFA_LOGIN_SUCCEEDED, user, "USER", user.getId(),
+                "MFA second factor verified; tokens issued.");
+        log.info("MFA login succeeded (userId={}).", user.getId());
+        return buildAuthResponse(user);
+    }
+
+    private BusinessException invalidMfaChallenge() {
+        return new BusinessException(HttpStatus.UNAUTHORIZED, "MFA_CHALLENGE_INVALID",
+                "Invalid or expired verification challenge.");
     }
 
     /**

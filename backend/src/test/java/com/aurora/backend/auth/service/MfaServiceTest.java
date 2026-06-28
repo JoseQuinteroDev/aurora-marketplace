@@ -211,6 +211,25 @@ class MfaServiceTest {
                 .satisfies(e -> assertThat(((BusinessException) e).getCode()).isEqualTo("MFA_NOT_ENABLED"));
     }
 
+    // --- verifyCode: the login-gating second-factor check (OWASP A07) ---
+
+    @Test
+    void verifyCodeReturnsTrueForACurrentCodeAndFalseForAWrongOne() {
+        User user = newUser();
+        givenUser(user);
+        mfaService.enroll(user);
+        mfaService.confirm(user, currentCodeFor(user));
+
+        assertThat(mfaService.verifyCode(user, currentCodeFor(user))).isTrue();
+        assertThat(mfaService.verifyCode(user, "000000")).isFalse();
+    }
+
+    @Test
+    void verifyCodeReturnsFalseWhenTheUserHasNoStoredSecret() {
+        User user = newUser(); // never enrolled — mfaSecret is null
+        assertThat(mfaService.verifyCode(user, "123456")).isFalse();
+    }
+
     @Test
     void statusReflectsTheEnabledFlag() {
         User user = newUser();

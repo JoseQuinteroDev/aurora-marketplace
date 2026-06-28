@@ -86,14 +86,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/revoke",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
-                                "/api/auth/verify-email", "/api/auth/resend-verification").permitAll()
+                                "/api/auth/verify-email", "/api/auth/resend-verification",
+                                // Login-gating second step: the caller holds no access token yet, only
+                                // the opaque single-use mfaToken from a MFA_REQUIRED login.
+                                "/api/auth/mfa/verify").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories", "/api/brands").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // MFA self-service (/api/auth/mfa/enroll|confirm|disable|status) is deliberately
                         // absent from the permit-list above: it falls through to authenticated() so a user
-                        // can only manage their OWN second factor. (The public /mfa/verify login endpoint
-                        // is a separate later increment.)
+                        // can only manage their OWN second factor. Only /api/auth/mfa/verify is public
+                        // (login-gating second step) — it is in the POST permit-list above.
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider)
