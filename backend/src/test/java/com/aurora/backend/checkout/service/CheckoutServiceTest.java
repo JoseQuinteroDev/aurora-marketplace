@@ -194,4 +194,19 @@ class CheckoutServiceTest {
         verify(orderRepository, never()).saveAndFlush(any());
         verifyNoInteractions(outboxRecorder);
     }
+
+    @Test
+    void anOverLengthIdempotencyKeyIsRejectedWith400BeforeTouchingTheDatabase() {
+        User user = customer();
+        String tooLong = "k".repeat(121);   // column is VARCHAR(120)
+
+        assertThatThrownBy(() -> checkoutService.confirmCheckout(user, tooLong))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("INVALID_IDEMPOTENCY_KEY"));
+
+        // Rejected up front — never reaches the idempotency lookup, the cart, or order creation,
+        // and is NOT mis-reported as a duplicate-checkout 409.
+        verifyNoInteractions(idempotencyRepository);
+        verify(cartRepository, never()).findByUserId(any());
+    }
 }

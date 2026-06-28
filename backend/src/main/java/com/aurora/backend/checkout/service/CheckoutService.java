@@ -2,6 +2,7 @@ package com.aurora.backend.checkout.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,6 +58,7 @@ public class CheckoutService {
     private final OutboxEventRecorder outboxRecorder;
 
     private static final String CURRENCY = "USD";
+    private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 120;   // matches the DB column width
 
     public CheckoutService(
             CartRepository cartRepository,
@@ -134,6 +136,16 @@ public class CheckoutService {
                 discountTotal,
                 total
         );
+
+        // Acquire the inventory row locks UP FRONT in a deterministic (variant-id sorted) order.
+        // Cart items are an unordered bag, so two concurrent checkouts sharing variants could
+        // otherwise lock the same rows in opposite order and deadlock; a stable global order
+        // makes that impossible. The per-item decrement below re-reads the now-locked rows.
+        cart.getItems().stream()
+                .map(item -> item.getVariant().getId())
+                .distinct()
+                .sorted()
+                .forEach(inventoryRepository::findByVariantIdForUpdate);
 
         cart.getItems().forEach(item -> {
             ProductVariant variant = item.getVariant();
@@ -217,30 +229,61 @@ public class CheckoutService {
         return OrderResponse.from(savedOrder);
     }
 
-    /** Treats a missing/blank Idempotency-Key as "not supplied" (the flow is then non-idempotent). */
+    /**
+     * Treats a missing/blank Idempotency-Key as "not supplied" (the flow is then non-idempotent).
+     * Rejects an over-length key up front with a clear 400 rather than letting it overflow the
+     * VARCHAR(120) column and surface later as a misleading "duplicate checkout" 409.
+     */
     private String normalizeKey(String idempotencyKey) {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             return null;
         }
-        return idempotencyKey.trim();
+        String trimmed = idempotencyKey.trim();
+        if (trimmed.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
+            throw new BusinessException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_IDEMPOTENCY_KEY",
+                    "Idempotency-Key must be at most " + MAX_IDEMPOTENCY_KEY_LENGTH + " characters."
+            );
+        }
+        return trimmed;
     }
 
     /**
      * Binds the key to the order it produced. The UNIQUE(user_id, key) constraint is the
      * enforcement point: if a truly-concurrent request already inserted this key, the flush
      * fails and the whole checkout transaction rolls back (no duplicate order/charge). The
-     * client's retry then takes the replay path above. A clean 409 lets it do so.
+     * client's retry then takes the replay path above. A clean 409 lets it do so — but ONLY for
+     * a genuine unique violation (SQLState 23505): any other integrity failure is rethrown so it
+     * is never masked as a duplicate-checkout race.
      */
     private void recordIdempotencyKey(User user, String key, Order order) {
         try {
             idempotencyRepository.saveAndFlush(new CheckoutIdempotencyKey(user, key, order));
-        } catch (DataIntegrityViolationException duplicate) {
-            throw new BusinessException(
-                    HttpStatus.CONFLICT,
-                    "DUPLICATE_CHECKOUT",
-                    "A checkout with this Idempotency-Key is already being processed. Please retry."
-            );
+        } catch (DataIntegrityViolationException violation) {
+            if (isUniqueViolation(violation)) {
+                throw new BusinessException(
+                        HttpStatus.CONFLICT,
+                        "DUPLICATE_CHECKOUT",
+                        "A checkout with this Idempotency-Key is already being processed. Please retry."
+                );
+            }
+            throw violation;
         }
+    }
+
+    /**
+     * Walks the cause chain for a SQL unique-violation (SQLState 23505). On the idempotency
+     * table the only unique constraint reachable here is {@code (user_id, idempotency_key)}, so a
+     * 23505 unambiguously means a duplicate key — never a different constraint.
+     */
+    private boolean isUniqueViolation(Throwable throwable) {
+        for (Throwable cause = throwable; cause != null; cause = cause.getCause()) {
+            if (cause instanceof SQLException sql && "23505".equals(sql.getSQLState())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void validateCartItems(Cart cart) {

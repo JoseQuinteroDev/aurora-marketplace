@@ -24,7 +24,7 @@ spring:
           '[/**]':
             allowed-origin-patterns: "${GATEWAY_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}"
             allowed-methods: "${GATEWAY_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}"
-            allowed-headers: "${GATEWAY_ALLOWED_HEADERS:Authorization,Content-Type,Accept,Origin,X-Requested-With,Idempotency-Key}"
+            allowed-headers: "${GATEWAY_ALLOWED_HEADERS:Authorization,Content-Type,Accept,Origin,X-Requested-With,Idempotency-Key,X-Retried}"
             allow-credentials: true
             max-age: 3600
 

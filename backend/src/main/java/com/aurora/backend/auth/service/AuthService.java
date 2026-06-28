@@ -126,6 +126,12 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        // Breach check FIRST, before any DB access. register() is @Transactional but the JDBC
+        // connection is acquired lazily on the first query (Hibernate AS_NEEDED), so running the
+        // blocking HIBP HTTP call before existsByEmail means no pooled connection is pinned during
+        // it — an HIBP slowdown can't starve the connection pool. (Same ordering as resetPassword.)
+        assertPasswordNotBreached(request.password());
+
         String email = normalizeEmail(request.email());
 
         if (userRepository.existsByEmail(email)) {
@@ -135,8 +141,6 @@ public class AuthService {
                     "Email is already registered."
             );
         }
-
-        assertPasswordNotBreached(request.password());
 
         User user = new User(
                 email,

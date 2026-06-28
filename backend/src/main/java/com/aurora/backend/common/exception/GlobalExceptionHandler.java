@@ -102,15 +102,17 @@ public class GlobalExceptionHandler {
         );
     }
 
-    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(
-            org.springframework.orm.ObjectOptimisticLockingFailureException exception,
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ErrorResponse> handleConcurrencyConflict(
+            org.springframework.dao.ConcurrencyFailureException exception,
             HttpServletRequest request
     ) {
-        // A concurrent modification lost the optimistic-lock race (OWASP A04). This is a
-        // transient conflict, not a fault — surface a clean 409 the client can safely retry,
-        // never a 500. Logged at warn (a burst can indicate contention or an attack).
-        log.warn("Optimistic-lock conflict on {} {}", request.getMethod(), request.getRequestURI());
+        // Any concurrency loss (OWASP A04): an optimistic-lock failure (@Version), or a
+        // pessimistic-lock acquisition failure / DB deadlock (e.g. contended checkout). All are
+        // transient, not faults — surface a clean 409 the client can safely retry, never a 500.
+        // Logged at warn (a burst can indicate contention or an attack).
+        log.warn("Concurrency conflict ({}) on {} {}",
+                exception.getClass().getSimpleName(), request.getMethod(), request.getRequestURI());
         return buildErrorResponse(
                 HttpStatus.CONFLICT,
                 "CONCURRENT_MODIFICATION",

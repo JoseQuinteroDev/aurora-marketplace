@@ -195,7 +195,7 @@ export class CheckoutPageComponent implements OnInit {
     // One stable key per checkout intent, reused on retry so a double-click / retried
     // request resolves to a single order server-side. Minted once, cleared on success.
     if (!this.idempotencyKey) {
-      this.idempotencyKey = crypto.randomUUID();
+      this.idempotencyKey = this.newIdempotencyKey();
     }
 
     this.confirming.set(true);
@@ -215,5 +215,18 @@ export class CheckoutPageComponent implements OnInit {
         this.confirming.set(false);
       }
     });
+  }
+
+  /**
+   * crypto.randomUUID is only defined in a secure context (HTTPS/localhost). Fall back to a
+   * non-crypto unique string elsewhere so checkout never hard-crashes — idempotency keys need
+   * uniqueness per intent, not cryptographic strength.
+   */
+  private newIdempotencyKey(): string {
+    const c = globalThis.crypto;
+    if (c && typeof c.randomUUID === 'function') {
+      return c.randomUUID();
+    }
+    return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
 }
