@@ -21,14 +21,18 @@ services:
     profiles: ["observability"]
     restart: unless-stopped
     command:
+      # No --web.enable-lifecycle / --web.enable-admin-api: those expose UNAUTHENTICATED
+      # mutating control-plane endpoints (/-/reload, /-/quit, TSDB admin). Prometheus has no
+      # auth of its own, so we keep only the read-only query UI and bind it to loopback below.
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=7d
-      - --web.enable-lifecycle
     volumes:
       - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - aurora_prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      # Loopback-only: the unauthenticated Prometheus UI/query API is reachable from the host
+      # (http://localhost:9090) but NOT published on other interfaces.
+      - "127.0.0.1:9090:9090"
     networks:
       - aurora_network
 
@@ -40,15 +44,21 @@ services:
     depends_on:
       - prometheus
     environment:
+      # LOCAL-DEV default credential (admin/admin), the same accepted-for-local policy as the
+      # Postgres/MinIO defaults in the base compose (see SECURITY.md). The overlay is opt-in
+      # (observability profile), loopback-bound (below), and the password is env-overridable —
+      # set GRAFANA_ADMIN_PASSWORD for anything beyond a local box.
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
     volumes:
       - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - aurora_grafana_data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      # Loopback-only: reachable at http://localhost:3000, not published on other interfaces.
+      - "127.0.0.1:3000:3000"
     networks:
       - aurora_network
 
