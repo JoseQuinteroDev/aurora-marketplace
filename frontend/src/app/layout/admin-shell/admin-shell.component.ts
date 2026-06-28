@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
-import { LucideAngularModule, Boxes, ClipboardList, LayoutDashboard, LogOut, Package, ShieldCheck } from 'lucide-angular';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { LucideAngularModule, Boxes, ClipboardList, LayoutDashboard, LogOut, Package, ShieldCheck, TicketPercent } from 'lucide-angular';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { LanguageService } from '../../core/i18n/language.service';
 import { AuthService } from '../../services/auth.service';
@@ -8,7 +8,7 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
 
 @Component({
   selector: 'app-admin-shell',
-  imports: [RouterOutlet, RouterLink, LucideAngularModule, TranslatePipe, ToastHostComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideAngularModule, TranslatePipe, ToastHostComponent],
   template: `
     <div class="min-h-screen bg-aurora-ink text-white">
       <aside class="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-white/[0.04] p-5 backdrop-blur-xl lg:block">
@@ -17,21 +17,47 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
           <span class="font-extrabold uppercase tracking-[0.22em]">Aurora</span>
         </a>
         <nav class="mt-10 grid gap-2">
-          <a routerLink="/admin" class="flex cursor-pointer items-center gap-3 rounded-ui bg-white/10 px-3 py-3 text-sm font-semibold">
+          <a
+            routerLink="/admin"
+            routerLinkActive="bg-white/10"
+            [routerLinkActiveOptions]="{ exact: true }"
+            ariaCurrentWhenActive="page"
+            class="flex cursor-pointer items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/[0.06]"
+          >
             <lucide-icon [img]="LayoutDashboard" size="18" />
             {{ 'admin.nav.dashboard' | t }}
           </a>
-          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted">
-            <lucide-icon [img]="Package" size="18" />
-            {{ 'nav.catalog' | t }}
-          </span>
-          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted">
-            <lucide-icon [img]="Boxes" size="18" />
-            {{ 'admin.nav.inventory' | t }}
-          </span>
-          <span class="flex items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted">
+          <a
+            routerLink="/admin/orders"
+            routerLinkActive="bg-white/10"
+            ariaCurrentWhenActive="page"
+            class="flex cursor-pointer items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/[0.06]"
+          >
             <lucide-icon [img]="ClipboardList" size="18" />
             {{ 'nav.orders' | t }}
+          </a>
+          <a
+            routerLink="/admin/coupons"
+            routerLinkActive="bg-white/10"
+            ariaCurrentWhenActive="page"
+            class="flex cursor-pointer items-center gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-white transition-colors duration-150 hover:bg-white/[0.06]"
+          >
+            <lucide-icon [img]="TicketPercent" size="18" />
+            {{ 'admin.nav.coupons' | t }}
+          </a>
+          <span class="flex items-center justify-between gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted" aria-disabled="true">
+            <span class="flex items-center gap-3">
+              <lucide-icon [img]="Package" size="18" />
+              {{ 'nav.catalog' | t }}
+            </span>
+            <span class="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]">{{ 'admin.nav.soon' | t }}</span>
+          </span>
+          <span class="flex items-center justify-between gap-3 rounded-ui px-3 py-3 text-sm font-semibold text-aurora-muted" aria-disabled="true">
+            <span class="flex items-center gap-3">
+              <lucide-icon [img]="Boxes" size="18" />
+              {{ 'admin.nav.inventory' | t }}
+            </span>
+            <span class="rounded-full bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em]">{{ 'admin.nav.soon' | t }}</span>
           </span>
         </nav>
         <button class="ui-button mt-8 w-full border border-white/10 bg-white/10 text-white hover:bg-white/15" type="button" (click)="auth.logout()">
@@ -72,6 +98,7 @@ export class AdminShellComponent {
   readonly Package = Package;
   readonly Boxes = Boxes;
   readonly ClipboardList = ClipboardList;
+  readonly TicketPercent = TicketPercent;
   readonly LogOut = LogOut;
   readonly ShieldCheck = ShieldCheck;
 

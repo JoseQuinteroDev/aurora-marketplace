@@ -17,6 +17,21 @@ export const routes: Routes = [
         path: '',
         loadComponent: () => import('./features/admin/admin-dashboard-page.component').then((m) => m.AdminDashboardPageComponent),
         title: 'title.admin'
+      },
+      {
+        path: 'orders',
+        loadComponent: () => import('./features/admin/orders/admin-orders-page.component').then((m) => m.AdminOrdersPageComponent),
+        title: 'title.adminOrders'
+      },
+      {
+        path: 'orders/:id',
+        loadComponent: () => import('./features/admin/orders/admin-order-detail-page.component').then((m) => m.AdminOrderDetailPageComponent),
+        title: 'title.adminOrder'
+      },
+      {
+        path: 'coupons',
+        loadComponent: () => import('./features/admin/coupons/admin-coupons-page.component').then((m) => m.AdminCouponsPageComponent),
+        title: 'title.adminCoupons'
       }
     ]
   },
