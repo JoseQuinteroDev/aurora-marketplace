@@ -122,6 +122,13 @@ app:
       batch-size: ${APP_OUTBOX_RELAY_BATCH_SIZE:100}
       # Send attempts before a row is parked as FAILED for inspection.
       max-attempts: ${APP_OUTBOX_RELAY_MAX_ATTEMPTS:10}
+    purge:
+      # Periodically delete already-PUBLISHED rows: prevents unbounded table growth and bounds
+      # how long an event payload's sensitive cleartext (reset/verification token) lingers in the
+      # DB after delivery (OWASP A07 residual). PENDING/FAILED rows are never purged.
+      enabled: ${APP_OUTBOX_PURGE_ENABLED:true}
+      retention-minutes: ${APP_OUTBOX_PURGE_RETENTION_MINUTES:60}
+      fixed-delay-ms: ${APP_OUTBOX_PURGE_FIXED_DELAY_MS:900000}
 
   batch:
     files:

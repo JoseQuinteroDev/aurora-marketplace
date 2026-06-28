@@ -1,5 +1,7 @@
 package com.aurora.backend.messaging.outbox;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 
 import com.aurora.backend.messaging.DomainEventPublisher;
@@ -30,6 +32,8 @@ public class OutboxRelay {
     private final DomainEventPublisher publisher;
     private final int batchSize;
     private final int maxAttempts;
+    private final boolean purgeEnabled;
+    private final int purgeRetentionMinutes;
 
     public OutboxRelay(
             OutboxEventRepository repository,
@@ -40,6 +44,8 @@ public class OutboxRelay {
         this.publisher = publisher;
         this.batchSize = env.getProperty("app.outbox.relay.batch-size", Integer.class, 100);
         this.maxAttempts = env.getProperty("app.outbox.relay.max-attempts", Integer.class, 10);
+        this.purgeEnabled = env.getProperty("app.outbox.purge.enabled", Boolean.class, true);
+        this.purgeRetentionMinutes = env.getProperty("app.outbox.purge.retention-minutes", Integer.class, 60);
     }
 
     @Scheduled(fixedDelayString = "${app.outbox.relay.fixed-delay-ms:2000}")
@@ -68,5 +74,24 @@ public class OutboxRelay {
         }
 
         log.debug("Outbox relay tick: {} published, {} deferred/failed", published, failed);
+    }
+
+    /**
+     * Periodically deletes PUBLISHED rows older than the retention window. Two wins: it keeps the
+     * outbox table from growing unbounded, and it bounds how long an event payload's sensitive
+     * cleartext (a password-reset / email-verification token) survives in the DB after delivery
+     * (OWASP A07 residual). PENDING/FAILED rows are never touched — only successfully relayed ones.
+     */
+    @Scheduled(fixedDelayString = "${app.outbox.purge.fixed-delay-ms:900000}")
+    @Transactional
+    public void purgePublished() {
+        if (!purgeEnabled) {
+            return;
+        }
+        Instant cutoff = Instant.now().minus(Duration.ofMinutes(purgeRetentionMinutes));
+        int deleted = repository.deleteByStatusAndPublishedAtBefore(OutboxStatus.PUBLISHED, cutoff);
+        if (deleted > 0) {
+            log.info("Outbox purge: removed {} PUBLISHED rows older than {} min.", deleted, purgeRetentionMinutes);
+        }
     }
 }

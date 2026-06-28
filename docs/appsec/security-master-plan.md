@@ -83,7 +83,10 @@ Strong controls already in place — the plan *builds on* these, it does not red
   invalidates every session; emailed via the outbox→notification path (token-only event,
   link composed downstream). Adversarially reviewed (6 findings fixed; 0 high/critical).
   *Tracked residual (low):* the raw token sits in `event_outbox`/`.DLT` cleartext until
-  expiry — follow-ups: purge PUBLISHED outbox rows, redact the DLT record + short TTL.
+  delivery — ✅ a scheduled **outbox purge** now deletes PUBLISHED rows after a retention window
+  (`OutboxRelay.purgePublished`, default 60 min, env-tunable), bounding the cleartext window and
+  preventing table bloat (`OutboxPurgeTest`). *Remaining:* redact the `.DLT` record + short TTL
+  (notification-service side).
 - **Email verification:** still to do — reuses the same single-use-token + outbox→email
   machinery as password reset.
 - ✅ **Breached-password check — SHIPPED** (`feat/auth-hardening`). At register/reset, a
