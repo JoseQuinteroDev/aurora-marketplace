@@ -25,6 +25,8 @@ class OutboxRelayTest {
         Environment env = mock(Environment.class);
         when(env.getProperty("app.outbox.relay.batch-size", Integer.class, 100)).thenReturn(100);
         when(env.getProperty("app.outbox.relay.max-attempts", Integer.class, 10)).thenReturn(maxAttempts);
+        when(env.getProperty("app.outbox.purge.enabled", Boolean.class, true)).thenReturn(true);
+        when(env.getProperty("app.outbox.purge.retention-minutes", Integer.class, 60)).thenReturn(60);
         return new OutboxRelay(repository, publisher, env);
     }
 

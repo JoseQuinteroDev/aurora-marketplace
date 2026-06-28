@@ -143,6 +143,9 @@ export class CheckoutPageComponent implements OnInit {
   readonly success = signal(false);
   readonly error = signal<string | null>(null);
 
+  // Idempotency-Key for the current checkout intent; minted on first confirm, reused on retry.
+  private idempotencyKey: string | null = null;
+
   readonly CheckCircle2 = CheckCircle2;
   readonly CreditCard = CreditCard;
   readonly MapPin = MapPin;
@@ -189,14 +192,22 @@ export class CheckoutPageComponent implements OnInit {
       return;
     }
 
+    // One stable key per checkout intent, reused on retry so a double-click / retried
+    // request resolves to a single order server-side. Minted once, cleared on success.
+    if (!this.idempotencyKey) {
+      this.idempotencyKey = this.newIdempotencyKey();
+    }
+
     this.confirming.set(true);
     this.error.set(null);
-    this.checkoutService.confirm().subscribe({
+    this.checkoutService.confirm(this.idempotencyKey).subscribe({
       next: (order) => {
+        this.idempotencyKey = null;
         this.success.set(true);
         this.router.navigateByUrl(`/orders/${order.id}/payment`);
       },
       error: (err: { status?: number; error?: { code?: string } }) => {
+        // Keep idempotencyKey so a retry dedups against the same intent.
         // A 403 EMAIL_NOT_VERIFIED gets a clear explanation (the global banner offers Resend);
         // anything else is the generic checkout error.
         const verifyBlocked = err?.status === 403 && err?.error?.code === 'EMAIL_NOT_VERIFIED';
@@ -204,5 +215,18 @@ export class CheckoutPageComponent implements OnInit {
         this.confirming.set(false);
       }
     });
+  }
+
+  /**
+   * crypto.randomUUID is only defined in a secure context (HTTPS/localhost). Fall back to a
+   * non-crypto unique string elsewhere so checkout never hard-crashes — idempotency keys need
+   * uniqueness per intent, not cryptographic strength.
+   */
+  private newIdempotencyKey(): string {
+    const c = globalThis.crypto;
+    if (c && typeof c.randomUUID === 'function') {
+      return c.randomUUID();
+    }
+    return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
   }
 }

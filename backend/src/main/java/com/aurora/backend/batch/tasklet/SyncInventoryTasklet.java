@@ -59,7 +59,12 @@ public class SyncInventoryTasklet implements Tasklet {
         ProductVariant variant = productVariantRepository.findBySku(line.sku())
                 .orElseThrow(() -> new IllegalStateException("Variant SKU not found: " + line.sku()));
 
-        Inventory inventory = inventoryRepository.findByVariantId(variant.getId())
+        // Take the SAME pessimistic row lock the checkout SALE path uses (findByVariantIdForUpdate)
+        // rather than an unlocked read: this serializes the batch and concurrent checkouts on the
+        // row instead of racing the @Version optimistic lock (which, post-V13, would otherwise abort
+        // the whole run on the first concurrent sale). A brand-new variant still falls through to a
+        // fresh save.
+        Inventory inventory = inventoryRepository.findByVariantIdForUpdate(variant.getId())
                 .orElseGet(() -> inventoryRepository.save(new Inventory(
                         variant,
                         0,

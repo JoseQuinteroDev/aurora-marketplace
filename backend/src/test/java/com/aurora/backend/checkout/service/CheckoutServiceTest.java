@@ -16,9 +16,12 @@ import com.aurora.backend.inventory.repository.StockMovementRepository;
 import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.order.dto.OrderResponse;
 import com.aurora.backend.order.repository.OrderRepository;
+import com.aurora.backend.checkout.entity.CheckoutIdempotencyKey;
+import com.aurora.backend.checkout.repository.CheckoutIdempotencyKeyRepository;
+import com.aurora.backend.order.entity.Order;
+import com.aurora.backend.order.entity.OrderStatus;
 import com.aurora.backend.payment.entity.Payment;
 import com.aurora.backend.payment.repository.PaymentRepository;
-import com.aurora.backend.promotion.repository.CouponUsageRepository;
 import com.aurora.backend.promotion.service.CouponService;
 import com.aurora.backend.user.entity.User;
 import com.aurora.backend.user.role.Role;
@@ -33,8 +36,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -58,7 +63,7 @@ class CheckoutServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private PaymentRepository paymentRepository;
     @Mock private CouponService couponService;
-    @Mock private CouponUsageRepository couponUsageRepository;
+    @Mock private CheckoutIdempotencyKeyRepository idempotencyRepository;
     @Mock private AuditLogService auditLogService;
     @Mock private OutboxEventRecorder outboxRecorder;
 
@@ -102,7 +107,7 @@ class CheckoutServiceTest {
         when(orderRepository.existsByOrderNumber(any())).thenReturn(false);
         when(orderRepository.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
 
-        OrderResponse order = checkoutService.confirmCheckout(user);
+        OrderResponse order = checkoutService.confirmCheckout(user, null);
 
         // Order money is the server computation, full stop.
         assertThat(order.subtotal()).isEqualByComparingTo("2598.00");
@@ -122,7 +127,7 @@ class CheckoutServiceTest {
         // Brand-new user (emailVerified=false) — the gate fires before the cart is even read.
         User unverified = new User("new@aurora.test", "hash", "New", "User", Role.CUSTOMER, true);
 
-        assertThatThrownBy(() -> checkoutService.confirmCheckout(unverified))
+        assertThatThrownBy(() -> checkoutService.confirmCheckout(unverified, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         ex -> assertThat(ex.getCode()).isEqualTo("EMAIL_NOT_VERIFIED"));
 
@@ -135,7 +140,7 @@ class CheckoutServiceTest {
         User user = customer();
         when(cartRepository.findByUserId(any())).thenReturn(Optional.of(new Cart(user)));
 
-        assertThatThrownBy(() -> checkoutService.confirmCheckout(user))
+        assertThatThrownBy(() -> checkoutService.confirmCheckout(user, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         ex -> assertThat(ex.getCode()).isEqualTo("CART_EMPTY"));
 
@@ -149,7 +154,7 @@ class CheckoutServiceTest {
         Cart cart = cartWith(user, variant(false), 1);
         when(cartRepository.findByUserId(any())).thenReturn(Optional.of(cart));
 
-        assertThatThrownBy(() -> checkoutService.confirmCheckout(user))
+        assertThatThrownBy(() -> checkoutService.confirmCheckout(user, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         ex -> assertThat(ex.getCode()).isEqualTo("PRODUCT_VARIANT_INACTIVE"));
 
@@ -165,10 +170,43 @@ class CheckoutServiceTest {
         when(cartRepository.findByUserId(any())).thenReturn(Optional.of(cart));
         when(inventoryRepository.findByVariantId(any())).thenReturn(Optional.of(empty));
 
-        assertThatThrownBy(() -> checkoutService.confirmCheckout(user))
+        assertThatThrownBy(() -> checkoutService.confirmCheckout(user, null))
                 .isInstanceOfSatisfying(BusinessException.class,
                         ex -> assertThat(ex.getCode()).isEqualTo("INSUFFICIENT_STOCK"));
 
         verify(orderRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void aDuplicateIdempotencyKeyReplaysTheStoredOrderWithoutCreatingANewOne() {
+        User user = customer();
+        Order stored = new Order(
+                "ORD-REPLAY", user, OrderStatus.PENDING_PAYMENT, null,
+                new BigDecimal("10.00"), BigDecimal.ZERO, new BigDecimal("10.00"));
+        when(idempotencyRepository.findByUserIdAndIdempotencyKey(any(), eq("dup-key")))
+                .thenReturn(Optional.of(new CheckoutIdempotencyKey(user, "dup-key", stored)));
+
+        OrderResponse response = checkoutService.confirmCheckout(user, "dup-key");
+
+        // Replays the original order — no cart read, no new order, no event.
+        assertThat(response.orderNumber()).isEqualTo("ORD-REPLAY");
+        verify(cartRepository, never()).findByUserId(any());
+        verify(orderRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(outboxRecorder);
+    }
+
+    @Test
+    void anOverLengthIdempotencyKeyIsRejectedWith400BeforeTouchingTheDatabase() {
+        User user = customer();
+        String tooLong = "k".repeat(121);   // column is VARCHAR(120)
+
+        assertThatThrownBy(() -> checkoutService.confirmCheckout(user, tooLong))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("INVALID_IDEMPOTENCY_KEY"));
+
+        // Rejected up front — never reaches the idempotency lookup, the cart, or order creation,
+        // and is NOT mis-reported as a duplicate-checkout 409.
+        verifyNoInteractions(idempotencyRepository);
+        verify(cartRepository, never()).findByUserId(any());
     }
 }

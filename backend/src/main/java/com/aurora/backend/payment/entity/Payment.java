@@ -23,6 +23,7 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "payments")
@@ -31,6 +32,13 @@ public class Payment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    // Optimistic lock (OWASP A04): prevents two concurrent payment submissions on the same
+    // order from both transitioning the payment to PAID (double-processing) — the second
+    // save fails with a 409 instead of emitting a duplicate PAYMENT_CONFIRMED event.
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "order_id", nullable = false, unique = true)
@@ -105,6 +113,10 @@ public class Payment {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
     }
 
     public List<PaymentAttempt> getAttempts() {

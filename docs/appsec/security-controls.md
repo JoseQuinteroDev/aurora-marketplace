@@ -22,10 +22,18 @@ Paths are relative to the repository root.
 | Credential check | `SecurityConfig.authenticationProvider` | `DaoAuthenticationProvider` + `UserDetailsService`. |
 | Password hashing | `SecurityConfig.passwordEncoder` | `BCryptPasswordEncoder` (per-password salt, adaptive cost). |
 | Disabled-account enforcement | `SecurityConfig.userDetailsService` | `.disabled(!user.isEnabled())` — disabled users cannot authenticate. |
-| Secret configuration | `JwtProperties` / `APP_SECURITY_JWT_SECRET` | Externalized; ≥32 chars required in prod (`CLAUDE.md`). |
+| Secret configuration | `JwtProperties` / `APP_SECURITY_JWT_SECRET` | Externalized; ≥32 chars required in prod (`CLAUDE.md`). Placeholder fails fast (`JwtSecretValidator`). |
+| Per-account login lockout | `backend/.../auth/service/LoginAttemptService.java`, `User.recordFailedLogin` | N consecutive failures → 15-min lock; enforced in the core (gateway-independent). |
+| Short access TTL + refresh rotation | `backend/.../security/token/RefreshTokenService.java` | Access tokens 15 min; opaque, single-use, SHA-256-at-rest refresh tokens rotate on `/api/auth/refresh`. |
+| Refresh-token reuse detection | `RefreshTokenReuseResponder` | A replayed (already-rotated) token revokes the whole family + denylists its access tokens, in a `REQUIRES_NEW` tx; audited. |
+| Access-token revocation / logout | `backend/.../security/token/TokenDenylistService.java` | Per-request denylist check; public `/api/auth/revoke` lets an idle session log out. |
+| Password reset | `PasswordResetTokenService` + `AuthService.resetPassword` | Anti-enumeration request (identical 200 + latency floor); single-use SHA-256 token; reset invalidates every session. |
+| Email verification | `EmailVerificationTokenService` + `AuthService.verifyEmail` | Single-use token flips `email_verified`; a verified email gates order placement (`CheckoutService`). |
+| Breached-password check | `backend/.../security/password/HibpPasswordBreachChecker.java` | Register/reset reject a password found in the HIBP corpus (k-anonymity, 5-char SHA-1 prefix only); fail-open. |
 
 **Verify:** a request with no/invalid/expired token to a protected route returns
-`401`; a tampered signature is rejected; a disabled user cannot log in.
+`401`; a tampered signature is rejected; a disabled user cannot log in; a replayed
+refresh token revokes the family; a breached password is rejected at register/reset.
 
 ---
 
@@ -51,7 +59,8 @@ cannot read another customer's order by id.
 | DTO binding (no overposting) | controllers/services across domains | Entities are never bound from request bodies. |
 | Entities never serialized out | all controllers | Responses are DTOs only — limits data exposure and coupling. |
 | Parameterized data access | Spring Data JPA repositories | No string-concatenated SQL. |
-| Centralized error mapping | `backend/.../common/exception/GlobalExceptionHandler.java` | Maps `NotFound`/`Business`/validation exceptions to `common.api` `ErrorResponse`; **no stack traces** leak. |
+| URL scheme allow-list | `backend/.../catalog/product/dto/ProductImageRequest.java` | Stored image URLs must be absolute `http(s)` — blocks `javascript:`/`data:`/`file:` scheme abuse (no server-side fetch sink exists; this is preventive). |
+| Centralized error mapping | `backend/.../common/exception/GlobalExceptionHandler.java` | Maps `NotFound`/`Business`/validation/optimistic-lock exceptions to `common.api` `ErrorResponse`; **no stack traces** leak. A concurrency conflict → retryable `409`. |
 
 **Verify:** malformed/oversized input yields `400` with field errors; server
 errors never expose stack traces or SQL.
@@ -65,10 +74,15 @@ errors never expose stack traces or SQL.
 | Server-side price/total computation | `backend/.../checkout/service/CheckoutService.java` | Line prices and totals computed from products/variants, not request values. |
 | Stock revalidation + deduction | `CheckoutService` | Active-product and available-stock checks; `SALE` stock movement recorded. |
 | Coupon revalidation | `checkout` + `promotion` | Coupon re-checked at checkout; usage recorded. |
+| Atomic coupon redemption | `backend/.../promotion/service/CouponService.java` (`redeem`) | PESSIMISTIC_WRITE row lock + re-check under the lock, so concurrent checkouts can't beat `maxUses`/`maxUsesPerUser`. |
+| Optimistic locking | `inventory`/`order`/`payment` entities (`@Version`, V13) | Closes concurrent lost-update races (admin/batch stock path, order status, double payment); lost race → `409`. |
+| Checkout idempotency | `backend/.../checkout/...` (`Idempotency-Key`, V14 unique key) | A retried/double-submitted checkout replays the original order; a concurrent duplicate rolls back — no double-order/charge. |
+| Deterministic lock order | `CheckoutService.confirmCheckout` | Inventory row locks acquired in sorted variant-id order to prevent concurrent-checkout deadlocks. |
 | Simulated payment integrity | `backend/.../payment/service/PaymentService.java` | Payment state transitions recorded; events emitted via outbox. |
 
 **Verify:** submitting a manipulated price/quantity/coupon in the request has no
-effect on the persisted order total.
+effect on the persisted order total; a double-submitted checkout creates one order;
+a coupon at its use limit can't be redeemed twice concurrently.
 
 ---
 
@@ -77,15 +91,18 @@ effect on the persisted order total.
 | Control | Where | Notes |
 |---|---|---|
 | Single entry point + routing | `gateway/.../resources/application.yml` | `/api/notifications/**` before the `/api/**` core catch-all (order-sensitive). |
-| Per-client-IP rate limiting | `application.yml` (`RequestRateLimiter`) + `gateway/.../config` `clientIpKeyResolver` | Redis token bucket; `replenishRate`/`burstCapacity` env-tunable. |
-| CORS allow-list | `application.yml` `globalcors` | Methods + origins constrained; `DedupeResponseHeader` avoids duplicate CORS headers. ⚠️ tighten origins per environment. |
+| Tiered per-client-IP rate limiting | `application.yml` (`RequestRateLimiter`) + `gateway/.../config` `clientIpKeyResolver` | Redis token bucket: global per-IP, a stricter `/api/auth/**` bucket (login spray), and the tightest buckets on `/api/auth/forgot-password` + `/api/auth/resend-verification` (email-bombing). `429` carries `Retry-After`. |
+| Per-environment CORS allow-list | `application.yml` `globalcors` (`GATEWAY_ALLOWED_ORIGINS`) | Origins/methods/headers are an explicit env-driven list (dev default = local ng-serve only; never a credentialed wildcard). `DedupeResponseHeader` avoids duplicate CORS headers. |
+| Edge security headers | `gateway/.../config/ResponseHardeningWebFilter.java` | Mirrors the core's CSP/HSTS/X-Frame/X-Content-Type/Referrer-Policy/Permissions-Policy onto gateway-originated responses (fallbacks/429s/preflights) via `putIfAbsent`. |
+| Trimmed actuator surface | `application.yml` `management` | Only health/info/prometheus exposed; `show-details: when-authorized` (never disclosed to anonymous callers). |
 | Circuit breakers | `application.yml` `resilience4j.circuitbreaker` | Sliding window 20, 50% failure threshold, 10s open. |
 | GET-only retries | route `Retry` filters | Only idempotent reads retried (2×, `SERVER_ERROR`). |
 | Per-call timeouts | `resilience4j.timelimiter` | Default 5s; cancels running futures. |
-| Graceful fallbacks | `gateway/.../fallback/FallbackController.java` | Terse JSON `503` instead of hanging or leaking internals. |
+| Graceful fallbacks (all methods) | `gateway/.../fallback/FallbackController.java` | Terse JSON `503` for ANY method (not just GET) when the core is down — no hang, no leak. |
 
-**Verify:** exceeding the rate limit returns `429`; a downed core returns the
-JSON fallback, not a stack trace or a hang.
+**Verify:** exceeding the rate limit returns `429` + `Retry-After`; a downed core returns the
+JSON `503` fallback for any method; an allowed origin gets CORS headers, an unexpected origin's
+preflight is `403`; gateway-originated responses carry the security headers.
 
 ---
 
@@ -99,6 +116,7 @@ JSON fallback, not a stack trace or a hang.
 | Poison-message handling | `.../listener/NonRetryableEventException.java` + `DefaultErrorHandler` | Backoff + retry for transient errors; immediate DLT for poison; per-topic `<topic>.DLT`. |
 | Forward-compatible contracts | event records (`@JsonIgnoreProperties(ignoreUnknown = true)`) | No shared library; contract = topic + JSON shape; no native deserialization. |
 | Topic registry | `backend/.../messaging/AuroraTopics.java` | Centralized topic names; publishing toggle `app.events.enabled`. |
+| Delivered-row purge | `OutboxRelay.purgePublished` | Scheduled bulk-delete of PUBLISHED rows past a retention window — bounds how long a token's cleartext payload survives + prevents table bloat. |
 
 **Verify:** a rolled-back transaction emits no event; a redelivered event sends
 only one email; a malformed event lands in the DLT without stalling the consumer.
@@ -109,8 +127,9 @@ only one email; a malformed event lands in the DLT without stalling the consumer
 
 | Control | Where | Notes |
 |---|---|---|
-| Versioned migrations | `backend/src/main/resources/db/migration/V*__*.sql` | Flyway; e.g. `V6__create_event_outbox.sql`. |
+| Versioned migrations | `backend/src/main/resources/db/migration/V*__*.sql` | Flyway; latest `V14` (V13 optimistic-lock versions, V14 checkout idempotency keys). |
 | Schema validation at boot | `application.yml` (`ddl-auto: validate`) | App fails fast on schema drift; Hibernate never alters tables. |
+| Optimistic-lock versions | `inventory`/`orders`/`payments` `version` columns (V13) | `@Version` lost-update protection (see §4). |
 | Audit trail | `backend/.../audit/` | Sensitive business events persisted; admin-readable. |
 
 ---

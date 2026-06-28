@@ -15,6 +15,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "inventory")
@@ -23,6 +24,14 @@ public class Inventory {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
+    // Optimistic lock (OWASP A04): the checkout path already holds a PESSIMISTIC_WRITE lock,
+    // but the admin/batch stock-movement path is an unlocked read-modify-write. @Version makes
+    // a concurrent lost update fail loudly (ObjectOptimisticLockingFailureException -> 409)
+    // instead of silently overwriting another writer's adjustment.
+    @Version
+    @Column(nullable = false)
+    private long version;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "variant_id", nullable = false, unique = true)
@@ -78,6 +87,10 @@ public class Inventory {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public long getVersion() {
+        return version;
     }
 
     public void adjustAvailableQuantity(int availableQuantity) {

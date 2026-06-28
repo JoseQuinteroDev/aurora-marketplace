@@ -9,6 +9,7 @@ import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.common.exception.NotFoundException;
 import com.aurora.backend.promotion.entity.Coupon;
 import com.aurora.backend.promotion.entity.CouponType;
+import com.aurora.backend.promotion.entity.CouponUsage;
 import com.aurora.backend.promotion.repository.CouponRepository;
 import com.aurora.backend.promotion.repository.CouponUsageRepository;
 import com.aurora.backend.user.entity.User;
@@ -23,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -126,5 +129,35 @@ class CouponServiceTest {
         assertThatThrownBy(() -> couponService.validateCouponForCart("ONCE", mock(User.class), SUBTOTAL))
                 .isInstanceOfSatisfying(BusinessException.class,
                         ex -> assertThat(ex.getCode()).isEqualTo("COUPON_USER_MAX_USES_REACHED"));
+    }
+
+    // --- atomic redemption (OWASP A04 — concurrency integrity) ---
+
+    @Test
+    void redeemTakesTheRowLockReChecksAndRecordsUsageWhenUnderTheLimit() {
+        Coupon capped = new Coupon(
+                "SAVE", CouponType.FIXED_AMOUNT, new BigDecimal("30.00"), true, null, null, 5, null, null);
+        when(couponRepository.findByIdForUpdate(any())).thenReturn(Optional.of(capped));
+        when(couponUsageRepository.countByCouponId(any())).thenReturn(2L);   // under the limit of 5
+
+        couponService.redeem(capped, mock(User.class));
+
+        // It re-reads under the lock and records exactly one usage.
+        verify(couponRepository).findByIdForUpdate(any());
+        verify(couponUsageRepository).save(any(CouponUsage.class));
+    }
+
+    @Test
+    void redeemRejectsAtTheGlobalLimitUnderTheLockWithoutRecording() {
+        Coupon capped = new Coupon(
+                "LIMITED", CouponType.FIXED_AMOUNT, new BigDecimal("30.00"), true, null, null, 1, null, null);
+        when(couponRepository.findByIdForUpdate(any())).thenReturn(Optional.of(capped));
+        when(couponUsageRepository.countByCouponId(any())).thenReturn(1L);   // limit already reached
+
+        assertThatThrownBy(() -> couponService.redeem(capped, mock(User.class)))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("COUPON_MAX_USES_REACHED"));
+
+        verify(couponUsageRepository, never()).save(any());
     }
 }

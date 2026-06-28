@@ -83,7 +83,10 @@ Strong controls already in place — the plan *builds on* these, it does not red
   invalidates every session; emailed via the outbox→notification path (token-only event,
   link composed downstream). Adversarially reviewed (6 findings fixed; 0 high/critical).
   *Tracked residual (low):* the raw token sits in `event_outbox`/`.DLT` cleartext until
-  expiry — follow-ups: purge PUBLISHED outbox rows, redact the DLT record + short TTL.
+  delivery — ✅ a scheduled **outbox purge** now deletes PUBLISHED rows after a retention window
+  (`OutboxRelay.purgePublished`, default 60 min, env-tunable), bounding the cleartext window and
+  preventing table bloat (`OutboxPurgeTest`). *Remaining:* redact the `.DLT` record + short TTL
+  (notification-service side).
 - **Email verification:** still to do — reuses the same single-use-token + outbox→email
   machinery as password reset.
 - ✅ **Breached-password check — SHIPPED** (`feat/auth-hardening`). At register/reset, a
@@ -92,43 +95,70 @@ Strong controls already in place — the plan *builds on* these, it does not red
   returns `400 PASSWORD_BREACHED`. **Fails open** on corpus outage (availability > strictness)
   and is env-toggleable for air-gapped deploys; the reset check runs *before* token
   consumption so a rejection doesn't burn the link. Unit-tested with a faked range client.
-- **Credential hygiene (remaining):** optional **TOTP MFA** for admins.
+- **Credential hygiene (remaining):** optional **TOTP MFA** — fully specified in
+  [`mfa-design.md`](mfa-design.md) (schema, RFC-6238/4648 primitives, enrollment + login-gating
+  flow, endpoints, security checks, test plan). Deliberately NOT implemented overnight: it touches
+  the login/token-issuance path, so it gets a focused, TDD'd, adversarially-reviewed build.
 - **Exit:** auth-lifecycle gaps in `README.md` move from ❌/⚠️ to ✅; each flow has a
   regression test and an audit-log entry.
 
 ### Phase 2 — Edge & transport hardening
 *OWASP: A05 (misconfig), A07, A01.*
-- **CORS per environment:** replace the hardcoded `localhost:*` + credentials with an
-  env-driven allow-list; reject unexpected origins (test it).
-- **Rate limiting, tiered:** keep the per-IP gateway bucket; add a **stricter bucket
-  on `/api/auth/**`** and a per-authenticated-user bucket; document the per-account
-  lockout as the non-bypassable backstop. Return `429` with `Retry-After`.
-- **Gateway-edge security headers:** mirror the core's header set at the gateway so
-  non-core and error/fallback responses also carry them.
-- **Lock down the gateway:** reactive Spring Security in front of it; bind management
-  endpoints to a separate non-routable port; drop `show-details: always`.
+- ✅ **CORS per environment — SHIPPED** (`feat/prod-hardening`). The hardcoded
+  `localhost:*` + credentials is replaced by an env-driven allow-list
+  (`GATEWAY_ALLOWED_ORIGINS`, default the local ng-serve origin only); a credentialed
+  wildcard is impossible and the allowed headers/methods are an explicit list. Verified
+  live: an allowed origin gets `Access-Control-Allow-Origin`, `https://evil.example`
+  preflight is `403`.
+- ✅ **Tiered rate limiting — SHIPPED (partial)** (`feat/prod-hardening`). Added a stricter
+  per-IP bucket on the rest of `/api/auth/**` (login/register/refresh/…; replenish 5 /
+  burst 20) on top of the email-bomb buckets and the global bucket; `429` now carries
+  `Retry-After`. The per-account lockout (core) remains the non-bypassable backstop. Verified
+  live (burst → `429` + `Retry-After: 1`). *Remaining:* a per-authenticated-user bucket
+  (needs JWT-subject key resolution at the gateway).
+- ✅ **Gateway-edge security headers — SHIPPED** (`feat/prod-hardening`). A reactive
+  `ResponseHardeningWebFilter` mirrors the core's header set (CSP/Referrer-Policy/HSTS/
+  X-Frame/X-Content-Type/Permissions-Policy) onto gateway-originated responses (fallbacks,
+  429s, preflights) via `putIfAbsent` (no dup over proxied core headers). Unit-tested +
+  verified live on the fallback response. Also fixed: the fallback now degrades **all
+  methods** (a POST to a downed core was 405, now the graceful 503 JSON).
+- **Lock down the gateway (partial):** ✅ dropped `show-details: always` → `when-authorized`
+  (gateway + core; core also restricted to `ADMIN`). *Remaining:* reactive Spring Security
+  in front of the gateway; bind management endpoints to a separate non-routable port.
 - **TLS everywhere:** HTTPS at the edge (so HSTS engages) and TLS for
-  Postgres/Redis/Kafka/SMTP via a hardened compose/deploy overlay.
+  Postgres/Redis/Kafka/SMTP via a hardened compose/deploy overlay. *(pending)*
 - **Exit:** a DAST scan reports no missing-header / permissive-CORS / unthrottled
   findings; management surface is not publicly routable.
 
-### Phase 3 — Data & business-logic integrity
+### Phase 3 — Data & business-logic integrity — ✅ SHIPPED (`feat/prod-hardening`)
 *OWASP: A04 (insecure design), A08.*
-- **Optimistic locking (`@Version`)** on `inventory`, `order`, `payment` to close
-  races beyond the current row-lock (concurrent checkout/refund).
-- **Checkout idempotency key:** client-supplied `Idempotency-Key` header → unique
-  constraint, so a double-submit/replay can't create two orders or double-charge.
-- **Coupon integrity:** DB unique constraint on code + atomic usage counting so
-  limits can't be beaten by concurrency.
-- **Exit:** new Testcontainers integration tests prove no oversell / no double-order
-  under concurrency.
+- ✅ **Optimistic locking (`@Version`)** on `inventory`, `order`, `payment` (V13). Closes
+  lost-update races beyond the checkout row lock (the admin/batch stock path, concurrent
+  order status changes, double payment submission). A lost race → `409
+  CONCURRENT_MODIFICATION`. Proven by `OrderOptimisticLockingTest` (Testcontainers).
+- ✅ **Checkout idempotency key.** Optional `Idempotency-Key` header → `(user_id, key)` unique
+  constraint (V14); a retry/double-submit replays the original order, a concurrent duplicate
+  rolls back (`409 DUPLICATE_CHECKOUT`). The SPA sends a stable per-intent UUID. Proven by
+  `CheckoutIdempotencyTest` (Testcontainers).
+- ✅ **Coupon integrity.** Code already had a DB unique constraint; redemption is now atomic —
+  `CouponService.redeem` takes a `PESSIMISTIC_WRITE` lock on the coupon row and re-checks the
+  usage limits under it (a unique constraint can't express `maxUses > 1`). Proven by
+  `CouponRedemptionConcurrencyTest` (Testcontainers).
+- **Exit:** ✅ Testcontainers integration tests prove no double-order and no coupon over-use
+  under concurrency, and that the optimistic lock prevents a lost update.
 
 ### Phase 4 — Injection, deserialization & SSRF sweep
 *OWASP: A03 (injection), A08, A10 (SSRF).*
 - **Injection audit:** confirm 100% parameterized JPA (no string-concatenated
   queries); add a CodeQL/grep gate flagging concatenated query strings.
-- **SSRF guard:** validate/allow-list any server-fetched URL (product image URLs,
-  future webhooks); block internal/link-local targets.
+- **SSRF guard:** ✅ *audited — no live sink.* A full-backend sweep found **no server-side
+  URL fetching** (RestTemplate/RestClient/WebClient/HttpClient/URL.openConnection): product
+  image URLs are stored and rendered by the browser, never fetched server-side. The one
+  outbound client is the HIBP breach check to a fixed, configured host. Added preventive input
+  hardening — stored image URLs must be absolute **http(s)** (blocks `javascript:`/`data:`/
+  `file:` scheme abuse), locked by `ProductImageRequestValidationTest`. *Remaining:* if a
+  server-side fetch is ever introduced (e.g. webhooks), add an allow-list that blocks
+  internal/link-local targets at that sink.
 - **Deserialization:** keep strict JSON mapping (`@JsonIgnoreProperties`); no generic
   polymorphic deserialization of untrusted input.
 - **Header/CRLF injection:** confirm email is built via structured API, not manual
