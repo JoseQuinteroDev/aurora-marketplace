@@ -206,6 +206,15 @@ docker compose up -d
 
 # Or the full containerized stack (gateway + core + notification-service):
 docker compose --profile apps up -d --build
+
+# Full stack + observability (Prometheus scrapes every service, Grafana dashboard):
+docker compose -f docker-compose.yml -f docker-compose.observability.yml `
+  --profile apps --profile observability up -d --build
+# Grafana http://localhost:3000 (admin/admin) — pre-provisioned "Aurora — Overview" dashboard
+# (outbox backlog, HTTP rate + 5xx, JVM heap). Prometheus http://localhost:9090.
+
+# Production-hardening overlay (prod profile, resource limits, cap-drop, internal-only core/notif):
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile apps up -d --build
 ```
 
 ## Run the Services Locally
