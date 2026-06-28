@@ -1,5 +1,24 @@
 ﻿# AGENTS.md - Aurora Marketplace
 
+> **⚠️ HISTORICAL — read CLAUDE.md for the current source of truth.**
+>
+> This file documents the project's **original build order and rules**. It is kept
+> for history; several of its rules are now **SUPERSEDED** because the project has
+> since intentionally grown past that early phase. In particular, these rules are
+> **obsolete — do not follow them**:
+>
+> - ~~"Do not create microservices"~~ — the project is now event-driven with Kafka
+>   and a `notification-service` microservice.
+> - ~~"Do not implement JWT until the base common architecture is ready"~~ — stateless
+>   JWT auth (plus refresh-token rotation, lockout, denylist) is shipped.
+> - ~~"Do not touch frontend until backend common architecture is done"~~ — there is a
+>   full Angular 21 storefront + admin.
+>
+> The **coding rules** below (incremental work, layering, DTOs vs entities, Bean
+> Validation, global exception handling, never-trust-client-input) remain **current**.
+> Treat the *sequencing / priority* sections as a snapshot of an earlier phase.
+> See **`CLAUDE.md`** for the authoritative, up-to-date guidance.
+
 ## Project
 
 Aurora Marketplace is a professional full-stack e-commerce portfolio project.
@@ -24,29 +43,42 @@ Aurora Marketplace is a professional full-stack e-commerce portfolio project.
 9. Use global exception handling.
 10. Never trust frontend values for prices, roles, ownership, stock or authorization.
 11. Keep the project ready for tests and documentation.
-12. Do not create microservices.
-13. Do not implement JWT until the base common architecture is ready.
-14. Do not touch frontend until backend common architecture is done.
+12. ~~Do not create microservices.~~ **(SUPERSEDED — the project is now event-driven with Kafka + `notification-service`.)**
+13. ~~Do not implement JWT until the base common architecture is ready.~~ **(SUPERSEDED — JWT auth is shipped.)**
+14. ~~Do not touch frontend until backend common architecture is done.~~ **(SUPERSEDED — a full Angular frontend exists.)**
 
 ## Backend package style
 
-Use this structure under com.aurora.backend:
+Use this layered, modular structure under com.aurora.backend. Each domain slice has
+its own `controller` / `service` / `dto` / `entity` / `repository`. (Updated to the
+current set of slices — the original list predates several domains.)
 
-- common.api
-- common.exception
-- common.validation
-- config
-- security
+Domain slices:
+
 - auth
-- user
 - catalog
 - inventory
 - cart
+- checkout
 - order
 - payment
-- batch
+- promotion (coupons)
+- review
+- wishlist
 - audit
-- notification
+- batch
+- admin
+
+Cross-cutting packages:
+
+- user (the `User` entity/repository, shared by `auth`)
+- security (JWT + token services)
+- messaging (transactional outbox + Kafka)
+- common (`common.api`, `common.exception`, `common.validation`)
+- config
+
+Note: there is **no** `notification` package in the core — notification is a separate
+microservice (`services/notification-service`, `com.aurora.notification`).
 
 ## UI/UX rules
 

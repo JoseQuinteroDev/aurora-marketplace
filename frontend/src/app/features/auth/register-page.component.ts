@@ -26,10 +26,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.firstName' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="controlInvalid('firstName')">
                   <lucide-icon class="text-stone-400" [img]="UserRound" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="firstName" autocomplete="given-name" [placeholder]="'auth.placeholder.firstName' | t" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="firstName" autocomplete="given-name" [placeholder]="'auth.placeholder.firstName' | t" [attr.aria-invalid]="controlInvalid('firstName')" [attr.aria-describedby]="controlInvalid('firstName') ? 'register-firstName-error' : null" />
                 </span>
                 @if (controlInvalid('firstName')) {
-                  <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.firstNameRequired' | t }}</span>
+                  <span id="register-firstName-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.firstNameRequired' | t }}</span>
                 }
               </label>
 
@@ -37,10 +37,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.lastName' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="controlInvalid('lastName')">
                   <lucide-icon class="text-stone-400" [img]="UserRound" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="lastName" autocomplete="family-name" [placeholder]="'auth.placeholder.lastName' | t" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="lastName" autocomplete="family-name" [placeholder]="'auth.placeholder.lastName' | t" [attr.aria-invalid]="controlInvalid('lastName')" [attr.aria-describedby]="controlInvalid('lastName') ? 'register-lastName-error' : null" />
                 </span>
                 @if (controlInvalid('lastName')) {
-                  <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.lastNameRequired' | t }}</span>
+                  <span id="register-lastName-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.lastNameRequired' | t }}</span>
                 }
               </label>
             </div>
@@ -49,10 +49,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.email' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="controlInvalid('email')">
                 <lucide-icon class="text-stone-400" [img]="Mail" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" [placeholder]="'auth.placeholder.email' | t" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" [placeholder]="'auth.placeholder.email' | t" [attr.aria-invalid]="controlInvalid('email')" [attr.aria-describedby]="controlInvalid('email') ? 'register-email-error' : null" />
               </span>
               @if (controlInvalid('email')) {
-                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
+                <span id="register-email-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
               }
             </label>
 
@@ -60,10 +60,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.phone' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="controlInvalid('phone')">
                 <lucide-icon class="text-stone-400" [img]="Phone" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="phone" type="tel" autocomplete="tel" inputmode="tel" [placeholder]="'auth.placeholder.phone' | t" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="phone" type="tel" autocomplete="tel" inputmode="tel" [placeholder]="'auth.placeholder.phone' | t" [attr.aria-invalid]="controlInvalid('phone')" [attr.aria-describedby]="controlInvalid('phone') ? 'register-phone-error' : null" />
               </span>
               @if (controlInvalid('phone')) {
-                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.phoneInvalid' | t }}</span>
+                <span id="register-phone-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.phoneInvalid' | t }}</span>
               }
             </label>
 
@@ -71,10 +71,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.password' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="controlInvalid('password')">
                 <lucide-icon class="text-stone-400" [img]="LockKeyhole" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="password" type="password" autocomplete="new-password" [placeholder]="'auth.placeholder.passwordNew' | t" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="password" type="password" autocomplete="new-password" [placeholder]="'auth.placeholder.passwordNew' | t" [attr.aria-invalid]="controlInvalid('password')" [attr.aria-describedby]="controlInvalid('password') ? 'register-password-error' : null" />
               </span>
               @if (controlInvalid('password')) {
-                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordLength' | t }}</span>
+                <span id="register-password-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordLength' | t }}</span>
               }
             </label>
 
@@ -96,7 +96,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
       </div>
 
       <div class="relative hidden min-h-[700px] overflow-hidden rounded-ui bg-aurora-night shadow-premium lg:block">
-        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1400&q=85" alt="Crear una cuenta en Aurora" />
+        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?auto=format&fit=crop&w=1400&q=85" [attr.alt]="'a11y.registerAlt' | t" />
         <div class="absolute inset-0 bg-gradient-to-t from-aurora-night via-aurora-night/40 to-transparent"></div>
         <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
           <h2 class="max-w-md text-4xl font-extrabold leading-tight">{{ 'auth.register.title' | t }}</h2>

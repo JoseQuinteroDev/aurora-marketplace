@@ -27,10 +27,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.email' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="emailInvalid()">
                   <lucide-icon class="text-stone-400" [img]="Mail" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" [placeholder]="'auth.placeholder.email' | t" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" [placeholder]="'auth.placeholder.email' | t" [attr.aria-invalid]="emailInvalid()" [attr.aria-describedby]="emailInvalid() ? 'forgot-email-error' : null" />
                 </span>
                 @if (emailInvalid()) {
-                  <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
+                  <span id="forgot-email-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
                 }
               </label>
 

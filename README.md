@@ -1,5 +1,12 @@
 # Aurora Marketplace
 
+[![CI](https://github.com/JoseQuinteroDev/aurora-marketplace/actions/workflows/ci.yml/badge.svg)](https://github.com/JoseQuinteroDev/aurora-marketplace/actions/workflows/ci.yml)
+[![Security](https://github.com/JoseQuinteroDev/aurora-marketplace/actions/workflows/security.yml/badge.svg)](https://github.com/JoseQuinteroDev/aurora-marketplace/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Java 21](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot 3.5](https://img.shields.io/badge/Spring%20Boot-3.5-6DB33F)
+![Angular 21](https://img.shields.io/badge/Angular-21-DD0031)
+
 Aurora Marketplace is a professional full-stack e-commerce portfolio project.
 
 The goal is not to build a simple online shop, but a real-world e-commerce system with secure backend architecture, catalog, cart, checkout, admin tools, batch processing and AppSec-focused documentation.
@@ -18,6 +25,40 @@ flowchart LR
     NS -->|SMTP| MP[Mailpit]
     CORE --- PG[(PostgreSQL)]
 ```
+
+## Engineering highlights
+
+The parts that make this more than a CRUD shop — each links to the deep dive:
+
+- **Event-driven core with a Transactional Outbox** — business writes and their domain events
+  commit in one DB transaction (no dual-write); a `@Scheduled` relay drains them to Kafka with
+  `FOR UPDATE SKIP LOCKED` for safe multi-instance draining. See
+  [event-driven docs](docs/architecture/03_event_driven_microservices.md).
+- **At-least-once + idempotent consumers + DLTs** — the notification-service dedupes on `eventId`,
+  retries with backoff, and routes poison messages to per-topic Dead Letter Topics.
+- **Never trust the client** — prices, totals, stock, roles, ownership and authorization are always
+  recomputed/reloaded server-side; the JWT `role` claim is **not** trusted (authorities reload from the DB).
+- **Concurrency-correct checkout** — deterministic lock ordering to avoid deadlock, a pessimistic
+  re-check under lock to prevent overselling, optimistic `@Version` locking on order/payment/inventory,
+  and a per-user `Idempotency-Key` so a retried checkout never double-charges.
+- **Defense-in-depth AppSec program** — a phased [security master plan](docs/appsec/security-master-plan.md)
+  mapping every OWASP Top-10 risk to a control + a regression test + a detection signal, plus a deliberate
+  [`vulnerable-lab`](docs/appsec/vulnerable-lab.md) teaching branch (exploit → remediate) and DevSecOps CI gates.
+- **Edge resilience** — gateway with per-IP Redis rate limiting (tiered buckets), Resilience4j circuit
+  breaker + timeouts, and a JSON fallback so a downed core degrades gracefully.
+
+## Security highlights
+
+- Stateless **JWT** (HS256, algorithm pinned) with authorities **reloaded from the DB**, not the token claim.
+- **Refresh-token rotation with reuse detection** — opaque, single-use, SHA-256-at-rest, 15-min access TTL;
+  reuse revokes the whole token family and denylists its access tokens.
+- **Per-account login lockout**, **password reset** and **email verification** (anti-enumeration), and
+  **breached-password rejection** via the HIBP range API (k-anonymity, fail-open).
+- **TOTP MFA** cryptographic foundation (RFC 6238/4648 + AES-GCM) — login-path wiring in progress.
+- Locked **CSP** + full security-header set on the core, mirrored onto gateway-originated responses.
+
+See the **[AppSec program overview](docs/appsec/README.md)** and the
+**[security-testing catalog](docs/appsec/security-testing.md)** (controls ↔ tests ↔ OWASP).
 
 ## Tech Stack
 
@@ -97,13 +138,24 @@ Also implemented:
 - API gateway as the single entry point (rate limiting, retries, timeouts, circuit breaker).
 - Observability: Prometheus metrics + distributed tracing across all services.
 
+Auth & account security (OWASP A07):
+
+- Refresh-token rotation with reuse detection (opaque, single-use, SHA-256-at-rest; 15-min access TTL).
+- Per-account login lockout, token revocation/denylist, public logout for idle sessions.
+- Self-service password reset and email verification (anti-enumeration; a verified email gates checkout).
+- Breached-password rejection (Have I Been Pwned range API, k-anonymity, fail-open).
+- TOTP MFA cryptographic foundation (login-path wiring in progress).
+
+Data & business-logic integrity (OWASP A04):
+
+- Server-side recomputation of all money/stock/discounts; optimistic `@Version` locking on
+  order/payment/inventory; per-user checkout `Idempotency-Key`; atomic coupon redemption under a row lock.
+
 Not implemented yet:
 
-- Real payment provider such as Stripe.
-- Refresh tokens.
-- Email verification.
-- Password recovery.
-- Orders shipping integrations.
+- Real payment provider (e.g. Stripe) — payments are simulated by design.
+- MFA login-path wiring (TOTP crypto foundation is shipped; enrollment + challenge flow is the next step).
+- Shipping/fulfilment integrations.
 
 ## Security & AppSec
 
@@ -125,8 +177,9 @@ and an automated DevSecOps pipeline. Start with the
 Automated on every push/PR via [GitHub Actions](.github/workflows/security.yml):
 **CodeQL** (SAST), **Trivy** (dependency & IaC scanning), **Gitleaks** (secret
 scanning, hard gate), **CycloneDX** (SBOM), plus **Dependabot** updates.
-Security regression tests live in
-`backend/src/test/java/com/aurora/backend/security/jwt/`.
+The security-critical controls are locked by regression tests catalogued in
+[`docs/appsec/security-testing.md`](docs/appsec/security-testing.md) (each test mapped to its
+control and OWASP category).
 
 ## Local Services
 
@@ -180,11 +233,18 @@ $env:AURORA_API_TARGET="http://localhost:8088"; npm start
 
 ## Configuration
 
-JWT development defaults exist in `application.yml`. In production, override at least:
+JWT development defaults exist in `application.yml`. In production, **activate the `prod` profile**
+(`SPRING_PROFILES_ACTIVE=prod`) — it requires the secrets below from the environment with no dev
+fallback and arms `JwtSecretValidator`'s fail-fast. Override at least:
 
 ```powershell
+$env:SPRING_PROFILES_ACTIVE="prod"
 $env:APP_SECURITY_JWT_SECRET="replace-with-a-real-secret-of-at-least-32-chars"
-$env:APP_SECURITY_JWT_EXPIRATION_MINUTES="60"
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://<host>:5432/aurora_marketplace"
+$env:SPRING_DATASOURCE_USERNAME="<user>"
+$env:SPRING_DATASOURCE_PASSWORD="<password>"
+# Access tokens are intentionally short-lived (15 min) and extended via refresh-token rotation.
+# Override only if you have a reason to: $env:APP_SECURITY_JWT_EXPIRATION_MINUTES="15"
 ```
 
 For the containerized stack, copy [`.env.example`](.env.example) to `.env` and
@@ -207,10 +267,17 @@ GET http://localhost:8080/actuator/health
 
 ## Main Backend Endpoints
 
-Public:
+Auth (public; anti-enumeration + rate-limited at the gateway):
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/auth/refresh` — rotate the refresh token (reuse detection)
+- `POST /api/auth/revoke` — idle-session logout
+- `POST /api/auth/forgot-password` / `POST /api/auth/reset-password`
+- `POST /api/auth/verify-email` / `POST /api/auth/resend-verification`
+
+Public:
+
 - `GET /api/categories`
 - `GET /api/brands`
 - `GET /api/products`
@@ -243,7 +310,9 @@ Admin:
 - `/api/admin/dashboard/summary`
 - `/api/admin/batch/**`
 
-More detail: `docs/api/backend-endpoints.md`.
+Interactive API docs (OpenAPI 3): **Swagger UI** at http://localhost:8080/swagger-ui.html and the
+machine-readable spec at `/v3/api-docs` — use the **Authorize** button to paste a Bearer token and
+call protected endpoints. Endpoint cheat sheet: `docs/api/backend-endpoints.md`.
 
 ## Batch Jobs
 

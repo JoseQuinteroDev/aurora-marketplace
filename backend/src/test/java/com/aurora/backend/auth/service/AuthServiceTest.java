@@ -8,6 +8,7 @@ import com.aurora.backend.audit.entity.AuditEventType;
 import com.aurora.backend.audit.service.AuditLogService;
 import com.aurora.backend.auth.dto.AuthResponse;
 import com.aurora.backend.auth.dto.ForgotPasswordRequest;
+import com.aurora.backend.auth.dto.LoginRequest;
 import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
 import com.aurora.backend.auth.dto.ResendVerificationRequest;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -43,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -179,6 +182,56 @@ class AuthServiceTest {
         authService.revoke(new RefreshRequest("rid.secret"));
 
         verify(refreshTokenService).revokeFamilyOf("rid.secret");
+    }
+
+    // --- login (per-account lockout + anti-enumeration, OWASP A07) ---
+
+    @Test
+    void loginRejectsALockedAccountWithoutEverAuthenticating() {
+        when(loginAttemptService.isLocked(eq("ada@aurora.test"), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("Ada@Aurora.test", "password123")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("INVALID_CREDENTIALS"));
+
+        // The lock short-circuits BEFORE authentication, so continued guessing cannot
+        // wear the lock down or reach the credential check at all.
+        verifyNoInteractions(authenticationManager);
+        verify(loginAttemptService, never()).recordFailure(anyString(), any());
+        verify(loginAttemptService, never()).recordSuccess(anyString());
+    }
+
+    @Test
+    void loginOnBadCredentialsRecordsAFailureAndThrowsTheGenericError() {
+        when(loginAttemptService.isLocked(anyString(), any())).thenReturn(false);
+        doThrow(new BadCredentialsException("bad"))
+                .when(authenticationManager).authenticate(any());
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("ada@aurora.test", "wrong-password")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        // Identical code/message whether the user is unknown or the password is wrong —
+                        // no 'user not found' vs 'bad password' oracle.
+                        ex -> assertThat(ex.getCode()).isEqualTo("INVALID_CREDENTIALS"));
+
+        verify(loginAttemptService).recordFailure(eq("ada@aurora.test"), any());
+        verify(loginAttemptService, never()).recordSuccess(anyString());
+    }
+
+    @Test
+    void loginOnSuccessRecordsSuccessAndIssuesBothTokens() {
+        when(loginAttemptService.isLocked(anyString(), any())).thenReturn(false);
+        when(userRepository.findByEmail("ada@aurora.test")).thenReturn(Optional.of(user()));
+        when(jwtService.generateToken(any(User.class))).thenReturn("token");
+        when(jwtService.getExpirationMinutes()).thenReturn(15L);
+        when(refreshTokenService.issue(any(User.class), any())).thenReturn("rid.secret");
+
+        AuthResponse response = authService.login(new LoginRequest("Ada@Aurora.test", "password123"));
+
+        verify(loginAttemptService).recordSuccess("ada@aurora.test");
+        verify(loginAttemptService, never()).recordFailure(anyString(), any());
+        assertThat(response.accessToken()).isEqualTo("token");
+        assertThat(response.refreshToken()).isEqualTo("rid.secret");
+        verify(refreshTokenService).issue(any(User.class), any());
     }
 
     // --- password reset ---

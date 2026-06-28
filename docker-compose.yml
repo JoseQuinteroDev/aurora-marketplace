@@ -146,8 +146,11 @@
       APP_SECURITY_JWT_EXPIRATION_MINUTES: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:-60}
     ports:
       - "8080:8080"
+    # Give graceful shutdown (25s lifecycle budget) room before Docker SIGKILLs (default is 10s).
+    stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      # Readiness gates dependents (ready to serve) — distinct from liveness (process alive).
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/readiness"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -174,8 +177,9 @@
       APP_MAIL_PORT: "1025"
     ports:
       - "8082:8082"
+    stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health/readiness"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -203,8 +207,9 @@
       REDIS_PORT: "6379"
     ports:
       - "8088:8088"
+    stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8088/actuator/health/readiness"]
       interval: 15s
       timeout: 5s
       retries: 10

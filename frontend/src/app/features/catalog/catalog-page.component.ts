@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LucideAngularModule, Grid3X3, Search, SlidersHorizontal, Sparkles, X } from 'lucide-angular';
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
@@ -27,7 +28,7 @@ type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
             </p>
           </div>
           <div class="relative min-h-64 overflow-hidden bg-aurora-night">
-            <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1400&q=85" alt="Catálogo de productos de Aurora" />
+            <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1400&q=85" [attr.alt]="'a11y.catalogAlt' | t" />
             <div class="absolute inset-0 bg-gradient-to-l from-aurora-night/30 to-aurora-night/80"></div>
             <div class="absolute bottom-6 left-6 right-6 flex flex-wrap gap-3">
               <span class="aurora-badge border-white/20 bg-white/15 text-white">
@@ -223,6 +224,7 @@ export class CatalogPageComponent implements OnInit {
 
   private loadedQuery: string | null = null;
   private filterReturnFocus: HTMLElement | null = null;
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor(
     private readonly catalogService: CatalogService,
@@ -238,7 +240,7 @@ export class CatalogPageComponent implements OnInit {
 
     // The URL is the source of truth for search + facets, so global search,
     // home category deep-links and in-page filters all stay in sync.
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const query = params.get('q') ?? '';
       this.query.set(query);
       this.selectedCategory.set(params.get('category'));

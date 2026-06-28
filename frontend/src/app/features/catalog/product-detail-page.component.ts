@@ -1,5 +1,6 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -267,9 +268,9 @@ type ProductTab = 'description' | 'specs' | 'reviews';
                         <p class="rounded-ui bg-aurora-pine/10 px-3 py-2 text-sm font-bold text-aurora-pine dark:bg-aurora-pine/15 dark:text-aurora-pinebright">{{ reviewMessage() }}</p>
                       }
                       @if (reviewError()) {
-                        <p class="rounded-ui bg-aurora-rose/10 px-3 py-2 text-sm font-bold text-aurora-rose dark:bg-aurora-rose/15">{{ reviewError() }}</p>
+                        <p id="review-form-error" class="rounded-ui bg-aurora-rose/10 px-3 py-2 text-sm font-bold text-aurora-rose dark:bg-aurora-rose/15">{{ reviewError() }}</p>
                       }
-                      <button class="ui-button ui-button-primary w-full" type="submit" [disabled]="reviewForm.invalid || reviewSubmitting()">{{ 'product.submitReview' | t }}</button>
+                      <button class="ui-button ui-button-primary w-full" type="submit" [disabled]="reviewForm.invalid || reviewSubmitting()" [attr.aria-invalid]="reviewError() ? true : null" [attr.aria-describedby]="reviewError() ? 'review-form-error' : null">{{ 'product.submitReview' | t }}</button>
                     </form>
                   }
                 </div>
@@ -283,6 +284,7 @@ type ProductTab = 'description' | 'specs' | 'reviews';
 })
 export class ProductDetailPageComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly product = signal<Product | null>(null);
   readonly reviews = signal<Review[]>([]);
@@ -341,7 +343,7 @@ export class ProductDetailPageComponent implements OnInit {
     // Subscribe (not snapshot) so navigating product -> product (back/forward,
     // links from cart/wishlist/orders) reloads and resets the view instead of
     // keeping the previous product, which Angular's route reuse would otherwise show.
-    this.route.paramMap.subscribe((params) => this.loadProduct(params.get('slug')));
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => this.loadProduct(params.get('slug')));
   }
 
   private loadProduct(slug: string | null): void {

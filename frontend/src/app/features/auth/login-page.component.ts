@@ -14,7 +14,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
   template: `
     <section class="page-shell grid min-h-[760px] items-center gap-10 py-10 lg:grid-cols-[0.96fr_1.04fr]">
       <div class="relative hidden min-h-[660px] overflow-hidden rounded-ui bg-aurora-night shadow-premium lg:block">
-        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=85" alt="Compra online en Aurora" />
+        <img class="absolute inset-0 h-full w-full object-cover opacity-75" src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=1400&q=85" [attr.alt]="'a11y.loginAlt' | t" />
         <div class="absolute inset-0 bg-gradient-to-t from-aurora-night via-aurora-night/40 to-transparent"></div>
         <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
           <div class="inline-flex items-center gap-2 rounded-ui border border-white/15 bg-white/10 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-aurora-pinebright">
@@ -44,10 +44,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.email' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="emailInvalid()">
                 <lucide-icon class="text-stone-400" [img]="Mail" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" [placeholder]="'auth.placeholder.email' | t" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="email" type="email" autocomplete="email" [placeholder]="'auth.placeholder.email' | t" [attr.aria-invalid]="emailInvalid()" [attr.aria-describedby]="emailInvalid() ? 'login-email-error' : null" />
               </span>
               @if (emailInvalid()) {
-                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
+                <span id="login-email-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.emailInvalid' | t }}</span>
               }
             </label>
 
@@ -55,10 +55,10 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.password' | t }}</span>
               <span class="field-shell" [class.field-shell-invalid]="passwordInvalid()">
                 <lucide-icon class="text-stone-400" [img]="LockKeyhole" size="17" />
-                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="password" type="password" autocomplete="current-password" [placeholder]="'auth.placeholder.password' | t" />
+                <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="password" type="password" autocomplete="current-password" [placeholder]="'auth.placeholder.password' | t" [attr.aria-invalid]="passwordInvalid()" [attr.aria-describedby]="passwordInvalid() ? 'login-password-error' : null" />
               </span>
               @if (passwordInvalid()) {
-                <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
+                <span id="login-password-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
               }
               <span class="mt-2 block text-right">
                 <a routerLink="/forgot-password" queryParamsHandling="preserve" class="premium-link text-xs">{{ 'auth.forgotLink' | t }}</a>

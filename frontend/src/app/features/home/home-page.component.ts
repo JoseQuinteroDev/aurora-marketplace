@@ -64,7 +64,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               <img
                 class="h-[340px] w-full object-cover sm:h-[440px]"
                 src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=85"
-                alt="Escritorio con portátil y auriculares"
+                [attr.alt]="'a11y.heroAlt' | t"
               />
             </div>
             <div class="absolute -left-3 bottom-5 flex items-center gap-2 rounded-ui border border-aurora-line bg-aurora-paper px-3 py-2 shadow-lift dark:border-white/10 dark:bg-aurora-night">
@@ -141,7 +141,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     <section class="page-shell py-14">
       <div class="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
         <div class="relative overflow-hidden rounded-ui bg-aurora-night p-6 text-white shadow-premium sm:p-8">
-          <img class="absolute inset-0 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80" alt="Viajes y estilo de vida" />
+          <img class="absolute inset-0 h-full w-full object-cover opacity-35" src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80" [attr.alt]="'a11y.promoAlt' | t" />
           <div class="relative z-10 max-w-xl">
             <p class="section-kicker">{{ 'home.promo.eyebrow' | t }}</p>
             <h2 class="mt-3 text-4xl font-extrabold leading-tight">{{ 'home.promo.title' | t }}</h2>
@@ -186,7 +186,7 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
     <section class="page-shell py-14">
       <div class="overflow-hidden rounded-ui border border-aurora-line bg-white shadow-premium dark:border-white/10 dark:bg-white/[0.07]">
         <div class="grid items-center gap-0 lg:grid-cols-[0.9fr_1.1fr]">
-          <img class="h-72 w-full object-cover lg:h-full" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1400&q=85" alt="Surtido de productos de tecnología y estilo de vida" />
+          <img class="h-72 w-full object-cover lg:h-full" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1400&q=85" [attr.alt]="'a11y.clubAlt' | t" />
           <div class="p-7 sm:p-10">
             <p class="section-kicker">{{ 'home.club.eyebrow' | t }}</p>
             <h2 class="mt-3 text-3xl font-extrabold text-aurora-ink sm:text-4xl dark:text-white">{{ 'home.club.title' | t }}</h2>

@@ -79,6 +79,10 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
+                        // Interactive API docs. Public here so the portfolio API is explorable; the
+                        // documented endpoints still enforce their own auth. In a locked-down prod,
+                        // gate these behind ROLE_ADMIN or a profile.
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/revoke",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
