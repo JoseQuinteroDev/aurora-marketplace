@@ -194,6 +194,15 @@
                         </exclude>
                     </excludes>
                 </configuration>
+                <executions>
+                    <!-- Generates META-INF/build-info.properties so /actuator/info reports the
+                         running artifact + version + build time ("which build is this?"). -->
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

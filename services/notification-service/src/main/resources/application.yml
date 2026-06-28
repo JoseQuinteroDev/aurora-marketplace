@@ -1,9 +1,16 @@
 server:
   port: 8082
+  # Drain in-flight work on shutdown rather than dropping it (clean redeploys; at-least-once
+  # redelivery already covers a mid-processing kill, but this avoids the avoidable churn).
+  shutdown: graceful
 
 spring:
   application:
     name: aurora-notification-service
+
+  # Grace budget for in-flight work to finish during graceful shutdown.
+  lifecycle:
+    timeout-per-shutdown-phase: 25s
 
   kafka:
     bootstrap-servers: ${APP_KAFKA_BOOTSTRAP_SERVERS:localhost:29092}

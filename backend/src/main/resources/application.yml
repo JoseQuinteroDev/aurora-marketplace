@@ -2,6 +2,11 @@
   application:
     name: aurora-marketplace-backend
 
+  # Let in-flight requests/jobs finish (up to this budget) when SIGTERM arrives, instead of
+  # being cut off — pairs with server.shutdown: graceful for zero-drop rolling deploys.
+  lifecycle:
+    timeout-per-shutdown-phase: 25s
+
   docker:
     compose:
       enabled: false
@@ -49,6 +54,8 @@
 
 server:
   port: 8080
+  # Drain in-flight requests on shutdown rather than dropping them (OWASP A-availability / prod-readiness).
+  shutdown: graceful
 
 management:
   endpoints:
