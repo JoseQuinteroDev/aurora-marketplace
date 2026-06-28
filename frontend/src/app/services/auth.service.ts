@@ -3,7 +3,14 @@ import { Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { ApiResponse } from '../core/models/api-response.model';
-import { AuthPayload, AuthUser, LoginRequest, RegisterRequest } from '../core/models/auth.model';
+import {
+  AuthPayload,
+  AuthUser,
+  LoginRequest,
+  MfaEnrollResponse,
+  MfaStatusResponse,
+  RegisterRequest
+} from '../core/models/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -35,10 +42,47 @@ export class AuthService {
     return this.isAuthenticated() && this.userSignal()?.role === 'ADMIN';
   }
 
+  /**
+   * Signs in. For an MFA-enrolled user the backend returns `status === 'MFA_REQUIRED'`
+   * with NO tokens — in that case we deliberately persist NOTHING and hand the response
+   * back so the login page can switch to the code-entry step (the session is only
+   * established once `mfaVerify` succeeds). A normal response persists the session as before.
+   */
   login(request: LoginRequest) {
     return this.http.post<ApiResponse<AuthPayload>>('/api/auth/login', request).pipe(
       tap((response) => this.persistSession(response.data))
     );
+  }
+
+  /**
+   * Completes an MFA challenge with the 6-digit code, exchanging the opaque mfaToken for
+   * the real tokens. On success the session is persisted EXACTLY like a normal login
+   * (same private path), so everything downstream behaves identically to a non-MFA sign-in.
+   */
+  mfaVerify(mfaToken: string, code: string) {
+    return this.http
+      .post<ApiResponse<AuthPayload>>('/api/auth/mfa/verify', { mfaToken, code })
+      .pipe(tap((response) => this.persistSession(response.data)));
+  }
+
+  /** Begins enrollment for the signed-in user → returns the secret + otpauth URI. Does NOT enable MFA yet. */
+  enrollMfa() {
+    return this.http.post<ApiResponse<MfaEnrollResponse>>('/api/auth/mfa/enroll', {});
+  }
+
+  /** Confirms enrollment with a code from the authenticator app → enables MFA. */
+  confirmMfa(code: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/mfa/confirm', { code });
+  }
+
+  /** Disables MFA for the signed-in user; requires a current 6-digit code. */
+  disableMfa(code: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/mfa/disable', { code });
+  }
+
+  /** Whether MFA is currently enabled for the signed-in user. */
+  mfaStatus() {
+    return this.http.get<ApiResponse<MfaStatusResponse>>('/api/auth/mfa/status');
   }
 
   register(request: RegisterRequest) {
@@ -119,6 +163,11 @@ export class AuthService {
   }
 
   private persistSession(payload: AuthPayload): void {
+    // An MFA challenge response carries no tokens — never establish a session from it.
+    // The real session is created later by mfaVerify, which returns a full token payload.
+    if (payload.status === 'MFA_REQUIRED' || !payload.accessToken) {
+      return;
+    }
     localStorage.setItem(this.tokenKey, payload.accessToken);
     localStorage.setItem(this.refreshKey, payload.refreshToken);
     localStorage.setItem(this.userKey, JSON.stringify(payload.user));
