@@ -30,6 +30,10 @@ app:
       # Required in production — no committed placeholder. JwtSecretValidator additionally
       # refuses to start under 'prod' if this is unset or a known dev secret.
       secret: ${APP_SECURITY_JWT_SECRET}
+    mfa:
+      # Required in production — no committed placeholder. MfaKeyValidator additionally refuses
+      # to start under 'prod' if this is unset, a known dev key, or not a 16/24/32-byte base64 key.
+      encryption-key: ${APP_SECURITY_MFA_ENCRYPTION_KEY}
 
 logging:
   level:

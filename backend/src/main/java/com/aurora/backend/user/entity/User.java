@@ -57,6 +57,18 @@ public class User {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    // Optional, opt-in TOTP second factor (OWASP A07). `mfaSecret` is the AES-GCM ciphertext of the
+    // Base32 TOTP secret (never plaintext); it is set while an enrollment is pending with
+    // `mfaEnabled` still false, and flipped to true only once a valid code confirms the enrollment.
+    @Column(name = "mfa_enabled", nullable = false)
+    private boolean mfaEnabled;
+
+    @Column(name = "mfa_secret", length = 255)
+    private String mfaSecret;
+
+    @Column(name = "mfa_enrolled_at")
+    private Instant mfaEnrolledAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -180,6 +192,48 @@ public class User {
     /** Marks the account's email as verified (sole write path; {@code @PreUpdate} bumps updatedAt). */
     public void verifyEmail() {
         this.emailVerified = true;
+    }
+
+    public boolean isMfaEnabled() {
+        return mfaEnabled;
+    }
+
+    public String getMfaSecret() {
+        return mfaSecret;
+    }
+
+    public Instant getMfaEnrolledAt() {
+        return mfaEnrolledAt;
+    }
+
+    /**
+     * Stores a freshly-minted, AES-GCM-encrypted TOTP secret as a PENDING enrollment without
+     * enabling MFA. Re-enrolling simply overwrites the pending secret (idempotent). Enabling
+     * is a separate, code-confirmed step ({@link #enableMfa(Instant)}).
+     */
+    public void beginMfaEnrollment(String encryptedSecret) {
+        this.mfaSecret = encryptedSecret;
+        this.mfaEnabled = false;
+        this.mfaEnrolledAt = null;
+    }
+
+    /**
+     * Activates MFA once a valid TOTP code has confirmed a pending enrollment. Requires a stored
+     * secret — a guard against enabling MFA with no second factor on file.
+     */
+    public void enableMfa(Instant now) {
+        if (mfaSecret == null) {
+            throw new IllegalStateException("Cannot enable MFA without a pending secret.");
+        }
+        this.mfaEnabled = true;
+        this.mfaEnrolledAt = now;
+    }
+
+    /** Turns MFA off and clears all enrollment state (sole disable write path). */
+    public void disableMfa() {
+        this.mfaEnabled = false;
+        this.mfaSecret = null;
+        this.mfaEnrolledAt = null;
     }
 
     public int getFailedLoginAttempts() {

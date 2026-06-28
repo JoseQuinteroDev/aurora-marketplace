@@ -77,6 +77,8 @@ need a database, so they are fast and reliable in CI.
 | `AuthServiceTest` (login) + `LoginAttemptServiceTest` | `backend/.../auth/service/` | `login()` rejects a **locked account before ever authenticating**, records a failure and throws the **generic** error on bad credentials (anti-enumeration), and records success on a valid login; the lockout state machine locks **exactly at** the configured max attempts, respects the lock window, and resets on success. (OWASP A07) |
 | `EventContractTest` (producer + consumer) | `backend/.../messaging/event/` + `notification-service/.../event/` | Pins the **Kafka JSON wire contract** across the no-shared-library boundary: the producer serializes each event to the exact field shape (Instant ISO-8601, UUID string, BigDecimal as a scale-normalized number), and the consumer deserializes the canonical JSON into its records with every required field non-null — a field rename/retype breaks the build instead of silently breaking a consumer at runtime. (integrity / A08) |
 | `GlobalExceptionHandlerTest` | `backend/.../common/exception/GlobalExceptionHandlerTest.java` | Each exception maps to the right status + code in the standard envelope — 404, business error, **409 CONCURRENT_MODIFICATION**, **403 FORBIDDEN** (method-security `AccessDeniedException`), and an unexpected exception → **500 with a generic message and no stack-trace/internal leak**. (OWASP A05/A09) |
+| `MfaServiceTest` + `MfaKeyValidatorTest` + `MfaControllerTest` | `backend/.../auth/service|controller/` + `security/mfa/` | TOTP MFA **enrollment** (opt-in): enroll mints a 160-bit secret stored **encrypted** (AES-GCM) and pending (not enabled); confirm enables **only on a valid current TOTP**; disable requires a valid code and clears the secret; a wrong code → generic `MFA_INVALID_CODE`. The self-service `/api/auth/mfa/{enroll,confirm,disable,status}` require authentication (401 anonymous), while `/api/auth/mfa/verify` is **public** (login-gating step, like `/refresh`) with 6-digit code validation. The MFA encryption key fail-fasts under `prod` on a placeholder/blank/wrong-length value (mirrors `JwtSecretValidator`). (OWASP A07) |
+| `AuthServiceTest` (MFA) + `MfaChallengeServiceTest` + `MfaLoginGatingTest` *(Testcontainers)* | `backend/.../auth/service/` + `security/token/MfaChallengeServiceTest.java` + `backend/.../auth/MfaLoginGatingTest.java` | TOTP MFA **login gating** — the careful token-issuance increment (OWASP A07). For an `mfaEnabled` user, `login()` issues **NO access/refresh tokens** (both null) and returns `status=MFA_REQUIRED` with a single-use `mfaToken`; the **only** MFA-login token-issuing path is `verifyMfa()`. The login challenge is opaque (`rowId.secret`), **SHA-256 at rest** (raw token never stored), short-TTL (5 min) and **single-use** (an atomic conditional UPDATE is the serialization point — a second `verify` with the same `mfaToken` → generic 401), with a bounded **attempt cap** (5) so the second factor can't be brute-forced in the window. A wrong code, an unknown/expired/consumed/over-cap challenge, and a user who is no longer MFA-enabled all collapse to the **same generic `MFA_CHALLENGE_INVALID` 401** (no oracle). The e2e proves enroll→confirm→login(`MFA_REQUIRED`)→verify(valid TOTP)→tokens, and that the `mfaToken` is single-use, end to end against PostgreSQL. **Non-MFA login is unchanged** (every existing `AuthServiceTest`/`AuthValidationTest` stays green). (OWASP A07) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -89,7 +91,11 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **all security-focused tests passing.** This cycle added JWT
+> Current status: **all security-focused tests passing.** This cycle shipped **TOTP MFA
+> login gating** — the last open Phase 1 item (OWASP A07): an `mfaEnabled` login now issues
+> no tokens and returns `MFA_REQUIRED`, exchanged at `/api/auth/mfa/verify` for the real
+> tokens via a single-use, SHA-256-at-rest, attempt-capped challenge (`AuthServiceTest` MFA
+> cases, `MfaChallengeServiceTest`, `MfaLoginGatingTest`). Earlier cycles added JWT
 > **algorithm-pinning + clock-skew** (`JwtServiceTest`), refresh-token grace-window
 > **detection** (`RefreshTokenServiceTest`), admin **method-security** defense-in-depth
 > (`AdminMethodSecurityTest`), the order **state machine** (`OrderTest` ×31), **bounded
@@ -166,7 +172,11 @@ the gateway. It is organized by OWASP category. ☐ = verify per change.
 - ☐ Expired token is rejected.
 - ☐ Token signed with a different secret is rejected.
 - ☐ Disabled account cannot authenticate.
-- ☐ Repeated failed logins are throttled (IP rate limit today; per-account TODO).
+- ☐ Repeated failed logins are throttled (per-account lockout + gateway IP rate limit).
+- ☐ An MFA-enabled login issues **no tokens** until `/api/auth/mfa/verify` succeeds; the `mfaToken`
+  is single-use, short-TTL, and is **not** accepted as an access/refresh token anywhere.
+- ☐ A wrong MFA code returns the **same generic 401** as a bad/expired challenge (no oracle), and
+  the per-challenge attempt cap bounds brute force.
 
 ### Injection & input (A03)
 - ☐ SQL metacharacters in inputs do not alter queries (parameterized).

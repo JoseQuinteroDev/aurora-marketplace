@@ -14,6 +14,7 @@ import com.aurora.backend.auth.dto.RegisterRequest;
 import com.aurora.backend.auth.dto.ResendVerificationRequest;
 import com.aurora.backend.auth.dto.ResetPasswordRequest;
 import com.aurora.backend.auth.dto.VerifyEmailRequest;
+import com.aurora.backend.auth.dto.VerifyMfaRequest;
 import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.messaging.AuroraTopics;
 import com.aurora.backend.messaging.event.EmailVerificationRequestedEvent;
@@ -22,6 +23,7 @@ import com.aurora.backend.messaging.outbox.OutboxEventRecorder;
 import com.aurora.backend.security.jwt.JwtService;
 import com.aurora.backend.security.password.PasswordBreachChecker;
 import com.aurora.backend.security.token.EmailVerificationTokenService;
+import com.aurora.backend.security.token.MfaChallengeService;
 import com.aurora.backend.security.token.PasswordResetTokenService;
 import com.aurora.backend.security.token.RefreshTokenRepository;
 import com.aurora.backend.security.token.RefreshTokenReuseResponder;
@@ -34,6 +36,7 @@ import com.aurora.backend.user.role.Role;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -60,6 +63,7 @@ import static org.mockito.Mockito.when;
 class AuthServiceTest {
 
     private static final UUID USER_ID = UUID.fromString("aaaaaaaa-0000-0000-0000-0000000000aa");
+    private static final UUID CHALLENGE_ID = UUID.fromString("dddddddd-0000-0000-0000-0000000000dd");
 
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
@@ -75,12 +79,15 @@ class AuthServiceTest {
     private final RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
     private final RefreshTokenReuseResponder reuseResponder = mock(RefreshTokenReuseResponder.class);
     private final PasswordBreachChecker passwordBreachChecker = mock(PasswordBreachChecker.class);
+    private final MfaService mfaService = mock(MfaService.class);
+    private final MfaChallengeService mfaChallengeService = mock(MfaChallengeService.class);
 
     private final AuthService authService = new AuthService(
             userRepository, passwordEncoder, authenticationManager, jwtService,
             loginAttemptService, tokenDenylistService, auditLogService, refreshTokenService,
             passwordResetTokenService, emailVerificationTokenService, outboxRecorder,
             refreshTokenRepository, reuseResponder, passwordBreachChecker,
+            mfaService, mfaChallengeService,
             30, 60L, 0L,        // password-reset: expiry, interval, latency-floor (0 = no sleep in tests)
             1440, 60L, 0L);     // email-verification: expiry, interval, latency-floor
 
@@ -229,9 +236,144 @@ class AuthServiceTest {
 
         verify(loginAttemptService).recordSuccess("ada@aurora.test");
         verify(loginAttemptService, never()).recordFailure(anyString(), any());
+        assertThat(response.status()).isEqualTo("AUTHENTICATED");
         assertThat(response.accessToken()).isEqualTo("token");
         assertThat(response.refreshToken()).isEqualTo("rid.secret");
         verify(refreshTokenService).issue(any(User.class), any());
+    }
+
+    // --- MFA login gating (OWASP A07) ---
+
+    /** A real, enabled User with MFA turned on (a stored secret + mfaEnabled=true). */
+    private User mfaEnabledUser() {
+        User user = new User("ada@aurora.test", "hash", "Ada", "Lovelace", Role.CUSTOMER, true);
+        ReflectionTestUtils.setField(user, "id", USER_ID);
+        user.beginMfaEnrollment("encrypted-secret");
+        user.enableMfa(java.time.Instant.now());
+        return user;
+    }
+
+    @Test
+    void loginForAnMfaEnabledUserReturnsMfaRequiredAndIssuesNoTokens() {
+        when(loginAttemptService.isLocked(anyString(), any())).thenReturn(false);
+        when(userRepository.findByEmail("ada@aurora.test")).thenReturn(Optional.of(mfaEnabledUser()));
+        when(mfaChallengeService.issue(any(User.class))).thenReturn("cid.secret");
+
+        AuthResponse response = authService.login(new LoginRequest("Ada@Aurora.test", "password123"));
+
+        // The password step succeeded but the login is NOT complete: recordSuccess is deliberately
+        // NOT called here (it fires only after a successful verifyMfa), so wrong second-factor codes
+        // keep accruing toward the per-account lockout. NO tokens are issued — only a challenge.
+        verify(loginAttemptService, never()).recordSuccess(anyString());
+        assertThat(response.status()).isEqualTo("MFA_REQUIRED");
+        assertThat(response.mfaToken()).isEqualTo("cid.secret");
+        assertThat(response.accessToken()).isNull();
+        assertThat(response.refreshToken()).isNull();
+        assertThat(response.user()).isNull();
+        verify(mfaChallengeService).issue(any(User.class));
+        verify(jwtService, never()).generateToken(any());
+        verify(refreshTokenService, never()).issue(any(), any());
+        verify(auditLogService).log(eq(AuditEventType.MFA_CHALLENGE_ISSUED), any(User.class), any(), any(), any());
+    }
+
+    @Test
+    void verifyMfaWithAValidCodeConsumesTheChallengeAndIssuesTokens() {
+        User user = mfaEnabledUser();
+        when(mfaChallengeService.validate("cid.secret"))
+                .thenReturn(new MfaChallengeService.ValidChallenge(CHALLENGE_ID, USER_ID));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(mfaService.verifyCode(eq(user), eq("123456"))).thenReturn(true);
+        when(jwtService.generateToken(any(User.class))).thenReturn("token");
+        when(jwtService.getExpirationMinutes()).thenReturn(15L);
+        when(refreshTokenService.issue(any(User.class), any())).thenReturn("rid.secret");
+
+        AuthResponse response = authService.verifyMfa(new VerifyMfaRequest("cid.secret", "123456"));
+
+        assertThat(response.status()).isEqualTo("AUTHENTICATED");
+        assertThat(response.accessToken()).isEqualTo("token");
+        assertThat(response.refreshToken()).isEqualTo("rid.secret");
+        verify(mfaChallengeService).consume(CHALLENGE_ID);
+        verify(mfaChallengeService, never()).recordFailedAttempt(any());
+        // Both factors passed -> the login is complete, so the per-account failure counter resets here
+        // (it was deliberately NOT reset at the password step).
+        verify(loginAttemptService).recordSuccess(anyString());
+        verify(auditLogService).log(eq(AuditEventType.MFA_LOGIN_SUCCEEDED), eq(user), any(), eq(USER_ID), any());
+    }
+
+    @Test
+    void verifyMfaWithAWrongCodeRecordsAnAttemptAndFailsGenericallyWithoutTokens() {
+        User user = mfaEnabledUser();
+        when(mfaChallengeService.validate("cid.secret"))
+                .thenReturn(new MfaChallengeService.ValidChallenge(CHALLENGE_ID, USER_ID));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(mfaService.verifyCode(eq(user), eq("000000"))).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.verifyMfa(new VerifyMfaRequest("cid.secret", "000000")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("MFA_CHALLENGE_INVALID"));
+
+        verify(mfaChallengeService).recordFailedAttempt(CHALLENGE_ID);
+        // A wrong second factor also feeds the per-account lockout, so it can't be brute-forced
+        // by re-logging-in to mint fresh challenges.
+        verify(loginAttemptService).recordFailure(anyString(), any());
+        verify(mfaChallengeService, never()).consume(any());
+        verify(jwtService, never()).generateToken(any());
+        verify(refreshTokenService, never()).issue(any(), any());
+    }
+
+    @Test
+    void verifyMfaIsRejectedWhenTheAccountIsLockedFromRepeatedSecondFactorFailures() {
+        User user = mfaEnabledUser();
+        when(mfaChallengeService.validate("cid.secret"))
+                .thenReturn(new MfaChallengeService.ValidChallenge(CHALLENGE_ID, USER_ID));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+        when(loginAttemptService.isLocked(anyString(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.verifyMfa(new VerifyMfaRequest("cid.secret", "123456")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("MFA_CHALLENGE_INVALID"));
+
+        // A locked account never even gets the code checked, and no tokens are issued.
+        verifyNoInteractions(mfaService);
+        verify(mfaChallengeService, never()).consume(any());
+        verify(jwtService, never()).generateToken(any());
+    }
+
+    @Test
+    void verifyMfaWithAnInvalidChallengeFailsGenerically() {
+        // Unknown/expired/consumed/over-cap challenge: validate() throws the generic 401, and we
+        // never reach code verification, attempt recording, or token issuance.
+        when(mfaChallengeService.validate("bad.token"))
+                .thenThrow(new BusinessException(HttpStatus.UNAUTHORIZED, "MFA_CHALLENGE_INVALID",
+                        "Invalid or expired verification challenge."));
+
+        assertThatThrownBy(() -> authService.verifyMfa(new VerifyMfaRequest("bad.token", "123456")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("MFA_CHALLENGE_INVALID"));
+
+        verifyNoInteractions(mfaService);
+        verify(mfaChallengeService, never()).consume(any());
+        verify(mfaChallengeService, never()).recordFailedAttempt(any());
+        verify(jwtService, never()).generateToken(any());
+    }
+
+    @Test
+    void verifyMfaForAUserNoLongerMfaEnabledFailsGenerically() {
+        // Defense-in-depth: a challenge whose user disabled MFA in the meantime is rejected, with
+        // no code check and no tokens (the same generic 401).
+        User notMfa = new User("ada@aurora.test", "hash", "Ada", "Lovelace", Role.CUSTOMER, true);
+        ReflectionTestUtils.setField(notMfa, "id", USER_ID);
+        when(mfaChallengeService.validate("cid.secret"))
+                .thenReturn(new MfaChallengeService.ValidChallenge(CHALLENGE_ID, USER_ID));
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(notMfa));
+
+        assertThatThrownBy(() -> authService.verifyMfa(new VerifyMfaRequest("cid.secret", "123456")))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        ex -> assertThat(ex.getCode()).isEqualTo("MFA_CHALLENGE_INVALID"));
+
+        verifyNoInteractions(mfaService);
+        verify(mfaChallengeService, never()).consume(any());
+        verify(jwtService, never()).generateToken(any());
     }
 
     // --- password reset ---
