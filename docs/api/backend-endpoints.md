@@ -4,11 +4,32 @@ Base URL: `http://localhost:8080`
 
 Use `Authorization: Bearer <token>` for protected endpoints.
 
+Notes on key headers:
+
+- `POST /api/checkout/confirm` reads an `Idempotency-Key` request header so a retried
+  confirm cannot place a duplicate order.
+- Gateway rate-limited responses return `429 Too Many Requests` with a `Retry-After`
+  header.
+
 ## Auth
 
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout` — revokes the caller's current access token (auth required)
+All auth endpoints are **public** (no token) **except** `logout`, which requires the
+caller's access token.
+
+Public:
+
+- `POST /api/auth/register` — create an account; issues an email-verification token.
+- `POST /api/auth/login` — authenticate; returns access + refresh tokens.
+- `POST /api/auth/refresh` — rotate a refresh token for a fresh access token (single-use; reuse revokes the family).
+- `POST /api/auth/revoke` — revoke a refresh-token family (always `200`, anti-enumeration; lets an idle session log out).
+- `POST /api/auth/forgot-password` — request a password-reset link (always `200`, anti-enumeration; rate-limited).
+- `POST /api/auth/reset-password` — set a new password using a reset token; revokes all sessions.
+- `POST /api/auth/verify-email` — confirm an email address using a verification token.
+- `POST /api/auth/resend-verification` — request a new verification link (always `200`, anti-enumeration; rate-limited).
+
+Authenticated:
+
+- `POST /api/auth/logout` — revokes the caller's current access token (and optional refresh token) via the denylist.
 
 ## Public Catalog
 

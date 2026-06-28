@@ -94,6 +94,22 @@ that is the point of an AppSec program.
   request is anti-enumeration (identical response, per-email throttle, fixed latency
   floor) and gateway rate-limited; a successful reset re-hashes the password and revokes
   every session. Emailed via the outbox→notification path (link composed downstream).
+- **Email verification** — registration issues an opaque single-use SHA-256-at-rest
+  verification token (emailed via the outbox→notification path); a verified email gates
+  checkout / order placement. Resend (`POST /api/auth/resend-verification`) is
+  anti-enumeration (identical response + fixed latency floor) and gateway rate-limited.
+- **Breached-password check** — registration and password reset screen the candidate
+  password against the Have I Been Pwned k-anonymity range API; known-breached passwords
+  are rejected with a localized (EN/ES) message.
+- **Optimistic concurrency control** — JPA `@Version` locking guards stock and other
+  contended rows against lost updates under concurrent writes.
+- **Idempotent checkout** — `POST /api/checkout/confirm` honours a client
+  `Idempotency-Key` header so a retried confirm cannot place a duplicate order.
+- **Atomic coupon redemption** — coupon use is redeemed atomically so per-coupon usage
+  limits cannot be raced past their cap.
+- **MFA cryptographic foundation** — RFC 6238/4648 TOTP generator, Base32 codec and an
+  AES-GCM secret cipher (`security/mfa/`) are in place. The login-path wiring (enrollment
+  + challenge) is not yet shipped (see gaps).
 - **Startup secret guard** — the app refuses to boot under the `prod` profile with
   a placeholder JWT secret (`JwtSecretValidator`).
 - **Security-event logging** — authentication outcomes, JWT rejections, 401/403
@@ -111,23 +127,26 @@ that is the point of an AppSec program.
 - **Secrets management** — externalized via environment variables, but the local
   compose stack ships development defaults inline (see `.env.example`).
 - **Token lifecycle** — short-lived (15-min) access tokens with server-side
-  revocation (logout) **and refresh-token rotation with reuse detection** now in
-  place; breached-password/MFA and `HttpOnly`-cookie storage are still pending.
+  revocation (logout), refresh-token rotation with reuse detection, password reset
+  and email verification are all in place; `HttpOnly`-cookie refresh storage (the
+  localStorage residual XSS risk is accepted for now) and the MFA login-path wiring
+  are the remaining items.
 
 ### Gaps ❌ (tracked)
 
 - **Transport encryption in the stack** — Postgres, Redis, Kafka and SMTP run
-  plaintext in compose; TLS is delegated to the deployment environment.
-- **Token lifecycle (remaining)** — revocation/logout, per-account lockout,
-  refresh-token rotation with reuse detection and self-service password reset now ship;
-  breached-password/MFA, `HttpOnly`-cookie token storage (the localStorage residual XSS
-  risk is accepted for now), and email verification are still open. See
-  [`owasp-top-10.md`](owasp-top-10.md) A07.
-- **Account-recovery & verification flows** — email verification and password
-  reset are not yet implemented.
+  plaintext in compose; TLS termination is delegated to the deployment environment.
+- **MFA login-path wiring** — the TOTP cryptographic foundation (generator, Base32
+  codec, AES-GCM secret cipher) ships, but enrollment and the login challenge step are
+  not yet wired into the auth flow. See [`owasp-top-10.md`](owasp-top-10.md) A07.
+- **`HttpOnly`-cookie refresh storage** — refresh tokens are returned to the SPA and
+  held in `localStorage`; moving them to `HttpOnly` cookies is an accepted residual,
+  not yet done. See [`owasp-top-10.md`](owasp-top-10.md) A07.
 - **Supply-chain hardening** — base-image digest pinning, GitHub Actions SHA
   pinning, and image signing/provenance remain open (containers already run
   multi-stage as a non-root user). See [`../devops/cicd-security.md`](../devops/cicd-security.md).
+- **Operational alerting (Phase 7)** — metrics, tracing and audit logging are in
+  place, but threshold-based alerting on security signals is not yet wired up.
 
 Each item above is expanded — with concrete remediation — in
 [`owasp-top-10.md`](owasp-top-10.md) and [`threat-model.md`](threat-model.md).
