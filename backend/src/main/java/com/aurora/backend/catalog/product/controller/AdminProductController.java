@@ -1,5 +1,6 @@
 package com.aurora.backend.catalog.product.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import com.aurora.backend.catalog.product.dto.ProductRequest;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -28,6 +30,17 @@ public class AdminProductController {
 
     public AdminProductController(ProductService productService) {
         this.productService = productService;
+    }
+
+    @GetMapping
+    public ApiResponse<List<ProductResponse>> listProducts() {
+        // Admin sees ALL products (incl. inactive) — the public GET /api/products is active-only.
+        return ApiResponse.success("Products retrieved successfully.", productService.listAllProducts());
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<ProductResponse> getProduct(@PathVariable UUID id) {
+        return ApiResponse.success("Product retrieved successfully.", productService.getProductById(id));
     }
 
     @PostMapping

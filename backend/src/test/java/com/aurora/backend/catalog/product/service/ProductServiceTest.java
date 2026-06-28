@@ -71,4 +71,23 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.getActiveProductBySlug("ghost-product"))
                 .isInstanceOf(NotFoundException.class);
     }
+
+    @Test
+    void adminListUsesTheUnfilteredQueryAndSkipsRatingsWhenEmpty() {
+        // The admin list pulls from findAllByOrderByCreatedAtDesc (active AND inactive), distinct
+        // from the public listActiveProducts (active-only). Empty result must not run the rating query.
+        when(productRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of());
+
+        assertThat(productService.listAllProducts()).isEmpty();
+        verify(productRepository).findAllByOrderByCreatedAtDesc();
+        verify(reviewRepository, never()).findRatingStatsByProductIds(any());
+    }
+
+    @Test
+    void fetchingAnUnknownAdminProductIdIsNotFound() {
+        when(productRepository.findById(any())).thenReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> productService.getProductById(java.util.UUID.randomUUID()))
+                .isInstanceOf(NotFoundException.class);
+    }
 }
