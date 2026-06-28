@@ -39,13 +39,13 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.reset.passwordLabel' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="controlInvalid('newPassword')">
                   <lucide-icon class="text-stone-400" [img]="LockKeyhole" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="newPassword" type="password" autocomplete="new-password" [placeholder]="'auth.placeholder.passwordNew' | t" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="newPassword" type="password" autocomplete="new-password" [placeholder]="'auth.placeholder.passwordNew' | t" [attr.aria-invalid]="controlInvalid('newPassword')" [attr.aria-describedby]="controlInvalid('newPassword') ? 'reset-newPassword-error' : null" />
                 </span>
                 @if (controlInvalid('newPassword')) {
                   @if (form.controls.newPassword.hasError('required')) {
-                    <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
+                    <span id="reset-newPassword-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
                   } @else {
-                    <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordLength' | t }}</span>
+                    <span id="reset-newPassword-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordLength' | t }}</span>
                   }
                 }
               </label>
@@ -54,10 +54,10 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
                 <span class="text-sm font-bold text-aurora-ink dark:text-stone-200">{{ 'auth.confirmPassword' | t }}</span>
                 <span class="field-shell" [class.field-shell-invalid]="mismatch()">
                   <lucide-icon class="text-stone-400" [img]="LockKeyhole" size="17" />
-                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="confirm" type="password" autocomplete="new-password" />
+                  <input class="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none dark:text-white" formControlName="confirm" type="password" autocomplete="new-password" [attr.aria-invalid]="mismatch()" [attr.aria-describedby]="mismatch() ? 'reset-confirm-error' : null" />
                 </span>
                 @if (mismatch()) {
-                  <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.reset.mismatch' | t }}</span>
+                  <span id="reset-confirm-error" class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.reset.mismatch' | t }}</span>
                 }
               </label>
 
