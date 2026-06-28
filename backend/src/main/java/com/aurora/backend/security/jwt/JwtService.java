@@ -1,6 +1,7 @@
 package com.aurora.backend.security.jwt;
 
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
@@ -10,14 +11,27 @@ import javax.crypto.SecretKey;
 
 import com.aurora.backend.user.entity.User;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwsHeader;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.Locator;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
 public class JwtService {
+
+    /**
+     * The one signature algorithm we issue and will accept. Pinning this defends against
+     * algorithm-confusion / {@code alg:none} downgrade attacks (OWASP A02): the verification
+     * key is only handed to the parser when the JWS header advertises exactly this algorithm.
+     */
+    private static final String EXPECTED_ALG = Jwts.SIG.HS256.getId();
+
+    /** Tolerated clock drift between nodes when validating exp/nbf (OWASP A07, multi-node skew). */
+    private static final long CLOCK_SKEW_SECONDS = 30;
 
     private final JwtProperties properties;
 
@@ -37,7 +51,8 @@ public class JwtService {
                 .claim("role", user.getRole().name())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiration))
-                .signWith(signingKey())
+                // Pin the algorithm explicitly so issuing and verifying stay symmetric.
+                .signWith(signingKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
@@ -70,10 +85,37 @@ public class JwtService {
 
     private Claims extractClaims(String token) {
         return Jwts.parser()
-                .verifyWith(signingKey())
+                // Resolve the verification key via a locator that refuses any header whose
+                // alg is not our pinned HS256 — so an alg-confusion or alg:none token is
+                // rejected by intent, not merely by library default.
+                .keyLocator(algorithmPinningKeyLocator())
+                // Tolerate small inter-node clock drift on exp/nbf checks.
+                .clockSkewSeconds(CLOCK_SKEW_SECONDS)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    /**
+     * A {@link Locator} that returns the HMAC verification key only when the JWS header's
+     * algorithm is exactly {@link #EXPECTED_ALG} (HS256); any other algorithm — including a
+     * swapped/forged {@code alg} header — throws and the token is rejected. (An {@code alg:none}
+     * token is an unsecured JWS, which {@code parseSignedClaims} rejects regardless.)
+     */
+    private Locator<Key> algorithmPinningKeyLocator() {
+        SecretKey key = signingKey();
+        return new io.jsonwebtoken.LocatorAdapter<>() {
+            @Override
+            protected Key locate(JwsHeader header) {
+                String alg = header.getAlgorithm();
+                if (!EXPECTED_ALG.equals(alg)) {
+                    throw new SignatureException(
+                            "Unexpected JWT signature algorithm '" + alg + "'; only "
+                                    + EXPECTED_ALG + " is accepted");
+                }
+                return key;
+            }
+        };
     }
 
     private SecretKey signingKey() {

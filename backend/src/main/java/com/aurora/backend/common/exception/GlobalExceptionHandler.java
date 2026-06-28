@@ -134,6 +134,21 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(
+            org.springframework.security.access.AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        // A method-security (@PreAuthorize) denial that propagates into the dispatcher must
+        // surface as a clean 403 — not the catch-all 500 below (OWASP A01 defense-in-depth).
+        // URL-level denials are already turned into 403 by Spring Security's filter chain before
+        // this advice ever runs; this covers the method-authorization backup layer on the core.
+        // Uses the same FORBIDDEN code as the filter-chain accessDeniedHandler so both 403 sources
+        // share one contract, and logs the denial as a security signal (parity with that handler).
+        log.warn("Access denied (method security) on {} {}", request.getMethod(), request.getRequestURI());
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", "Access is denied.", request);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpectedException(Exception exception, HttpServletRequest request) {
         // A 500 is either a real fault or an exploitation attempt — either way it must

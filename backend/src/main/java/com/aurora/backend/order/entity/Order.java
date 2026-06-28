@@ -3,10 +3,16 @@ package com.aurora.backend.order.entity;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.user.entity.User;
+import org.springframework.http.HttpStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,6 +34,33 @@ import jakarta.persistence.Version;
 @Entity
 @Table(name = "orders")
 public class Order {
+
+    // Legal order-status state machine (OWASP A04 — business-logic integrity).
+    // changeStatus is reachable from the admin PATCH endpoint and the internal
+    // payment flow; without this guard an admin could force illegal jumps
+    // (e.g. DELIVERED -> PENDING_PAYMENT). Keys are sources; values are the
+    // statuses each source may move TO. Terminal states (CANCELLED, REFUNDED)
+    // map to an empty set. Every transition the current code legitimately
+    // performs is permitted; only backwards/skip moves are forbidden.
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS;
+    static {
+        Map<OrderStatus, Set<OrderStatus>> transitions = new EnumMap<>(OrderStatus.class);
+        transitions.put(OrderStatus.CREATED,
+                EnumSet.of(OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.CANCELLED));
+        transitions.put(OrderStatus.PENDING_PAYMENT,
+                EnumSet.of(OrderStatus.PAID, OrderStatus.CANCELLED));
+        transitions.put(OrderStatus.PAID,
+                EnumSet.of(OrderStatus.PREPARING, OrderStatus.SHIPPED, OrderStatus.CANCELLED, OrderStatus.REFUNDED));
+        transitions.put(OrderStatus.PREPARING,
+                EnumSet.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED, OrderStatus.REFUNDED));
+        transitions.put(OrderStatus.SHIPPED,
+                EnumSet.of(OrderStatus.DELIVERED, OrderStatus.REFUNDED));
+        transitions.put(OrderStatus.DELIVERED,
+                EnumSet.of(OrderStatus.REFUNDED));
+        transitions.put(OrderStatus.CANCELLED, EnumSet.noneOf(OrderStatus.class));
+        transitions.put(OrderStatus.REFUNDED, EnumSet.noneOf(OrderStatus.class));
+        ALLOWED_TRANSITIONS = transitions;
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -172,6 +205,21 @@ public class Order {
     }
 
     public void changeStatus(OrderStatus status) {
+        // Re-applying the current status is an idempotent no-op (callers such as
+        // the payment-failure path already guard against pointless self-writes).
+        if (status == this.status) {
+            return;
+        }
+
+        Set<OrderStatus> reachable = ALLOWED_TRANSITIONS.getOrDefault(this.status, Set.of());
+        if (!reachable.contains(status)) {
+            throw new BusinessException(
+                    HttpStatus.CONFLICT,
+                    "ILLEGAL_ORDER_TRANSITION",
+                    "Order cannot move from " + this.status + " to " + status + "."
+            );
+        }
+
         this.status = status;
     }
 }

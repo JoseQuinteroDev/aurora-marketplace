@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,8 +13,15 @@ import com.aurora.backend.security.jwt.JwtService;
 import com.aurora.backend.user.entity.User;
 import com.aurora.backend.user.repository.UserRepository;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +53,24 @@ class RefreshTokenServiceTest {
 
     private final RefreshTokenService service = new RefreshTokenService(
             repository, userRepository, jwtService, reuseResponder, 30L, 10L);
+
+    // Captures the service's own log output so the grace-window DETECTION signal is assertable.
+    private final ch.qos.logback.classic.Logger serviceLogger =
+            (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(RefreshTokenService.class);
+    private final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
+
+    @BeforeEach
+    void attachLogAppender() {
+        logAppender.setContext((LoggerContext) LoggerFactory.getILoggerFactory());
+        logAppender.start();
+        serviceLogger.addAppender(logAppender);
+    }
+
+    @AfterEach
+    void detachLogAppender() {
+        serviceLogger.detachAppender(logAppender);
+        logAppender.stop();
+    }
 
     private User user() {
         User user = mock(User.class);
@@ -206,6 +232,73 @@ class RefreshTokenServiceTest {
         assertThat(second.accessToken()).isEqualTo(first.accessToken());
         assertThat(second.rawRefreshToken()).isEqualTo(first.rawRefreshToken());
         verify(reuseResponder, never()).respondToReuse(any(), any()); // never a false-positive logout
+    }
+
+    @Test
+    void graceWindowCacheHitFromConcurrentDoubleSubmitEmitsADetectionSignalWithFamilyAndUserButNoSecret() {
+        UUID rowId = UUID.randomUUID();
+        String secret = "Zq7Xk2Vn9rawTokenSecret";  // distinctive so doesNotContain(secret) is meaningful
+        RefreshToken parent = row(rowId, secret, RefreshTokenStatus.ACTIVE, future(), UUID.randomUUID());
+
+        when(repository.findById(rowId)).thenReturn(Optional.of(parent));
+        User stubbedUser = user();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(stubbedUser));
+        when(jwtService.generateToken(any(User.class))).thenReturn("newAccess");
+        when(jwtService.extractJti("newAccess")).thenReturn(UUID.randomUUID().toString());
+        // First call wins the rotation race (1); the replay loses it (0) and serves from cache.
+        when(repository.claimForRotation(eq(rowId), any(), any())).thenReturn(1, 0);
+
+        service.rotate(rowId + "." + secret);  // populates the grace cache (no signal yet)
+        logAppender.list.clear();
+        service.rotate(rowId + "." + secret);  // cache hit on the lost race → DETECTION signal
+
+        ILoggingEvent signal = graceWindowWarn();
+        assertThat(signal).as("a WARN detection signal must fire on the grace-window cache hit").isNotNull();
+        assertThat(signal.getFormattedMessage())
+                .contains(FAMILY_ID.toString())
+                .contains(USER_ID.toString())
+                .doesNotContain(secret);  // never log the raw token/secret
+    }
+
+    @Test
+    void graceWindowCacheHitFromRotatedReplayEmitsADetectionSignalAndStillReturnsTheCachedResult() {
+        UUID rowId = UUID.randomUUID();
+        String secret = "Zq7Xk2Vn9rawTokenSecret";  // distinctive so doesNotContain(secret) is meaningful
+        // ACTIVE on first hit so it rotates and caches; we flip it to ROTATED for the replay,
+        // exercising the handleRotatedReplay() grace branch (the silently-honored theft path).
+        RefreshToken row = row(rowId, secret, RefreshTokenStatus.ACTIVE, future(), UUID.randomUUID());
+
+        when(repository.findById(rowId)).thenReturn(Optional.of(row));
+        User stubbedUser = user();
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(stubbedUser));
+        when(jwtService.generateToken(any(User.class))).thenReturn("newAccess");
+        when(jwtService.extractJti("newAccess")).thenReturn(UUID.randomUUID().toString());
+        when(repository.claimForRotation(eq(rowId), any(), any())).thenReturn(1);
+
+        RefreshTokenService.RotationResult first = service.rotate(rowId + "." + secret);
+        ReflectionTestUtils.setField(row, "status", RefreshTokenStatus.ROTATED);
+        logAppender.list.clear();
+        RefreshTokenService.RotationResult replay = service.rotate(rowId + "." + secret);
+
+        // Behavior unchanged: cached result returned, no false-positive family revoke.
+        assertThat(replay.rawRefreshToken()).isEqualTo(first.rawRefreshToken());
+        verify(reuseResponder, never()).respondToReuse(any(), any());
+
+        ILoggingEvent signal = graceWindowWarn();
+        assertThat(signal).as("a WARN detection signal must fire on the rotated-replay grace cache hit").isNotNull();
+        assertThat(signal.getFormattedMessage())
+                .contains(FAMILY_ID.toString())
+                .contains(USER_ID.toString())
+                .doesNotContain(secret);
+    }
+
+    /** First WARN-level event emitted by the service since the last clear, or null. */
+    private ILoggingEvent graceWindowWarn() {
+        List<ILoggingEvent> events = logAppender.list;
+        return events.stream()
+                .filter(e -> e.getLevel() == Level.WARN)
+                .findFirst()
+                .orElse(null);
     }
 
     @Test
