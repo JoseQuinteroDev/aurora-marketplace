@@ -46,6 +46,21 @@ export const routes: Routes = [
         title: 'title.register'
       },
       {
+        path: 'forgot-password',
+        loadComponent: () => import('./features/auth/forgot-password-page.component').then((m) => m.ForgotPasswordPageComponent),
+        title: 'title.forgotPassword'
+      },
+      {
+        path: 'reset-password',
+        loadComponent: () => import('./features/auth/reset-password-page.component').then((m) => m.ResetPasswordPageComponent),
+        title: 'title.resetPassword'
+      },
+      {
+        path: 'verify-email',
+        loadComponent: () => import('./features/auth/verify-email-page.component').then((m) => m.VerifyEmailPageComponent),
+        title: 'title.verifyEmail'
+      },
+      {
         path: 'cart',
         loadComponent: () => import('./features/cart/cart-page.component').then((m) => m.CartPageComponent),
         canActivate: [authGuard],

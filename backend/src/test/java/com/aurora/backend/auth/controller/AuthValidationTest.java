@@ -1,11 +1,13 @@
 package com.aurora.backend.auth.controller;
 
 import com.aurora.backend.auth.service.AuthService;
+import com.aurora.backend.common.exception.BusinessException;
 import com.aurora.backend.config.SecurityConfig;
 import com.aurora.backend.security.CurrentUserService;
 import com.aurora.backend.security.jwt.JwtAuthenticationFilter;
 import com.aurora.backend.security.jwt.JwtService;
 import com.aurora.backend.security.token.TokenDenylistService;
+import com.aurora.backend.user.entity.User;
 import com.aurora.backend.user.repository.UserRepository;
 
 import org.junit.jupiter.api.Test;
@@ -18,9 +20,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.springframework.http.HttpStatus;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,5 +101,148 @@ class AuthValidationTest {
                 .andExpect(status().isCreated());
 
         verify(authService).register(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void refreshIsPublicAndReachesTheServiceWithAValidBody() throws Exception {
+        // permitAll: an anonymous, well-formed refresh reaches the controller (not 401 from the chain).
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"rid.secret\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).refresh(any());
+    }
+
+    @Test
+    void refreshWithABlankTokenIs400AndDoesNotCallTheService() throws Exception {
+        mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).refresh(any());
+    }
+
+    @Test
+    void revokeIsPublicAndAlwaysSucceeds() throws Exception {
+        // permitAll + anti-enumeration: anonymous, well-formed revoke returns 200.
+        mvc.perform(post("/api/auth/revoke").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"rid.secret\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).revoke(any());
+    }
+
+    @Test
+    void logoutStillRequiresAuthentication() throws Exception {
+        mvc.perform(post("/api/auth/logout").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutPassesTheRefreshTokenThroughForAnAuthenticatedUser() throws Exception {
+        when(currentUserService.getCurrentUser(any())).thenReturn(mock(User.class));
+
+        mvc.perform(post("/api/auth/logout").with(user("u").roles("CUSTOMER"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"refreshToken\":\"rid.secret\"}"))
+                .andExpect(status().isOk());
+
+        verify(authService).logout(any(), any(), eq("rid.secret"));
+    }
+
+    @Test
+    void forgotPasswordIsPublicAndReturnsTheGenericMessage() throws Exception {
+        // permitAll + anti-enumeration: the controller never branches on existence.
+        mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"ada@aurora.test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("If an account exists for that email, a reset link has been sent."));
+
+        verify(authService).requestPasswordReset(any());
+    }
+
+    @Test
+    void forgotPasswordWithAnInvalidEmailIs400() throws Exception {
+        mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"not-an-email\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).requestPasswordReset(any());
+    }
+
+    @Test
+    void resetPasswordWithAValidBodyReturns200() throws Exception {
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"rid.secret\",\"newPassword\":\"Password123!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Password updated successfully."));
+
+        verify(authService).resetPassword(any());
+    }
+
+    @Test
+    void resetPasswordWithAnInvalidTokenMapsTo401() throws Exception {
+        doThrow(new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_RESET_TOKEN",
+                "Invalid or expired reset token."))
+                .when(authService).resetPassword(any());
+
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"rid.secret\",\"newPassword\":\"Password123!\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_RESET_TOKEN"));
+    }
+
+    @Test
+    void resetPasswordWithAShortPasswordIs400() throws Exception {
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"rid.secret\",\"newPassword\":\"short\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).resetPassword(any());
+    }
+
+    @Test
+    void verifyEmailWithAValidBodyReturns200() throws Exception {
+        mvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"ev.secret\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Email verified successfully."));
+
+        verify(authService).verifyEmail(any());
+    }
+
+    @Test
+    void verifyEmailWithAnInvalidTokenMapsTo401() throws Exception {
+        doThrow(new BusinessException(HttpStatus.UNAUTHORIZED, "INVALID_VERIFICATION_TOKEN",
+                "Invalid or expired verification link."))
+                .when(authService).verifyEmail(any());
+
+        mvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"ev.secret\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_VERIFICATION_TOKEN"));
+    }
+
+    @Test
+    void verifyEmailWithABlankTokenIs400() throws Exception {
+        mvc.perform(post("/api/auth/verify-email").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"token\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(authService, never()).verifyEmail(any());
+    }
+
+    @Test
+    void resendVerificationIsPublicAndReturnsTheGenericMessage() throws Exception {
+        mvc.perform(post("/api/auth/resend-verification").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"ada@aurora.test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("If your account needs verification, we've sent a new link."));
+
+        verify(authService).resendVerification(any());
     }
 }

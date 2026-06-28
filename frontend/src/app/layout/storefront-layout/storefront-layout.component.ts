@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import {
   LucideAngularModule,
@@ -19,6 +19,7 @@ import {
 import { TranslatePipe } from '../../core/i18n/translate.pipe';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { ToastService } from '../../services/toast.service';
 import { LanguageService } from '../../core/i18n/language.service';
 import { ThemeService } from '../../core/theme/theme.service';
 import { WishlistService } from '../../services/wishlist.service';
@@ -43,6 +44,21 @@ import { ToastHostComponent } from '../../shared/toast-host/toast-host.component
           </a>
         </div>
       </div>
+
+      @if (auth.currentUser()?.emailVerified === false && !bannerDismissed()) {
+        <div class="border-b border-aurora-line bg-white dark:border-white/10 dark:bg-aurora-night">
+          <div class="page-shell flex flex-wrap items-center justify-between gap-3 py-2 text-sm text-aurora-ink dark:text-stone-200">
+            <span class="inline-flex items-center gap-2 font-semibold">
+              <lucide-icon class="text-aurora-gold" [img]="ShieldCheck" size="15" />
+              {{ 'auth.banner.verifyMessage' | t }}
+            </span>
+            <span class="flex items-center gap-3">
+              <button class="premium-link" type="button" (click)="resendVerification()">{{ 'auth.banner.resend' | t }}</button>
+              <button class="text-aurora-muted transition-colors hover:text-aurora-ink dark:text-stone-400 dark:hover:text-white" type="button" (click)="bannerDismissed.set(true)" [attr.aria-label]="'auth.banner.dismiss' | t">✕</button>
+            </span>
+          </div>
+        </div>
+      }
 
       <header class="sticky top-0 z-40 border-b border-white/60 bg-white/80 backdrop-blur-2xl dark:border-white/10 dark:bg-aurora-night/80">
         <div class="page-shell flex min-h-20 items-center gap-3 py-3">
@@ -181,6 +197,10 @@ export class StorefrontLayoutComponent {
   readonly Sparkles = Sparkles;
   readonly Sun = Sun;
   readonly UserRound = UserRound;
+  readonly ShieldCheck = ShieldCheck;
+
+  // Session-only (not persisted): a dismissed banner reappears next visit while still unverified.
+  readonly bannerDismissed = signal(false);
 
   readonly trustItems = [
     { icon: ShieldCheck, title: 'footer.trust.secure', copy: 'footer.trust.secureCopy' },
@@ -194,8 +214,21 @@ export class StorefrontLayoutComponent {
     readonly language: LanguageService,
     readonly theme: ThemeService,
     readonly wishlist: WishlistService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly toast: ToastService
   ) {}
+
+  /** Re-sends the verification email. Always reports success (anti-enumeration parity). */
+  resendVerification(): void {
+    const user = this.auth.currentUser();
+    if (!user) {
+      return;
+    }
+    this.auth.resendVerification(user.email).subscribe({
+      next: () => this.toast.success(this.language.translate('auth.banner.resent')),
+      error: () => this.toast.success(this.language.translate('auth.banner.resent'))
+    });
+  }
 
   submitSearch(term: string): void {
     const value = (term ?? '').trim();

@@ -65,15 +65,34 @@ Strong controls already in place — the plan *builds on* these, it does not red
 
 ### Phase 1 — Authentication & session hardening
 *OWASP: A07 (auth failures), A01.*
-- **Refresh-token rotation:** short-lived access token + rotating refresh token with
-  **reuse detection** (a replayed refresh revokes the family). Persist refresh-token
-  state; reuse the `jti` denylist machinery.
-- **Token storage:** offer `HttpOnly` + `Secure` + `SameSite=Strict` cookie storage
-  (with CSRF defense for cookie mode) as an alternative to `localStorage`.
-- **Account recovery:** password reset + email verification using single-use,
-  time-boxed, hashed tokens (never log or email the raw token twice).
-- **Credential hygiene:** breached-password check (HIBP range/k-anonymity API) at
-  register/reset; optional **TOTP MFA** for admins.
+- ✅ **Refresh-token rotation — SHIPPED** (`feat/auth-hardening`). Opaque, single-use,
+  SHA-256-at-rest refresh tokens that rotate on every `POST /api/auth/refresh`;
+  **reuse detection** revokes the whole family + denylists its access tokens + audits
+  (`REFRESH_TOKEN_REUSED`), committed in a `REQUIRES_NEW` transaction so the 401 can't
+  roll it back; a benign double-submit within a grace window is idempotent. Access TTL
+  cut 60→15 min; added public `POST /api/auth/revoke` for idle-session logout. Designed
+  and adversarially reviewed via multi-agent workflows; backend + frontend tests green.
+- **Token storage:** today both tokens live in `localStorage` (deliberate SPA
+  tradeoff; the **residual XSS risk is accepted**, with rotation + reuse detection +
+  15-min access TTL as compensating controls). Future upgrade: deliver the refresh
+  token as an `HttpOnly` + `Secure` + `SameSite` cookie scoped to the refresh/revoke
+  paths (needs the gateway/SPA CORS + per-env origin work from Phase 2).
+- ✅ **Password reset — SHIPPED** (`feat/auth-hardening`). Single-use, time-boxed,
+  SHA-256-at-rest token; anti-enumeration request (identical 200 + per-email throttle +
+  fixed latency floor) with a gateway rate-limit route; a successful reset re-hashes and
+  invalidates every session; emailed via the outbox→notification path (token-only event,
+  link composed downstream). Adversarially reviewed (6 findings fixed; 0 high/critical).
+  *Tracked residual (low):* the raw token sits in `event_outbox`/`.DLT` cleartext until
+  expiry — follow-ups: purge PUBLISHED outbox rows, redact the DLT record + short TTL.
+- **Email verification:** still to do — reuses the same single-use-token + outbox→email
+  machinery as password reset.
+- ✅ **Breached-password check — SHIPPED** (`feat/auth-hardening`). At register/reset, a
+  chosen password is checked against the Have I Been Pwned "Pwned Passwords" corpus via the
+  **range API with k-anonymity** (only a 5-char SHA-1 prefix leaves the process); a match
+  returns `400 PASSWORD_BREACHED`. **Fails open** on corpus outage (availability > strictness)
+  and is env-toggleable for air-gapped deploys; the reset check runs *before* token
+  consumption so a rejection doesn't burn the link. Unit-tested with a faked range client.
+- **Credential hygiene (remaining):** optional **TOTP MFA** for admins.
 - **Exit:** auth-lifecycle gaps in `README.md` move from ❌/⚠️ to ✅; each flow has a
   regression test and an audit-log entry.
 

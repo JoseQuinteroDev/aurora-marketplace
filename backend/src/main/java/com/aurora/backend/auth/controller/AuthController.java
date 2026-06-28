@@ -1,8 +1,14 @@
 package com.aurora.backend.auth.controller;
 
 import com.aurora.backend.auth.dto.AuthResponse;
+import com.aurora.backend.auth.dto.ForgotPasswordRequest;
 import com.aurora.backend.auth.dto.LoginRequest;
+import com.aurora.backend.auth.dto.LogoutRequest;
+import com.aurora.backend.auth.dto.RefreshRequest;
 import com.aurora.backend.auth.dto.RegisterRequest;
+import com.aurora.backend.auth.dto.ResendVerificationRequest;
+import com.aurora.backend.auth.dto.ResetPasswordRequest;
+import com.aurora.backend.auth.dto.VerifyEmailRequest;
 import com.aurora.backend.auth.service.AuthService;
 import com.aurora.backend.common.api.ApiResponse;
 import com.aurora.backend.security.CurrentUserService;
@@ -44,13 +50,53 @@ public class AuthController {
         return ApiResponse.success("Login successful.", authService.login(request));
     }
 
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.success("Token refreshed.", authService.refresh(request));
+    }
+
+    @PostMapping("/revoke")
+    public ApiResponse<Void> revoke(@Valid @RequestBody RefreshRequest request) {
+        // Public + always 200 (anti-enumeration): lets an idle session revoke its
+        // refresh-token family without a live access token.
+        authService.revoke(request);
+        return ApiResponse.success("Token revoked.");
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        // Always 200 with an identical message — never reveals whether the email exists.
+        authService.requestPasswordReset(request);
+        return ApiResponse.success("If an account exists for that email, a reset link has been sent.");
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ApiResponse.success("Password updated successfully.");
+    }
+
+    @PostMapping("/verify-email")
+    public ApiResponse<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        authService.verifyEmail(request);
+        return ApiResponse.success("Email verified successfully.");
+    }
+
+    @PostMapping("/resend-verification")
+    public ApiResponse<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        // Always 200 with an identical message — never reveals whether the account exists/needs it.
+        authService.resendVerification(request);
+        return ApiResponse.success("If your account needs verification, we've sent a new link.");
+    }
+
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @RequestBody(required = false) LogoutRequest body,
             Authentication authentication
     ) {
         User actor = currentUserService.getCurrentUser(authentication);
-        authService.logout(authorizationHeader, actor);
+        authService.logout(authorizationHeader, actor, body != null ? body.refreshToken() : null);
         return ApiResponse.success("Logout successful.");
     }
 }

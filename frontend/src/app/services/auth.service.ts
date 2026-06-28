@@ -8,6 +8,7 @@ import { AuthPayload, AuthUser, LoginRequest, RegisterRequest } from '../core/mo
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly tokenKey = 'aurora_access_token';
+  private readonly refreshKey = 'aurora_refresh_token';
   private readonly userKey = 'aurora_user';
   private readonly expiryKey = 'aurora_token_expires_at';
   private readonly userSignal = signal<AuthUser | null>(this.loadUser());
@@ -47,6 +48,38 @@ export class AuthService {
   }
 
   /**
+   * Rotates the stored refresh token for a fresh access + refresh token pair.
+   * The server single-uses the presented token, so we persist the rotated one in
+   * place. Driven by the HTTP interceptor when an access token expires (15-min TTL).
+   */
+  refresh() {
+    const refreshToken = this.getRefreshToken();
+    return this.http.post<ApiResponse<AuthPayload>>('/api/auth/refresh', { refreshToken }).pipe(
+      tap((response) => this.persistSession(response.data))
+    );
+  }
+
+  /** Requests a password-reset email. Does NOT authenticate (no session is persisted). */
+  requestPasswordReset(email: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/forgot-password', { email });
+  }
+
+  /** Sets a new password from a reset token. Does NOT authenticate — the user signs in after. */
+  resetPassword(token: string, newPassword: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/reset-password', { token, newPassword });
+  }
+
+  /** Confirms an email-verification token. Does NOT authenticate. */
+  verifyEmail(token: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/verify-email', { token });
+  }
+
+  /** Re-sends the verification email (anti-enumeration; always succeeds from the client's view). */
+  resendVerification(email: string) {
+    return this.http.post<ApiResponse<void>>('/api/auth/resend-verification', { email });
+  }
+
+  /**
    * Clears the session. By default navigates home; pass `null` to clear without
    * navigating (used by the HTTP error interceptor, which redirects to /login itself).
    */
@@ -56,7 +89,10 @@ export class AuthService {
     // the interceptor reacting to an already-rejected token, so there is nothing to
     // revoke. Never block the UI on the response.
     if (redirectTo && this.getToken()) {
-      this.http.post('/api/auth/logout', {}).subscribe({ next: () => {}, error: () => {} });
+      // Send the refresh token so the server revokes the whole family, not just
+      // the current access token. Best-effort; never block the UI on the response.
+      this.http.post('/api/auth/logout', { refreshToken: this.getRefreshToken() })
+        .subscribe({ next: () => {}, error: () => {} });
     }
 
     this.clearSession();
@@ -68,6 +104,7 @@ export class AuthService {
 
   private clearSession(): void {
     localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.refreshKey);
     localStorage.removeItem(this.userKey);
     localStorage.removeItem(this.expiryKey);
     this.userSignal.set(null);
@@ -77,8 +114,13 @@ export class AuthService {
     return localStorage.getItem(this.tokenKey);
   }
 
+  getRefreshToken(): string | null {
+    return localStorage.getItem(this.refreshKey);
+  }
+
   private persistSession(payload: AuthPayload): void {
     localStorage.setItem(this.tokenKey, payload.accessToken);
+    localStorage.setItem(this.refreshKey, payload.refreshToken);
     localStorage.setItem(this.userKey, JSON.stringify(payload.user));
     localStorage.setItem(this.expiryKey, String(Date.now() + payload.expiresInMinutes * 60_000));
     this.userSignal.set(payload.user);

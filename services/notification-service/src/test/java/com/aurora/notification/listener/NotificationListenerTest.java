@@ -7,12 +7,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,7 +37,8 @@ class NotificationListenerTest {
         smsService = mock(SmsService.class);
         store = new NotificationStore();
         listener = new NotificationListener(
-                new ObjectMapper(), emailService, smsService, store, new ProcessedEventTracker());
+                new ObjectMapper(), emailService, smsService, store, new ProcessedEventTracker(),
+                "http://localhost:4200/reset-password", "http://localhost:4200/verify-email");
     }
 
     @Test
@@ -153,6 +156,86 @@ class NotificationListenerTest {
     @Test
     void treatsAMalformedPaymentPayloadAsNonRetryable() {
         assertThatThrownBy(() -> listener.onPaymentConfirmed("{ broken"))
+                .isInstanceOf(NonRetryableEventException.class);
+    }
+
+    private static final String PASSWORD_RESET_EVENT = """
+            {"eventId":"pr-1","userId":"00000000-0000-0000-0000-000000000001",
+             "customerEmail":"a@b.com","customerName":"Ada",
+             "resetToken":"rid.secret","expiresInMinutes":30}
+            """;
+
+    @Test
+    void sendsAResetEmailWithTheLinkForAPasswordResetEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onPasswordResetRequested(PASSWORD_RESET_EVENT);
+
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(emailService).send(eq("a@b.com"), eq("Reset your Aurora Marketplace password"), body.capture());
+        // The link host is composed here; the body carries it, never just the bare token.
+        assertThat(body.getValue()).contains("http://localhost:4200/reset-password?token=rid.secret");
+        verify(smsService, never()).send(any(), any()); // email-only
+        assertThat(store.findRecent().get(0).type()).isEqualTo("PASSWORD_RESET");
+    }
+
+    @Test
+    void doesNotResendARedeliveredPasswordResetEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onPasswordResetRequested(PASSWORD_RESET_EVENT);
+        listener.onPasswordResetRequested(PASSWORD_RESET_EVENT); // duplicate delivery
+
+        verify(emailService, times(1)).send(any(), any(), any());
+    }
+
+    @Test
+    void treatsAMalformedResetPayloadAsNonRetryable() {
+        assertThatThrownBy(() -> listener.onPasswordResetRequested("{ broken"))
+                .isInstanceOf(NonRetryableEventException.class);
+    }
+
+    @Test
+    void rethrowsWhenResetEmailDeliveryFailsSoItCanBeRetried() {
+        when(emailService.send(any(), any(), any())).thenReturn(false);
+
+        assertThatThrownBy(() -> listener.onPasswordResetRequested(PASSWORD_RESET_EVENT))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(store.count()).isZero();
+    }
+
+    private static final String EMAIL_VERIFICATION_EVENT = """
+            {"eventId":"ev-1","userId":"00000000-0000-0000-0000-000000000002",
+             "customerEmail":"new@aurora.test","customerName":"Newbie",
+             "verificationToken":"ev.secret","expiresInMinutes":1440}
+            """;
+
+    @Test
+    void sendsAVerificationEmailWithTheLinkForAVerificationEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onEmailVerificationRequested(EMAIL_VERIFICATION_EVENT);
+
+        ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+        verify(emailService).send(eq("new@aurora.test"), eq("Verify your Aurora Marketplace email"), body.capture());
+        assertThat(body.getValue()).contains("http://localhost:4200/verify-email?token=ev.secret");
+        verify(smsService, never()).send(any(), any()); // email-only
+        assertThat(store.findRecent().get(0).type()).isEqualTo("EMAIL_VERIFICATION");
+    }
+
+    @Test
+    void doesNotResendARedeliveredVerificationEvent() {
+        when(emailService.send(any(), any(), any())).thenReturn(true);
+
+        listener.onEmailVerificationRequested(EMAIL_VERIFICATION_EVENT);
+        listener.onEmailVerificationRequested(EMAIL_VERIFICATION_EVENT); // duplicate delivery
+
+        verify(emailService, times(1)).send(any(), any(), any());
+    }
+
+    @Test
+    void treatsAMalformedVerificationPayloadAsNonRetryable() {
+        assertThatThrownBy(() -> listener.onEmailVerificationRequested("{ broken"))
                 .isInstanceOf(NonRetryableEventException.class);
     }
 }

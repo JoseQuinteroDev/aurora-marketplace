@@ -77,13 +77,30 @@ app:
     jwt:
       # Development default only. Override APP_SECURITY_JWT_SECRET in production.
       secret: ${APP_SECURITY_JWT_SECRET:aurora-marketplace-development-secret-change-me-before-production-1234567890}
-      expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:60}
+      # Short-lived access token (OWASP A07): refresh-token rotation keeps sessions
+      # alive, so the access token can be brief — limiting the blast radius of a leak.
+      expiration-minutes: ${APP_SECURITY_JWT_EXPIRATION_MINUTES:15}
     login:
       # Per-account brute-force lockout (OWASP A07): after this many consecutive
       # failed logins, the account is locked for lock-duration-minutes. Enforced
       # in the core (not just the gateway), so it holds regardless of ingress.
       max-failed-attempts: ${APP_SECURITY_LOGIN_MAX_FAILED_ATTEMPTS:5}
       lock-duration-minutes: ${APP_SECURITY_LOGIN_LOCK_DURATION_MINUTES:15}
+    breached-password:
+      # Credential hygiene (OWASP A07): reject a chosen password (register / reset) that
+      # appears in the Have I Been Pwned "Pwned Passwords" corpus. Uses k-anonymity — only
+      # the first 5 hex chars of the password's SHA-1 leave the process. Fails OPEN if the
+      # corpus is unreachable (availability > strictness). Disable for air-gapped envs.
+      enabled: ${APP_SECURITY_BREACHED_PASSWORD_ENABLED:true}
+      api-base-url: ${APP_SECURITY_BREACHED_PASSWORD_API_BASE_URL:https://api.pwnedpasswords.com}
+      timeout-ms: ${APP_SECURITY_BREACHED_PASSWORD_TIMEOUT_MS:2500}
+    refresh-token:
+      # Refresh-token rotation with reuse detection (OWASP A07). Opaque tokens,
+      # SHA-256-at-rest, single-use; a benign double-submit within grace-seconds is
+      # idempotent, a later replay revokes the whole token family.
+      expiration-days: ${APP_SECURITY_REFRESH_TOKEN_EXPIRATION_DAYS:30}
+      grace-seconds: ${APP_SECURITY_REFRESH_TOKEN_GRACE_SECONDS:10}
+      purge-delay-ms: ${APP_SECURITY_REFRESH_TOKEN_PURGE_DELAY_MS:3600000}
 
   events:
     # When true, domain events are recorded to the transactional outbox and then

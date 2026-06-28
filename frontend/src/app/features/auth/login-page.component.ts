@@ -60,6 +60,9 @@ import { StatePanelComponent } from '../../shared/state-panel/state-panel.compon
               @if (passwordInvalid()) {
                 <span class="mt-2 block text-xs font-bold text-aurora-rose">{{ 'auth.passwordRequired' | t }}</span>
               }
+              <span class="mt-2 block text-right">
+                <a routerLink="/forgot-password" queryParamsHandling="preserve" class="premium-link text-xs">{{ 'auth.forgotLink' | t }}</a>
+              </span>
             </label>
 
             @if (error()) {

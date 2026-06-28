@@ -346,18 +346,37 @@ poor session/token lifecycle.
   `jti`; `POST /api/auth/logout` revokes the current token via a denylist
   (`TokenDenylistService` / `token_denylist`) that the auth filter checks on every
   request, so a logged-out or stolen token stops working before it expires.
+- **✅ Remediated — refresh-token rotation with reuse detection.** Opaque, single-use,
+  SHA-256-at-rest refresh tokens rotate on every `POST /api/auth/refresh`
+  (`RefreshTokenService` / `refresh_tokens`, `V10`). Replaying a rotated token revokes
+  the whole family, denylists its access tokens and audits `REFRESH_TOKEN_REUSED` — in
+  a `REQUIRES_NEW` transaction so the 401 can't undo it (`RefreshTokenReuseResponder`).
+  Access TTL cut to 15 min; idle sessions can revoke via public `POST /api/auth/revoke`.
+- **✅ Remediated — self-service password reset.** Opaque single-use SHA-256-at-rest
+  reset token (`PasswordResetTokenService` / `password_reset_tokens`, `V11`); the
+  request endpoint is anti-enumeration (identical 200, per-email throttle, and a fixed
+  response-latency floor so the positive branch's DB writes aren't a timing oracle) and
+  rate-limited at the gateway; a successful reset re-hashes the password and **invalidates
+  every session** (revokes all refresh families). Emailed via the outbox→notification
+  path (link composed downstream; the event carries only the token).
 
 **Residual / gaps**
-- No refresh-token rotation (medium); no credential-stuffing/breached-password/MFA
-  defense (medium); token in `localStorage` rather than an `HttpOnly` cookie
-  (medium); no email verification or password reset (low); length-only password
-  policy accepts weak-but-long passwords (low).
+- No credential-stuffing/breached-password/MFA defense (medium); refresh token in
+  `localStorage` rather than an `HttpOnly` cookie (medium — residual XSS risk
+  *accepted*, with rotation + reuse detection + 15-min access TTL as compensating
+  controls); no email **verification** yet (low); length-only password policy accepts
+  weak-but-long passwords (low).
+- **Token at rest in the messaging plane** (low, tracked): the raw single-use reset
+  token lives in `event_outbox.payload` and (on a transient email failure) in the
+  `*.DLT` in cleartext, until expiry. Narrow window (30-min single-use, needs
+  privileged DB/broker access). Follow-ups: purge PUBLISHED outbox rows on a schedule;
+  redact the token from the DLT record + short DLT `retention.ms`; auth the dev Kafka UI.
 
 **Remediation (remaining)**
-- Add rotating refresh tokens (short access-token TTL + reuse detection) on top of
-  the now-shipped `jti` revocation denylist.
 - Breached-password check (HIBP k-anonymity) at registration/change; optional TOTP
-  MFA for admins; move the token to an `HttpOnly`/`Secure`/`SameSite` cookie.
+  MFA for admins; move the refresh token to an `HttpOnly`/`Secure`/`SameSite` cookie
+  (with the per-env CORS work from the misconfig section); email verification +
+  password reset.
 
 ---
 
@@ -492,7 +511,9 @@ deserialization, broken event integrity, unverified pipeline artifacts.
 | A05 Misconfig | ⚠️ | Core security headers ✅; gateway-edge header filter + per-env CORS — **P2** |
 | A04 Insecure Design | ⚠️ | Locking/`@Version` + coupon unique constraint + checkout idempotency key — **P2** |
 | A08 Integrity | ⚠️ | SHA-pin Actions + image signing/provenance — **P2** |
-| A07 AuthN (remaining) | ⚠️ | Refresh-token rotation, breached-password/MFA, cookie storage — **P3** |
+| A07 refresh rotation | ✅ Remediated | Opaque single-use rotating refresh tokens + reuse detection (family revoke + denylist + audit), 15-min access TTL |
+| A07 password reset | ✅ Remediated | Opaque single-use SHA-256 token; anti-enumeration (latency floor + throttle) + gateway rate limit; reset invalidates every session |
+| A07 AuthN (remaining) | ⚠️ | Breached-password/MFA, `HttpOnly`-cookie storage, email verification — **P3** |
 | A02 Crypto | ⚠️ | TLS in transit + secret manager — **P3 (infra)** |
 | A03 / A06 / A10 | ✅ | Maintain; add regression tests; pin image digests / SHA |
 

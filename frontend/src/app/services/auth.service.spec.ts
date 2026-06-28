@@ -12,6 +12,7 @@ function payload(role: 'CUSTOMER' | 'ADMIN' = 'CUSTOMER', minutes = 60): AuthPay
   return {
     tokenType: 'Bearer',
     accessToken: 'tok-123',
+    refreshToken: 'rid-123.secret',
     expiresInMinutes: minutes,
     user: { id: 'u1', email: 'a@b.c', firstName: 'A', lastName: 'B', role },
   };
@@ -82,11 +83,79 @@ describe('AuthService', () => {
     http.expectOne('/api/auth/login').flush({ data: payload() });
 
     service.logout();
-    http.expectOne('/api/auth/logout').flush({});   // best-effort server revoke
+    const logoutReq = http.expectOne('/api/auth/logout');
+    expect(logoutReq.request.body.refreshToken).toBe('rid-123.secret'); // family revoke
+    logoutReq.flush({});
 
     expect(service.getToken()).toBeNull();
+    expect(service.getRefreshToken()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
     expect(navigations).toContain('/');
+    http.verify();
+  });
+
+  it('refresh rotates the stored access + refresh tokens in place', () => {
+    const { service, http } = setup();
+    service.login({ email: 'a@b.c', password: 'secret12' }).subscribe();
+    http.expectOne('/api/auth/login').flush({ data: payload() });
+    expect(service.getRefreshToken()).toBe('rid-123.secret');
+
+    service.refresh().subscribe();
+    const req = http.expectOne('/api/auth/refresh');
+    expect(req.request.body.refreshToken).toBe('rid-123.secret');
+    req.flush({ data: { ...payload(), accessToken: 'tok-456', refreshToken: 'rid-456.secret' } });
+
+    expect(service.getToken()).toBe('tok-456');
+    expect(service.getRefreshToken()).toBe('rid-456.secret');
+    http.verify();
+  });
+
+  it('requestPasswordReset posts the email and never touches the session', () => {
+    const { service, http } = setup();
+
+    service.requestPasswordReset('a@b.c').subscribe();
+    const req = http.expectOne('/api/auth/forgot-password');
+    expect(req.request.body).toEqual({ email: 'a@b.c' });
+    req.flush({ data: null });
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull(); // does not authenticate
+    http.verify();
+  });
+
+  it('resetPassword posts token + newPassword and does not authenticate', () => {
+    const { service, http } = setup();
+
+    service.resetPassword('rid.secret', 'Password123!').subscribe();
+    const req = http.expectOne('/api/auth/reset-password');
+    expect(req.request.body).toEqual({ token: 'rid.secret', newPassword: 'Password123!' });
+    req.flush({ data: null });
+
+    expect(service.getToken()).toBeNull();
+    expect(service.getRefreshToken()).toBeNull();
+    http.verify();
+  });
+
+  it('verifyEmail posts the token and never touches the session', () => {
+    const { service, http } = setup();
+
+    service.verifyEmail('ev.secret').subscribe();
+    const req = http.expectOne('/api/auth/verify-email');
+    expect(req.request.body).toEqual({ token: 'ev.secret' });
+    req.flush({ data: null });
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull(); // does not authenticate
+    http.verify();
+  });
+
+  it('resendVerification posts the email and does not authenticate', () => {
+    const { service, http } = setup();
+
+    service.resendVerification('a@b.c').subscribe();
+    const req = http.expectOne('/api/auth/resend-verification');
+    expect(req.request.body).toEqual({ email: 'a@b.c' });
+    req.flush({ data: null });
+
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
     http.verify();
   });
 });
