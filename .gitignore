@@ -11,6 +11,8 @@
 
 # Java / Spring Boot
 backend/target/
+gateway/target/
+services/notification-service/target/
 *.class
 
 # Environment files
@@ -33,3 +35,6 @@ Thumbs.db
 # Python cache
 __pycache__/
 *.pyc
+
+# Local planning / analysis notes (working scratch, not part of the committed deliverable)
+.planning/
