@@ -32,7 +32,11 @@ management:
         include: health,info,prometheus
   endpoint:
     health:
-      show-details: always
+      # Consistent with the core: don't disclose per-component health to anonymous
+      # callers. No Spring Security guards this actuator, so without an authenticated
+      # principal this resolves to status-only (UP/DOWN) — the component breakdown
+      # stays private rather than being shown to everyone.
+      show-details: when-authorized
       probes:
         enabled: true
   metrics:

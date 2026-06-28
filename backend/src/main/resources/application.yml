@@ -7,9 +7,12 @@
       enabled: false
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/aurora_marketplace
-    username: aurora_user
-    password: aurora_password
+    # Dev defaults keep local runs zero-config; override every one of these via env in any
+    # deployed environment (OWASP A02/A05 — no committed DB credentials). The 'prod' profile
+    # (application-prod.yml) drops the defaults so a missing credential fails fast at startup.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/aurora_marketplace}
+    username: ${SPRING_DATASOURCE_USERNAME:aurora_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:aurora_password}
     driver-class-name: org.postgresql.Driver
 
   jpa:
