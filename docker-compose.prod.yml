@@ -1,0 +1,68 @@
+# Production hardening overlay for the application services.
+#
+# Use ON TOP of the base compose (which provides infra + the app service definitions):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile apps up -d --build
+#
+# What this overlay adds for a production-shaped run (OWASP A05 / prod-readiness):
+#   - Activates the 'prod' Spring profile (required DB creds + JWT secret from env, no dev fallback).
+#   - Container hardening: drop all Linux capabilities, no-new-privileges, read-only root FS (+ tmpfs /tmp
+#     so the JVM/Tomcat can still write scratch), restart: always.
+#   - Memory limits + a container-aware JVM heap (-XX:MaxRAMPercentage) so the heap sizes to the cgroup.
+#   - Internal-only backend & notification-service (host port bindings reset); only the gateway is exposed.
+#
+# Secrets are NOT defaulted here on purpose — set them in the environment / .env (see .env.example):
+#   APP_SECURITY_JWT_SECRET, SPRING_DATASOURCE_PASSWORD (+ a real mail/SMS provider for notifications).
+
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+    ports: !reset []          # internal only — reach it through the gateway
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  notification-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+    ports: !reset []          # internal only — not publicly routable
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  gateway:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75.0"
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 512M
