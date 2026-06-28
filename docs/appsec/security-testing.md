@@ -49,7 +49,7 @@ need a database, so they are fast and reliable in CI.
 
 | Test | File | Asserts |
 |---|---|---|
-| `JwtServiceTest` | `backend/src/test/java/com/aurora/backend/security/jwt/JwtServiceTest.java` | A valid token round-trips; a **tampered payload** is rejected; a token **signed with another secret** is rejected; an **expired token** is rejected. (OWASP A02/A07) |
+| `JwtServiceTest` | `backend/src/test/java/com/aurora/backend/security/jwt/JwtServiceTest.java` | A valid token round-trips; a **tampered payload** is rejected; a token **signed with another secret** is rejected; an **expired token** is rejected; the **signature algorithm is pinned to HS256** (a swapped-`alg`/confusion token is rejected by intent, not just by library default) with a **30s clock-skew** tolerance for multi-node drift. (OWASP A02/A07) |
 | `JwtAuthenticationFilterTest` | `backend/.../security/jwt/JwtAuthenticationFilterTest.java` | No header → stays anonymous; valid token → authenticated with **authorities loaded from the database, not the token**; invalid token → fails closed but the chain proceeds. (OWASP A01) |
 | `OrderServiceTest` | `backend/.../order/service/OrderServiceTest.java` | `getUserOrder` resolves only via the **owner-scoped** `findByIdAndUserId` (never the unscoped `findById`), so a customer cannot read another customer's order (**IDOR**, A01); admin `updateStatus` changes status + audits the change, unknown order → 404, and list scoping holds. |
 | `CheckoutServiceTest` | `backend/.../checkout/service/CheckoutServiceTest.java` | Order + payment money is **recomputed server-side** from the cart/catalog (client cannot influence price/total); empty cart, inactive variant and insufficient stock are rejected. Locks the **client-trusted-pricing** control. (OWASP A04) |
@@ -67,6 +67,13 @@ need a database, so they are fast and reliable in CI.
 | `CouponRedemptionConcurrencyTest` *(Testcontainers)* | `backend/.../promotion/CouponRedemptionConcurrencyTest.java` | A `maxUses=1` coupon redeemed by two transactions at once is redeemed **exactly once** (one `COUPON_MAX_USES_REACHED`); the row lock + re-check beats the read-modify-write race. (OWASP A04) |
 | `CheckoutIdempotencyTest` *(Testcontainers)* | `backend/.../checkout/CheckoutIdempotencyTest.java` | The `(user_id, idempotency_key)` unique constraint blocks a duplicate, and `confirmCheckout` **replays** the recorded order for a known key **without creating a second order** — no double-order / double-charge on retry. (OWASP A04) |
 | `ProductImageRequestValidationTest` | `backend/.../catalog/product/dto/ProductImageRequestValidationTest.java` | A product image URL must be an absolute **http(s)** URL — `javascript:`/`data:`/`file:`/relative are rejected (stored-XSS / SSRF-precursor input hardening). (OWASP A03/A10) |
+| `BoundedInputValidationTest` | `backend/.../common/validation/BoundedInputValidationTest.java` | Free-text and numeric inputs are **size-bounded** so one request can't persist multi-MB payloads — review `comment` ≤2000, product `description` ≤5000, variant `attributesJson` ≤2000, cart quantity ≤1000, product `variants`/`images` list cardinality capped, and prices `@Digits`-bounded. (OWASP A03/A08) |
+| `ProductSearchValidationTest` | `backend/.../catalog/product/controller/ProductSearchValidationTest.java` | **Web-slice**: the public product-search `q` param is capped (≤100) via `@Validated`; an over-long query is rejected `400 VALIDATION_ERROR` before the service is hit. (OWASP A03) |
+| `AdminMethodSecurityTest` | `backend/.../config/AdminMethodSecurityTest.java` | **Web-slice** defense-in-depth: with `@EnableMethodSecurity`, the class-level `@PreAuthorize("hasRole('ADMIN')")` on every admin controller denies a `ROLE_CUSTOMER` even with the URL rule bypassed — a method-security **`403` (not `500`)** backs up the `/api/admin/**` URL rule. (OWASP A01) |
+| `OrderTest` | `backend/.../order/OrderTest.java` | `Order.changeStatus` enforces a **legal-transition state machine** — illegal jumps (e.g. `DELIVERED → PENDING_PAYMENT`) throw `409 ILLEGAL_ORDER_TRANSITION`; every transition the checkout/payment/admin flows perform is allowed; same-state is an idempotent no-op. (OWASP A04) |
+| `BatchFileReaderTest` | `backend/.../batch/support/BatchFileReaderTest.java` | The CSV batch reader **caps file size and row count** (streamed, leak-free) so an oversized import can't OOM the tasklet JVM. (OWASP A04 — availability) |
+| `RefreshTokenServiceTest` (grace-window) | `backend/.../security/token/RefreshTokenServiceTest.java` | A refresh-token replay served from the **grace-window cache** emits a **detection signal** (WARN with familyId + userId, **never the raw token**) so a stolen-token replay inside the window is visible even though it cannot be blocked. (OWASP A07/A09) |
+| `MailTransportPlainTextTripwireTest` *(notification-service)* | `services/notification-service/.../email/MailTransportPlainTextTripwireTest.java` | **Tripwire**: email transports send **plain text** (not HTML), so a future switch to HTML — which would turn unescaped event fields into stored XSS — breaks the build. (OWASP A03) |
 
 The headline assertion — *authorities come from the DB, not the JWT claim* — is
 the control that makes a forged `role` claim worthless. It is now covered by a
@@ -79,18 +86,19 @@ cd backend
 .\mvnw.cmd test "-Dtest=JwtServiceTest,JwtAuthenticationFilterTest"
 ```
 
-> Current status: **60 security-focused tests, all passing.** (JWT ×7,
-> `OrderServiceTest` ×6, `CheckoutServiceTest` ×4, `CouponServiceTest` ×9,
-> `AdminAuthorizationTest` ×3, `ReviewServiceTest` ×4, `CartServiceTest` ×5,
-> `InventoryServiceTest` ×6, `AuthValidationTest` ×4, `WishlistServiceTest` ×3,
-> `ProductServiceTest` ×4, `PaymentServiceTest` ×5.)
-> Beyond these security-focused tests, the full Docker-free backend suite is **70
-> tests**. A parallel **frontend** suite (Vitest) covers the auth service, route
-> guards, the HTTP interceptor, cart/toast services, i18n parity and utilities
-> (**45 tests**), and the **notification-service** covers its listener +
-> idempotency tracker (**13 tests**) — ~119 fast tests green across the stack.
-> The JWT and service tests need no Spring context; `AdminAuthorizationTest` is a
-> web slice (Spring context, still no database/Docker).
+> Current status: **all security-focused tests passing.** This cycle added JWT
+> **algorithm-pinning + clock-skew** (`JwtServiceTest`), refresh-token grace-window
+> **detection** (`RefreshTokenServiceTest`), admin **method-security** defense-in-depth
+> (`AdminMethodSecurityTest`), the order **state machine** (`OrderTest` ×31), **bounded
+> inputs** (`BoundedInputValidationTest`, `ProductSearchValidationTest`), the batch-reader
+> **DoS cap** (`BatchFileReaderTest`), and the **plain-text email tripwire**
+> (`MailTransportPlainTextTripwireTest`, notification-service) — on top of the existing
+> IDOR / pricing / coupon / RBAC suite above.
+> The full backend suite (incl. the Testcontainers integration tests) is **217 tests, all
+> green**; a parallel **frontend** suite (Vitest) and the **notification-service** suite
+> keep the rest of the stack green on every push/PR. The unit/service and validation tests
+> need no Spring context; the `@WebMvcTest` slices add the Spring context but still no
+> database/Docker.
 
 ### Where to add the next ones
 

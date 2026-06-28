@@ -6,6 +6,9 @@ import com.aurora.backend.catalog.product.dto.ProductResponse;
 import com.aurora.backend.catalog.product.service.ProductService;
 import com.aurora.backend.common.api.ApiResponse;
 
+import jakarta.validation.constraints.Size;
+
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/products")
+@Validated
 public class ProductController {
 
     private final ProductService productService;
@@ -28,7 +32,8 @@ public class ProductController {
     }
 
     @GetMapping("/search")
-    public ApiResponse<List<ProductResponse>> searchProducts(@RequestParam String q) {
+    public ApiResponse<List<ProductResponse>> searchProducts(
+            @RequestParam @Size(max = 100, message = "Search query must be at most 100 characters.") String q) {
         return ApiResponse.success("Products retrieved successfully.", productService.searchActiveProducts(q));
     }
 

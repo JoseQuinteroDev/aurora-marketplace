@@ -14,6 +14,7 @@ public record ReviewRequest(
         @Size(max = 160, message = "Review title must be at most 160 characters.")
         String title,
 
+        @Size(max = 2000, message = "Review comment must be at most 2000 characters.")
         String comment
 ) {
 }

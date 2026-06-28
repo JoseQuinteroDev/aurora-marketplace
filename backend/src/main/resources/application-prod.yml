@@ -1,0 +1,39 @@
+# Production profile (SPRING_PROFILES_ACTIVE=prod).
+#
+# Layered on top of application.yml: only the production-hardening deltas live here.
+# The core rule (OWASP A02/A05): secrets and DB credentials are REQUIRED from the
+# environment with NO baked-in default. If one is missing, startup FAILS fast rather
+# than silently running on a known weak credential: an unset ${SPRING_DATASOURCE_URL}
+# is rejected by the JDBC driver, and an unset ${APP_SECURITY_JWT_SECRET} trips the
+# secret's @Size(min=32)/@NotBlank bind validation. Activating this profile also arms
+# JwtSecretValidator, which additionally rejects a known dev placeholder secret (it
+# only throws under the 'prod' profile).
+spring:
+  datasource:
+    # No dev fallbacks here on purpose: an unset URL/credential must break startup.
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+
+  jpa:
+    hibernate:
+      # Schema is Flyway-managed; never let Hibernate alter prod tables.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Don't pretty-print SQL in production logs (noise + minor info leak).
+        format_sql: false
+
+app:
+  security:
+    jwt:
+      # Required in production — no committed placeholder. JwtSecretValidator additionally
+      # refuses to start under 'prod' if this is unset or a known dev secret.
+      secret: ${APP_SECURITY_JWT_SECRET}
+
+logging:
+  level:
+    # Silence SQL statement logging in production (the base config sets this to DEBUG
+    # for local development); leaking query shapes/parameters is needless exposure.
+    org.hibernate.SQL: WARN
+    org.springframework.security: INFO

@@ -7,6 +7,7 @@ import com.aurora.backend.batch.dto.BatchJobInfoResponse;
 import com.aurora.backend.batch.service.BatchAdminService;
 import com.aurora.backend.common.api.ApiResponse;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin/batch")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminBatchController {
 
     private final BatchAdminService batchAdminService;

@@ -168,6 +168,7 @@ public class RefreshTokenService {
         if (repository.claimForRotation(row.getId(), childId, now) == 0) {
             CachedRotation cached = validCache(row.getId(), now);
             if (cached != null) {
+                signalGraceWindowReplay(row.getFamilyId(), cached.userId());
                 return toResult(cached);
             }
             throw invalidToken();
@@ -192,6 +193,7 @@ public class RefreshTokenService {
     private RotationResult handleRotatedReplay(RefreshToken row, Instant now) {
         CachedRotation cached = validCache(row.getId(), now);
         if (cached != null) {
+            signalGraceWindowReplay(row.getFamilyId(), cached.userId());
             return toResult(cached); // benign double-submit within the grace window
         }
         // Theft: a genuinely old, already-rotated token replayed. The responder commits
@@ -204,6 +206,21 @@ public class RefreshTokenService {
     private RotationResult toResult(CachedRotation cached) {
         User user = userRepository.findById(cached.userId()).orElseThrow(this::invalidToken);
         return new RotationResult(user, cached.accessToken(), cached.rawRefreshToken());
+    }
+
+    /**
+     * Security DETECTION signal for a grace-window cache hit (OWASP A07/A09). A legit
+     * near-simultaneous double-submit and a stolen token replayed inside the window
+     * present a byte-identical token, so we cannot tell them apart and must honor the
+     * cached result — but the event MUST be visible: a stolen-token replay would
+     * otherwise be served silently with reuse detection suppressed. We emit a
+     * structured WARN recording only familyId + userId (never the raw token/secret —
+     * see the class javadoc). Detection only; behavior is unchanged.
+     */
+    private void signalGraceWindowReplay(UUID familyId, UUID userId) {
+        log.warn("Refresh-token grace-window replay served from cache; "
+                + "family {} user {} (benign double-submit OR replayed stolen token — indistinguishable).",
+                familyId, userId);
     }
 
     private CachedRotation validCache(UUID rowId, Instant now) {
