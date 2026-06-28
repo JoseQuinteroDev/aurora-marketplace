@@ -126,8 +126,14 @@ export class ResetPasswordPageComponent {
         this.toast.success(this.language.translate('auth.reset.success'));
         this.router.navigateByUrl('/login');
       },
-      error: (err: { status?: number }) => {
-        this.error.set(this.language.translate(err?.status === 401 ? 'auth.reset.invalidToken' : 'auth.reset.error'));
+      error: (err: { status?: number; error?: { code?: string } }) => {
+        let key = 'auth.reset.error';
+        if (err?.error?.code === 'PASSWORD_BREACHED') {
+          key = 'auth.reset.passwordBreached';
+        } else if (err?.status === 401) {
+          key = 'auth.reset.invalidToken';
+        }
+        this.error.set(this.language.translate(key));
         this.loading.set(false);
       }
     });

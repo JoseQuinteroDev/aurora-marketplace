@@ -165,7 +165,13 @@ export class RegisterPageComponent {
         this.router.navigateByUrl(safeInternalUrl(returnUrl));
       },
       error: (err: HttpErrorResponse) => {
-        const key = err?.status === 409 ? 'auth.register.emailExists' : 'auth.register.error';
+        const code = err?.error?.code;
+        let key = 'auth.register.error';
+        if (code === 'PASSWORD_BREACHED') {
+          key = 'auth.register.passwordBreached';
+        } else if (err?.status === 409) {
+          key = 'auth.register.emailExists';
+        }
         this.error.set(this.language.translate(key));
         this.loading.set(false);
       }
